@@ -51,6 +51,12 @@ void led_indicate_info(int cycles) {
     digitalWrite(pin_led_rx, LOW);
 }
 
+void escapedSerialWrite(uint8_t byte) {
+	if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
+    if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
+    Serial.write(byte);
+}
+
 void kiss_indicate_error(uint8_t error_code) {
 	Serial.write(FEND);
 	Serial.write(CMD_ERROR);
@@ -68,20 +74,20 @@ void kiss_indicate_radiostate() {
 void kiss_indicate_stat_rx() {
 	Serial.write(FEND);
 	Serial.write(CMD_STAT_RX);
-	Serial.write(stat_rx>>24);
-	Serial.write(stat_rx>>16);
-	Serial.write(stat_rx>>8);
-	Serial.write(stat_rx);
+	escapedSerialWrite(stat_rx>>24);
+	escapedSerialWrite(stat_rx>>16);
+	escapedSerialWrite(stat_rx>>8);
+	escapedSerialWrite(stat_rx);
 	Serial.write(FEND);
 }
 
 void kiss_indicate_stat_tx() {
 	Serial.write(FEND);
 	Serial.write(CMD_STAT_TX);
-	Serial.write(stat_tx>>24);
-	Serial.write(stat_tx>>16);
-	Serial.write(stat_tx>>8);
-	Serial.write(stat_tx);
+	escapedSerialWrite(stat_tx>>24);
+	escapedSerialWrite(stat_tx>>16);
+	escapedSerialWrite(stat_tx>>8);
+	escapedSerialWrite(stat_tx);
 	Serial.write(FEND);
 }
 
@@ -116,20 +122,20 @@ void kiss_indicate_txpower() {
 void kiss_indicate_bandwidth() {
 	Serial.write(FEND);
 	Serial.write(CMD_BANDWIDTH);
-	Serial.write(lora_bw>>24);
-	Serial.write(lora_bw>>16);
-	Serial.write(lora_bw>>8);
-	Serial.write(lora_bw);
+	escapedSerialWrite(lora_bw>>24);
+	escapedSerialWrite(lora_bw>>16);
+	escapedSerialWrite(lora_bw>>8);
+	escapedSerialWrite(lora_bw);
 	Serial.write(FEND);
 }
 
 void kiss_indicate_frequency() {
 	Serial.write(FEND);
 	Serial.write(CMD_FREQUENCY);
-	Serial.write(lora_freq>>24);
-	Serial.write(lora_freq>>16);
-	Serial.write(lora_freq>>8);
-	Serial.write(lora_freq);
+	escapedSerialWrite(lora_freq>>24);
+	escapedSerialWrite(lora_freq>>16);
+	escapedSerialWrite(lora_freq>>8);
+	escapedSerialWrite(lora_freq);
 	Serial.write(FEND);
 }
 
@@ -197,3 +203,4 @@ uint8_t getRandom() {
 		return 0x00;
 	}
 }
+

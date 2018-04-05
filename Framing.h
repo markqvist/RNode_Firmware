@@ -52,4 +52,13 @@ All:					0xc00119d21b80c00200005140c00308c00407c0
 Radio on 				0xc00501c0
 
 Config+on 				0xc00119d21b80c00200005140c00308c00407c00501c0
+
+
+		c1 = self.bandwidth >> 24
+		c2 = self.bandwidth >> 16 & 0xFF
+		c3 = self.bandwidth >> 8 & 0xFF
+		c4 = self.bandwidth & 0xFF
+		data = KISS.escape(chr(c1)+chr(c2)+chr(c3)+chr(c4))
+
+
 */
