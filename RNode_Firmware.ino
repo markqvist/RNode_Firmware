@@ -81,8 +81,6 @@ void update_radio_lock() {
 }
 
 void receiveCallback(int packet_size) {
-  led_rx_on();
-
   uint8_t header   = LoRa.read(); packet_size--;
   uint8_t sequence = packetSequence(header);
   bool    ready    = false;
@@ -148,7 +146,6 @@ void receiveCallback(int packet_size) {
     Serial.write(FEND);
     read_len = 0;
   }
-  led_rx_off();
 }
 
 void transmit(size_t size) {
@@ -178,21 +175,22 @@ void transmit(size_t size) {
 
     LoRa.endPacket();
     led_tx_off();
-    LoRa.receive();
 
-    if (FLOW_CONTROL_ENABLED)
-      kiss_indicate_ready();
+    LoRa.receive();
 
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
     led_indicate_error(5);
   }
+
+  if (FLOW_CONTROL_ENABLED)
+      kiss_indicate_ready();
 }
 
 void serialCallback(uint8_t sbyte) {
   if (IN_FRAME && sbyte == FEND && command == CMD_DATA) {
     IN_FRAME = false;
-    transmit(frame_len);
+    outbound_ready = true;
   } else if (sbyte == FEND) {
     IN_FRAME = true;
     command = CMD_UNKNOWN;
@@ -308,7 +306,61 @@ void serialCallback(uint8_t sbyte) {
   }
 }
 
+void updateModemStatus() {
+  uint8_t status = LoRa.modemStatus();
+  last_status_update = millis();
+  if (status & SIG_DETECT == 0x01) { stat_signal_detected = true; } else { stat_signal_detected = false; }
+  if (status & SIG_SYNCED == 0x01) { stat_signal_synced = true; } else { stat_signal_synced = false; }
+  if (status & RX_ONGOING == 0x01) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
+
+  if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
+    if (dcd_count < dcd_threshold) {
+      dcd_count++;
+      dcd = true;
+    } else {
+      dcd = true;
+      dcd_led = true;
+    }
+  } else {
+    if (dcd_count > 0) {
+      dcd_count--;
+    } else {
+      dcd_led = false;
+    }
+    dcd = false;
+  }
+
+  if (dcd_led) {
+    led_rx_on();
+  } else {
+    led_rx_off();
+  }
+}
+
+void checkModemStatus() {
+  if (millis()-last_status_update >= status_interval_ms) {
+    led_tx_on();
+    updateModemStatus();
+    led_tx_off();
+  }
+}
+
 void loop() {
+  if (radio_online) {
+    checkModemStatus();
+    if (outbound_ready) {
+      if (!dcd_waiting) updateModemStatus();
+      if (!dcd && !dcd_led) {
+        if (dcd_waiting) delay(lora_rx_turnaround_ms);
+        outbound_ready = false;
+        dcd_waiting = false;
+        transmit(frame_len);
+      } else {
+        dcd_waiting = true;
+      }
+    }
+  }
+
   if (Serial.available()) {
     char sbyte = Serial.read();
     serialCallback(sbyte);

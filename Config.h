@@ -43,8 +43,10 @@
 	#endif
 
 	// MCU independent configuration parameters
-	const long serial_baudrate = 115200;
-	const int  rssi_offset     = 164;
+	const long serial_baudrate  = 115200;
+	const int  rssi_offset      = 164;
+
+	const int lora_rx_turnaround_ms = 5;
 
 	// Default LoRa settings
 	int  lora_sf   = 0;
@@ -66,5 +68,24 @@
 
 	uint32_t stat_rx		= 0;
 	uint32_t stat_tx		= 0;
+
+	bool outbound_ready       = false;
+
+	bool stat_signal_detected = false;
+	bool stat_signal_synced   = false;
+	bool stat_rx_ongoing      = false;
+	bool dcd				  = false;
+	bool dcd_led              = false;
+	bool dcd_waiting          = false;
+	uint16_t dcd_count        = 0;
+	uint16_t dcd_threshold    = 15;
+
+	uint32_t status_interval_ms = 3;
+	uint32_t last_status_update = 0;
+
+	// Status flags
+	const uint8_t SIG_DETECT = 0x01;
+	const uint8_t SIG_SYNCED = 0x02;
+	const uint8_t RX_ONGOING = 0x04;
 
 #endif

@@ -54,6 +54,7 @@ public:
   void setCodingRate4(int denominator);
   void setPreambleLength(long length);
   void setSyncWord(int sw);
+  uint8_t modemStatus();
   void enableCrc();
   void disableCrc();
 
