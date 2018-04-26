@@ -14,6 +14,7 @@
 	#define CMD_SF			0x04
 	#define CMD_RADIO_STATE 0x05
 	#define CMD_RADIO_LOCK	0x06
+	#define CMD_READY		0x0F
 
 	#define CMD_STAT_RX		0x21
 	#define CMD_STAT_TX		0x22

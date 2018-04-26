@@ -146,6 +146,13 @@ void kiss_indicate_random(uint8_t byte) {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_ready() {
+	Serial.write(FEND);
+	Serial.write(CMD_READY);
+	Serial.write(0x01);
+	Serial.write(FEND);
+}
+
 bool isSplitPacket(uint8_t header) {
 	return (header & FLAG_SPLIT);
 }
@@ -163,6 +170,10 @@ void getPacketData(int len) {
 
 void setSpreadingFactor() {
 	if (radio_online) LoRa.setSpreadingFactor(lora_sf);
+}
+
+void setCodingRate() {
+	if (radio_online) LoRa.setCodingRate4(lora_cr);
 }
 
 void setTXPower() {

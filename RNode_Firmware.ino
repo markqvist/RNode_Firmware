@@ -42,6 +42,7 @@ bool startRadio() {
         setTXPower();
         setBandwidth();
         setSpreadingFactor();
+        setCodingRate();
         getFrequency();
 
         LoRa.enableCrc();
@@ -178,6 +179,10 @@ void transmit(size_t size) {
     LoRa.endPacket();
     led_tx_off();
     LoRa.receive();
+
+    if (FLOW_CONTROL_ENABLED)
+      kiss_indicate_ready();
+
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
     led_indicate_error(5);

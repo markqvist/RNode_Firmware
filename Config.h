@@ -26,6 +26,9 @@
 		const int pin_dio = 2;
 		const int pin_led_rx = 5;
 		const int pin_led_tx = 4;
+
+		#define FLOW_CONTROL_ENABLED true
+		#define QUEUE_SIZE 0
 	#endif
 
 	#if MCU_VARIANT == MCU_1284P
@@ -34,6 +37,9 @@
 		const int pin_dio = 2;
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
+
+		#define FLOW_CONTROL_ENABLED true
+		#define QUEUE_SIZE 24
 	#endif
 
 	// MCU independent configuration parameters
@@ -42,6 +48,7 @@
 
 	// Default LoRa settings
 	int  lora_sf   = 0;
+	int  lora_cr   = 5;
 	int  lora_txp  = 0xFF;
 	uint32_t lora_bw   = 0;
 	uint32_t lora_freq = 0;
