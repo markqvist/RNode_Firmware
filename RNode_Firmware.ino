@@ -339,9 +339,7 @@ void updateModemStatus() {
 
 void checkModemStatus() {
   if (millis()-last_status_update >= status_interval_ms) {
-    led_tx_on();
     updateModemStatus();
-    led_tx_off();
   }
 }
 
@@ -352,9 +350,12 @@ void loop() {
       if (!dcd_waiting) updateModemStatus();
       if (!dcd && !dcd_led) {
         if (dcd_waiting) delay(lora_rx_turnaround_ms);
-        outbound_ready = false;
-        dcd_waiting = false;
-        transmit(frame_len);
+        updateModemStatus();
+        if (!dcd) {
+          outbound_ready = false;
+          dcd_waiting = false;
+          transmit(frame_len);
+        }
       } else {
         dcd_waiting = true;
       }

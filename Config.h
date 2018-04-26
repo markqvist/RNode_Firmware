@@ -46,7 +46,7 @@
 	const long serial_baudrate  = 115200;
 	const int  rssi_offset      = 164;
 
-	const int lora_rx_turnaround_ms = 5;
+	const int lora_rx_turnaround_ms = 50;
 
 	// Default LoRa settings
 	int  lora_sf   = 0;
