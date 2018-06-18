@@ -51,6 +51,26 @@ void led_indicate_info(int cycles) {
     digitalWrite(pin_led_rx, LOW);
 }
 
+uint8_t led_standby_min = 1;
+uint8_t led_standby_max = 22;
+uint8_t led_standby_value = led_standby_min;
+int8_t  led_standby_direction = 0;
+unsigned long led_standby_ticks = 0;
+unsigned long led_standby_wait = 11000;
+void led_indicate_standby() {
+	led_standby_ticks++;
+	if (led_standby_ticks > led_standby_wait) {
+		led_standby_ticks = 0;
+		if (led_standby_value <= led_standby_min) {
+			led_standby_direction = 1;
+		} else if (led_standby_value >= led_standby_max) {
+			led_standby_direction = -1;
+		}
+		led_standby_value += led_standby_direction;
+		analogWrite(pin_led_rx, led_standby_value);
+	}
+}
+
 void escapedSerialWrite(uint8_t byte) {
 	if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
     if (byte == FESC) { Serial.write(FESC); byte = TFESC; }

@@ -2,6 +2,7 @@
 #include <LoRa.h>
 #include "Config.h"
 #include "Framing.h"
+#include "EEPROM.cpp"
 #include "Utilities.cpp"
 
 void setup() {
@@ -360,6 +361,8 @@ void loop() {
         dcd_waiting = true;
       }
     }
+  } else {
+    led_indicate_standby();
   }
 
   if (Serial.available()) {

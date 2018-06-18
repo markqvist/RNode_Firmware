@@ -1,8 +1,12 @@
 #ifndef CONFIG_H
 	#define CONFIG_H
 
-	#define MCU_328P 0x90
+	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
+
+	#define PRODUCT_RNODE 0x03
+	#define MODEL_A4 0xA4
+	#define MODEL_A9 0xA9
 
 	#if defined(__AVR_ATmega328P__)
 		#define MCU_VARIANT MCU_328P

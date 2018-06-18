@@ -6,7 +6,7 @@
 
 #include <LoRa.h>
 
-// registers
+// Registers
 #define REG_FIFO                 0x00
 #define REG_OP_MODE              0x01
 #define REG_FRF_MSB              0x06
@@ -39,7 +39,7 @@
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
 
-// modes
+// Modes
 #define MODE_LONG_RANGE_MODE     0x80
 #define MODE_SLEEP               0x00
 #define MODE_STDBY               0x01
@@ -112,7 +112,7 @@ int LoRaClass::begin(long frequency)
   writeRegister(REG_MODEM_CONFIG_3, 0x04);
 
   // set output power to 17 dBm
-  setTxPower(17);
+  setTxPower(2);
 
   // put in standby mode
   idle();

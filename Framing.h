@@ -22,6 +22,11 @@
 	#define CMD_BLINK		0x30
 	#define CMD_RANDOM		0x40
 
+	#define CMD_INFO_READ	0x50
+	#define CMD_INFO_WRITE	0x51
+	#define CMD_CONF_READ	0x52
+	#define CMD_CONF_WRITE	0x53
+
 	#define RADIO_STATE_OFF 0x00
 	#define RADIO_STATE_ON	0x01
 
