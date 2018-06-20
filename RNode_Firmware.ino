@@ -232,7 +232,7 @@ void serialCallback(uint8_t sbyte) {
             kiss_indicate_frequency();
           } else {
             lora_freq = freq;
-            setFrequency();
+            if (op_mode == MODE_HOST) setFrequency();
             kiss_indicate_frequency();
           }
         }
@@ -255,7 +255,7 @@ void serialCallback(uint8_t sbyte) {
             kiss_indicate_bandwidth();
           } else {
             lora_bw = bw;
-            setBandwidth();
+            if (op_mode == MODE_HOST) setBandwidth();
             kiss_indicate_bandwidth();
           }
         }
@@ -267,7 +267,7 @@ void serialCallback(uint8_t sbyte) {
         if (txp > 17) txp = 17;
 
         lora_txp = txp;
-        setTXPower();
+        if (op_mode == MODE_HOST) setTXPower();
         kiss_indicate_txpower();
       }
     } else if (command == CMD_SF) {
@@ -279,7 +279,7 @@ void serialCallback(uint8_t sbyte) {
         if (sf > 12) sf = 12;
 
         lora_sf = sf;
-        setSpreadingFactor();
+        if (op_mode == MODE_HOST) setSpreadingFactor();
         kiss_indicate_spreadingfactor();
       }
     } else if (command == CMD_CR) {
@@ -291,7 +291,7 @@ void serialCallback(uint8_t sbyte) {
         if (cr > 8) cr = 8;
 
         lora_cr = cr;
-        setCodingRate();
+        if (op_mode == MODE_HOST) setCodingRate();
         kiss_indicate_codingrate();
       }
     } else if (command == CMD_RADIO_STATE) {
@@ -397,6 +397,7 @@ void validateStatus() {
 
         if (eeprom_have_conf()) {
           eeprom_conf_load();
+          op_mode = MODE_TNC;
           startRadio();
         }
       }

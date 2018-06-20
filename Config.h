@@ -9,6 +9,9 @@
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
 
+	#define MODE_HOST 0x11
+	#define MODE_TNC  0x12
+
 	#if defined(__AVR_ATmega328P__)
 		#define MCU_VARIANT MCU_328P
 		#warning "Firmware is being compiled for atmega328p based boards"
@@ -72,6 +75,7 @@
 	bool radio_locked = true;
 	bool radio_online = false;
 	bool hw_ready     = false;
+	uint8_t op_mode   = MODE_HOST;
 	uint8_t model     = 0x00;
 	uint8_t hwrev     = 0x00;
 	
