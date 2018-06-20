@@ -1,12 +1,13 @@
+#include "ROM.h"
+
 #ifndef CONFIG_H
 	#define CONFIG_H
 
+	#define MAJ_VERS  0x01
+	#define MIN_VERS  0x03
+
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
-
-	#define PRODUCT_RNODE 0x03
-	#define MODEL_A4 0xA4
-	#define MODEL_A9 0xA9
 
 	#if defined(__AVR_ATmega328P__)
 		#define MCU_VARIANT MCU_328P
@@ -33,6 +34,9 @@
 
 		#define FLOW_CONTROL_ENABLED true
 		#define QUEUE_SIZE 0
+
+		#define EEPROM_SIZE 512
+		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 	#endif
 
 	#if MCU_VARIANT == MCU_1284P
@@ -44,7 +48,12 @@
 
 		#define FLOW_CONTROL_ENABLED true
 		#define QUEUE_SIZE 24
+
+		#define EEPROM_SIZE 4096
+		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 	#endif
+
+	#define eeprom_addr(a) (a+EEPROM_OFFSET)
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
@@ -62,6 +71,9 @@
 	// Operational variables
 	bool radio_locked = true;
 	bool radio_online = false;
+	bool hw_ready     = false;
+	uint8_t model     = 0x00;
+	uint8_t hwrev     = 0x00;
 	
 	int		last_rssi		= -164;
 	size_t	read_len		= 0;

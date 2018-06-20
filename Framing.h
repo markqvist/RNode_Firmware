@@ -12,8 +12,10 @@
 	#define CMD_BANDWIDTH	0x02
 	#define CMD_TXPOWER		0x03
 	#define CMD_SF			0x04
-	#define CMD_RADIO_STATE 0x05
-	#define CMD_RADIO_LOCK	0x06
+	#define CMD_CR 			0x05
+	#define CMD_RADIO_STATE 0x06
+	#define CMD_RADIO_LOCK	0x07
+	#define CMD_DETECT		0x08
 	#define CMD_READY		0x0F
 
 	#define CMD_STAT_RX		0x21
@@ -22,22 +24,28 @@
 	#define CMD_BLINK		0x30
 	#define CMD_RANDOM		0x40
 
-	#define CMD_INFO_READ	0x50
-	#define CMD_INFO_WRITE	0x51
-	#define CMD_CONF_READ	0x52
-	#define CMD_CONF_WRITE	0x53
+	#define CMD_FW_VERSION  0x50
+	#define CMD_ROM_READ	0x51
+	#define CMD_ROM_WRITE	0x52
+	#define CMD_CONF_SAVE   0x53
+	#define CMD_UNLOCK_ROM	0x59
+	#define ROM_UNLOCK_BYTE 0xF8
+
+	#define DETECT_REQ	 	0x73
+	#define DETECT_RESP		0x46
 
 	#define RADIO_STATE_OFF 0x00
 	#define RADIO_STATE_ON	0x01
-
-	#define CMD_ERROR		0x90
-	#define ERROR_INITRADIO 0x01
-	#define ERROR_TXFAILED	0x02
 
 	#define NIBBLE_SEQ		0xF0
 	#define NIBBLE_FLAGS	0x0F
 	#define FLAG_SPLIT		0x01
 	#define SEQ_UNSET		0xFF
+
+	#define CMD_ERROR			0x90
+	#define ERROR_INITRADIO 	0x01
+	#define ERROR_TXFAILED		0x02
+	#define ERROR_EEPROM_LOCKED 0x03
 
 	// Serial framing variables
 	size_t frame_len;
@@ -57,7 +65,7 @@ All:					0xc00119d21b80c00200005140c00308c00407c0
 
 Radio on 				0xc00501c0
 
-Config+on 				0xc00119d21b80c00200005140c00308c00407c00501c0
+Config+on 				0xc00119d21b80c00200005140c00301c00407c00601c0
 
 
 		c1 = self.bandwidth >> 24

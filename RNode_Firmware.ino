@@ -2,7 +2,6 @@
 #include <LoRa.h>
 #include "Config.h"
 #include "Framing.h"
-#include "EEPROM.cpp"
 #include "Utilities.cpp"
 
 void setup() {
@@ -25,12 +24,15 @@ void setup() {
   // Set chip select, reset and interrupt
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
+
+  // Validate board health, EEPROM and config
+  validateStatus();
 }
 
 bool startRadio() {
   update_radio_lock();
   if (!radio_online) {
-    if (!radio_locked) {
+    if (!radio_locked && hw_ready) {
       if (!LoRa.begin(lora_freq)) {
         // The radio could not be started.
         // Indicate this failure over both the
@@ -280,6 +282,18 @@ void serialCallback(uint8_t sbyte) {
         setSpreadingFactor();
         kiss_indicate_spreadingfactor();
       }
+    } else if (command == CMD_CR) {
+      if (sbyte == 0xFF) {
+        kiss_indicate_codingrate();
+      } else {
+        int cr = sbyte;
+        if (cr < 5) cr = 5;
+        if (cr > 8) cr = 8;
+
+        lora_cr = cr;
+        setCodingRate();
+        kiss_indicate_codingrate();
+      }
     } else if (command == CMD_RADIO_STATE) {
       if (sbyte == 0xFF) {
         kiss_indicate_radiostate();
@@ -303,6 +317,33 @@ void serialCallback(uint8_t sbyte) {
       led_indicate_info(sbyte);
     } else if (command == CMD_RANDOM) {
       kiss_indicate_random(getRandom());
+    } else if (command == CMD_DETECT) {
+      if (sbyte == DETECT_REQ) {
+        kiss_indicate_detect();
+      }
+    } else if (command == CMD_UNLOCK_ROM) {
+      if (sbyte == ROM_UNLOCK_BYTE) {
+        unlock_rom();
+      }
+    } else if (command == CMD_ROM_READ) {
+      kiss_dump_eeprom();
+    } else if (command == CMD_ROM_WRITE) {
+      if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            cbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 2) {
+          eeprom_write(cbuf[0], cbuf[1]);
+        }
+    } else if (command == CMD_FW_VERSION) {
+      kiss_indicate_version();
     }
   }
 }
@@ -344,6 +385,20 @@ void checkModemStatus() {
   }
 }
 
+void validateStatus() {
+  if (eeprom_lock_set()) {
+    if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
+      if (eeprom_checksum_valid()) {
+        hw_ready = true;
+      }
+    } else {
+      hw_ready = false;
+    }
+  } else {
+    hw_ready = false;
+  }
+}
+
 void loop() {
   if (radio_online) {
     checkModemStatus();
@@ -362,7 +417,12 @@ void loop() {
       }
     }
   } else {
-    led_indicate_standby();
+    if (hw_ready) {
+      led_indicate_standby();
+    } else {
+      led_indicate_not_ready();
+      stopRadio();
+    }
   }
 
   if (Serial.available()) {

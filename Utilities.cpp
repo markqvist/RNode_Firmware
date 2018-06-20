@@ -1,7 +1,10 @@
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <LoRa.h>
+#include "ROM.h"
 #include "Config.h"
 #include "Framing.h"
+#include "MD5.h"
 
 void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -68,6 +71,22 @@ void led_indicate_standby() {
 		}
 		led_standby_value += led_standby_direction;
 		analogWrite(pin_led_rx, led_standby_value);
+		digitalWrite(pin_led_tx, 0);
+	}
+}
+
+void led_indicate_not_ready() {
+	led_standby_ticks++;
+	if (led_standby_ticks > led_standby_wait) {
+		led_standby_ticks = 0;
+		if (led_standby_value <= led_standby_min) {
+			led_standby_direction = 1;
+		} else if (led_standby_value >= led_standby_max) {
+			led_standby_direction = -1;
+		}
+		led_standby_value += led_standby_direction;
+		analogWrite(pin_led_tx, led_standby_value);
+		digitalWrite(pin_led_rx, 0);
 	}
 }
 
@@ -132,6 +151,13 @@ void kiss_indicate_spreadingfactor() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_codingrate() {
+	Serial.write(FEND);
+	Serial.write(CMD_CR);
+	Serial.write((uint8_t)lora_cr);
+	Serial.write(FEND);
+}
+
 void kiss_indicate_txpower() {
 	Serial.write(FEND);
 	Serial.write(CMD_TXPOWER);
@@ -173,6 +199,21 @@ void kiss_indicate_ready() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_detect() {
+	Serial.write(FEND);
+	Serial.write(CMD_DETECT);
+	Serial.write(DETECT_RESP);
+	Serial.write(FEND);
+}
+
+void kiss_indicate_version() {
+	Serial.write(FEND);
+	Serial.write(CMD_FW_VERSION);
+	Serial.write(MAJ_VERS);
+	Serial.write(MIN_VERS);
+	Serial.write(FEND);
+}
+
 bool isSplitPacket(uint8_t header) {
 	return (header & FLAG_SPLIT);
 }
@@ -197,7 +238,10 @@ void setCodingRate() {
 }
 
 void setTXPower() {
-	if (radio_online) LoRa.setTxPower(lora_txp);
+	if (radio_online) {
+		if (model == MODEL_A4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+	}
 }
 
 
@@ -233,5 +277,118 @@ uint8_t getRandom() {
 	} else {
 		return 0x00;
 	}
+}
+
+bool eeprom_info_locked() {
+	uint8_t lock_byte = EEPROM.read(eeprom_addr(ADDR_INFO_LOCK));
+	if (lock_byte == INFO_LOCK_BYTE) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void eeprom_dump_info() {
+	for (int addr = ADDR_PRODUCT; addr <= ADDR_INFO_LOCK; addr++) {
+		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+		escapedSerialWrite(byte);
+	}
+}
+
+void eeprom_dump_config() {
+	for (int addr = ADDR_CONF_SF; addr <= ADDR_CONF_OK; addr++) {
+		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+		escapedSerialWrite(byte);
+	}
+}
+
+void eeprom_dump_all() {
+	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
+		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+		escapedSerialWrite(byte);
+	}
+}
+
+void kiss_dump_eeprom() {
+	Serial.write(FEND);
+	Serial.write(CMD_ROM_READ);
+	eeprom_dump_all();
+	Serial.write(FEND);
+}
+
+void eeprom_write(uint8_t addr, uint8_t byte) {
+	if (!eeprom_info_locked() && addr >= 0 && addr < EEPROM_RESERVED) {
+		EEPROM.update(eeprom_addr(addr), byte);
+	} else {
+		kiss_indicate_error(ERROR_EEPROM_LOCKED);
+	}
+}
+
+void eeprom_erase() {
+	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
+		EEPROM.update(eeprom_addr(addr), 0xFF);
+	}
+	while (true) { led_tx_on(); led_rx_off(); }
+}
+
+bool eeprom_lock_set() {
+	if (EEPROM.read(eeprom_addr(ADDR_INFO_LOCK)) == INFO_LOCK_BYTE) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool eeprom_product_valid() {
+	if (EEPROM.read(eeprom_addr(ADDR_PRODUCT)) == PRODUCT_RNODE) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool eeprom_model_valid() {
+	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
+	if (model == MODEL_A4 || model == MODEL_A9) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool eeprom_hwrev_valid() {
+	hwrev = EEPROM.read(eeprom_addr(ADDR_HW_REV));
+	if (hwrev != 0x00 && hwrev != 0xFF) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool eeprom_checksum_valid() {
+	char *data = (char*)malloc(CHECKSUMMED_SIZE);
+	for (uint8_t  i = 0; i < CHECKSUMMED_SIZE; i++) {
+		char byte = EEPROM.read(eeprom_addr(i));
+		data[i] = byte;
+	}
+	
+	unsigned char *hash = MD5::make_hash(data, CHECKSUMMED_SIZE);
+	bool checksum_valid = true;
+	for (uint8_t i = 0; i < 16; i++) {
+		uint8_t stored_chk_byte = EEPROM.read(eeprom_addr(ADDR_CHKSUM+i));
+		uint8_t calced_chk_byte = (uint8_t)hash[i];
+		if (stored_chk_byte != calced_chk_byte) {
+			checksum_valid = false;
+		}
+	}
+
+	free(hash);
+	free(data);
+	return checksum_valid;
+}
+
+void unlock_rom() {
+	led_indicate_error(50);
+	eeprom_erase();
 }
 
