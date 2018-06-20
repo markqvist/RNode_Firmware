@@ -1,6 +1,5 @@
 # RNode Firmware
 
-## Intro
 This is the firmware for RNode, a very flexible LoRa-based communication device. RNode can functions as a:
 
 - Network adapter for [RNS](https://github.com/markqvist/Reticulum)
@@ -29,7 +28,7 @@ RNode can operate in two modes, host-controlled (default) and TNC mode:
 ## USB and Serial Protocol
 You can communicate with RNode either via the on-board USB connector, or using the serial pins on the board (labeled RX0 and TX0). RNode uses a standard FTDI USB chip, so it works out of the box without additional drivers in most operating systems.
 
-All communications to and from the board uses [KISS framing](https://en.wikipedia.org/wiki/KISS_(TNC)) with a custom command set. RNode also does not use HDLC ports in the command byte, and as such uses the full 8 bits of the command bytes for the actual command. Please see table below for supported commands.
+All communications to and from the board uses [KISS framing](https://en.wikipedia.org/wiki/KISS_(TNC)) with a custom command set. RNode also does not use HDLC ports in the command byte, and as such uses the full 8 bits of the command byte is available for the actual command. Please see table below for supported commands.
 
 | Command          | Byte | Description
 | -----------------|------| -----------------------------------------------
