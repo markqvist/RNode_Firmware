@@ -1,6 +1,6 @@
 # RNode Firmware
 
-This is the firmware for RNode, a very flexible LoRa-based communication device. RNode can functions as a:
+This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based communication device. RNode can functions as a:
 
 - Network adapter for [RNS](https://github.com/markqvist/Reticulum)
 - LoRa interface for your computer (or any device with a USB or serial port)
