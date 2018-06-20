@@ -28,6 +28,7 @@
 	#define CMD_ROM_READ	0x51
 	#define CMD_ROM_WRITE	0x52
 	#define CMD_CONF_SAVE   0x53
+	#define CMD_CONF_DELETE 0x54
 	#define CMD_UNLOCK_ROM	0x59
 	#define ROM_UNLOCK_BYTE 0xF8
 
@@ -54,25 +55,3 @@
 	uint8_t command = CMD_UNKNOWN;
 
 #endif
-
-/*
-Frequency 433.200		0xc00119d21b80c0
-Bandwidth 20.800		0xc00200005140c0
-TX Power 8dbm			0xc00308c0
-SF 7					0xc00407c0
-
-All:					0xc00119d21b80c00200005140c00308c00407c0
-
-Radio on 				0xc00501c0
-
-Config+on 				0xc00119d21b80c00200005140c00301c00407c00601c0
-
-
-		c1 = self.bandwidth >> 24
-		c2 = self.bandwidth >> 16 & 0xFF
-		c3 = self.bandwidth >> 8 & 0xFF
-		c4 = self.bandwidth & 0xFF
-		data = KISS.escape(chr(c1)+chr(c2)+chr(c3)+chr(c4))
-
-
-*/

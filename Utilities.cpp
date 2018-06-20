@@ -228,7 +228,6 @@ void getPacketData(int len) {
 	}
 }
 
-
 void setSpreadingFactor() {
 	if (radio_online) LoRa.setSpreadingFactor(lora_sf);
 }
@@ -385,6 +384,51 @@ bool eeprom_checksum_valid() {
 	free(hash);
 	free(data);
 	return checksum_valid;
+}
+
+bool eeprom_have_conf() {
+	if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void eeprom_conf_load() {
+	if (eeprom_have_conf()) {
+		lora_sf = EEPROM.read(eeprom_addr(ADDR_CONF_SF));
+		lora_cr = EEPROM.read(eeprom_addr(ADDR_CONF_CR));
+		lora_txp = EEPROM.read(eeprom_addr(ADDR_CONF_TXP));
+		lora_freq = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x03);
+		lora_bw = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x03);
+	}
+}
+
+void eeprom_conf_save() {
+	if (hw_ready && radio_online) {
+		EEPROM.update(eeprom_addr(ADDR_CONF_SF), lora_sf);
+		EEPROM.update(eeprom_addr(ADDR_CONF_CR), lora_cr);
+		EEPROM.update(eeprom_addr(ADDR_CONF_TXP), lora_txp);
+
+		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
+		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
+		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
+		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
+
+		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
+		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
+		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
+		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
+
+		EEPROM.update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+		led_indicate_info(10);
+	} else {
+		led_indicate_warning(10);
+	}
+}
+
+void eeprom_conf_delete() {
+	EEPROM.update(eeprom_addr(ADDR_CONF_OK), 0x00);
 }
 
 void unlock_rom() {

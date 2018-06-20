@@ -370,24 +370,24 @@ void LoRaClass::setTxPower(int level, int outputPin)
   }
 }
 
-void LoRaClass::setFrequency(long frequency)
-{
+void LoRaClass::setFrequency(long frequency) {
   _frequency = frequency;
 
-  uint64_t frf = ((uint64_t)frequency << 19) / 32000000;
+  uint32_t frf = ((uint64_t)frequency << 19) / 32000000;
 
   writeRegister(REG_FRF_MSB, (uint8_t)(frf >> 16));
   writeRegister(REG_FRF_MID, (uint8_t)(frf >> 8));
   writeRegister(REG_FRF_LSB, (uint8_t)(frf >> 0));
 }
 
-long LoRaClass::getFrequency() {
+uint32_t LoRaClass::getFrequency() {
   uint8_t msb = readRegister(REG_FRF_MSB);
   uint8_t mid = readRegister(REG_FRF_MID);
   uint8_t lsb = readRegister(REG_FRF_LSB);
 
-  uint64_t frf = msb << 16 | mid << 8 | lsb;
-  long frequency = (uint64_t)(frf*32000000) >> 19;
+  uint32_t frf = ((uint32_t)msb << 16) | ((uint32_t)mid << 8) | (uint32_t)lsb;
+  uint64_t frm = (uint64_t)frf*32000000;
+  uint32_t frequency = (frm >> 19);
 
   return frequency;
 }

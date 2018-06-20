@@ -344,6 +344,10 @@ void serialCallback(uint8_t sbyte) {
         }
     } else if (command == CMD_FW_VERSION) {
       kiss_indicate_version();
+    } else if (command == CMD_CONF_SAVE) {
+      eeprom_conf_save();
+    } else if (command == CMD_CONF_DELETE) {
+      eeprom_conf_delete();
     }
   }
 }
@@ -390,6 +394,11 @@ void validateStatus() {
     if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
       if (eeprom_checksum_valid()) {
         hw_ready = true;
+
+        if (eeprom_have_conf()) {
+          eeprom_conf_load();
+          startRadio();
+        }
       }
     } else {
       hw_ready = false;

@@ -46,7 +46,7 @@ public:
   void sleep();
 
   void setTxPower(int level, int outputPin = PA_OUTPUT_PA_BOOST_PIN);
-  long getFrequency();
+  uint32_t getFrequency();
   void setFrequency(long frequency);
   void setSpreadingFactor(int sf);
   long getSignalBandwidth();

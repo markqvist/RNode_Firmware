@@ -62,9 +62,9 @@
 	const int lora_rx_turnaround_ms = 50;
 
 	// Default LoRa settings
-	int  lora_sf   = 0;
-	int  lora_cr   = 5;
-	int  lora_txp  = 0xFF;
+	int  lora_sf   	   = 0;
+	int  lora_cr       = 5;
+	int  lora_txp      = 0xFF;
 	uint32_t lora_bw   = 0;
 	uint32_t lora_freq = 0;
 
