@@ -62,7 +62,7 @@ Have a look in the "Libraries" folder for includes to let you easily use RNode i
 Here's a Python example:
 
 ```python
-import RNodeInterface
+from RNode import RNodeInterface
 
 def gotPacket(data, rnode):
 	print "Received a packet: "+data
@@ -76,7 +76,7 @@ rnode = RNodeInterface(
 	txpower = 2,
 	sf = 7,
 	cr = 5,
-	loglevel = RnodeInterface.LOG_DEBUG)
+	loglevel = RNodeInterface.LOG_DEBUG)
 
 rnode.send("Hello World!")
 ```

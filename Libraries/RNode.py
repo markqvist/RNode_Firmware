@@ -1,12 +1,10 @@
 from __future__ import print_function
-from Interface import Interface
 from time import sleep
 import sys
 import serial
 import threading
 import time
 import math
-import RNS
 
 class KISS():
 	FEND			= chr(0xC0)
@@ -54,6 +52,7 @@ class KISS():
 	
 
 class RNodeInterface():
+	MTU = 500
 	MAX_CHUNK = 32768
 	FREQ_MIN  = 137000000
 	FREQ_MAX  = 1020000000
@@ -248,7 +247,7 @@ class RNodeInterface():
 			return False
 
 	def setPromiscuousMode(self, state):
-		if state == True
+		if state == True:
 			kiss_command = KISS.FEND+KISS.CMD_PROMISC+chr(0x01)+KISS.FEND
 		else:
 			kiss_command = KISS.FEND+KISS.CMD_PROMISC+chr(0x00)+KISS.FEND
@@ -270,7 +269,7 @@ class RNodeInterface():
 		self.callback(data, self)
 
 	def send(self, data):
-		processOutgoing(data)
+		self.processOutgoing(data)
 
 	def processOutgoing(self,data):
 		if self.online:
@@ -321,7 +320,7 @@ class RNodeInterface():
 						command = KISS.CMD_UNKNOWN
 						data_buffer = ""
 						command_buffer = ""
-					elif (in_frame and len(data_buffer) < RNS.Reticulum.MTU):
+					elif (in_frame and len(data_buffer) < RNodeInterface.MTU):
 						if (len(data_buffer) == 0 and command == KISS.CMD_UNKNOWN):
 							command = byte
 						elif (command == KISS.CMD_DATA):
@@ -416,11 +415,11 @@ class RNodeInterface():
 							self.r_random = ord(byte)
 						elif (command == KISS.CMD_ERROR):
 							if (byte == KISS.ERROR_INITRADIO):
-								self.log(str(self)+" hardware initialisation error (code "+RNS.hexrep(byte)+")", RNodeInterface.LOG_ERROR)
+								self.log(str(self)+" hardware initialisation error (code "+self.hexrep(byte)+")", RNodeInterface.LOG_ERROR)
 							elif (byte == KISS.ERROR_INITRADIO):
-								self.log(str(self)+" hardware TX error (code "+RNS.hexrep(byte)+")", RNodeInterface.LOG_ERROR)
+								self.log(str(self)+" hardware TX error (code "+self.hexrep(byte)+")", RNodeInterface.LOG_ERROR)
 							else:
-								self.log(str(self)+" hardware error (code "+RNS.hexrep(byte)+")", RNodeInterface.LOG_ERROR)
+								self.log(str(self)+" hardware error (code "+self.hexrep(byte)+")", RNodeInterface.LOG_ERROR)
 						elif (command == KISS.CMD_READY):
 							# TODO: add timeout and reset if ready
 							# command never arrives
@@ -441,15 +440,14 @@ class RNodeInterface():
 			self.log("A serial port error occurred, the contained exception was: "+str(e), RNodeInterface.LOG_ERROR)
 			self.log("The interface "+str(self.name)+" is now offline.", RNodeInterface.LOG_ERROR)
 
-	def log(msg, level=3):
+	def log(self, msg, level=3):
+		logtimefmt   = "%Y-%m-%d %H:%M:%S"
 		if self.loglevel >= level:
 			timestamp = time.time()
 			logstring = "["+time.strftime(logtimefmt)+"] ["+self.loglevelname(level)+"] "+msg
+			print(logstring)
 
-			if (logdest == LOG_STDOUT):
-				print(logstring)
-
-	def loglevelname(level):
+	def loglevelname(self, level):
 		if (level == RNodeInterface.LOG_CRITICAL):
 			return "Critical"
 		if (level == RNodeInterface.LOG_ERROR):
@@ -466,6 +464,13 @@ class RNodeInterface():
 			return "Debug"
 		if (level == RNodeInterface.LOG_EXTREME):
 			return "Extra"
+
+	def hexrep(data, delimit=True):
+		delimiter = ":"
+		if not delimit:
+			delimiter = ""
+		hexrep = delimiter.join("{:02x}".format(ord(c)) for c in data)
+		return hexrep
 
 	def __str__(self):
 		return "RNodeInterface["+self.name+"]"
