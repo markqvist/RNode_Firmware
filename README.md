@@ -74,7 +74,7 @@ rnode = RNodeInterface(
 	txpower = 2,
 	sf = 7,
 	cr = 5,
-	loglevel = *RnodeInterface.LOG_DEBUG)
+	loglevel = RnodeInterface.LOG_DEBUG)
 
 rnode.send("Hello World!")
 ```
