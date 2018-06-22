@@ -56,8 +56,10 @@ All communications to and from the board uses [KISS framing](https://en.wikipedi
 | ROM Erase        | 0x59 | Completely erases EEPROM
 | Error            | 0x90 | Indicates an error
 
-## Programming API
-Have a look in the "Libraries" folder for libraries to let you easily use RNode in your own software. Here's a Python example:
+## Programming Libraries
+Have a look in the "Libraries" folder for includes to let you easily use RNode in your own software.
+
+Here's a Python example:
 
 ```python
 import RNodeInterface
