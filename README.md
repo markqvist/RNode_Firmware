@@ -56,3 +56,25 @@ All communications to and from the board uses [KISS framing](https://en.wikipedi
 | ROM Erase        | 0x59 | Completely erases EEPROM
 | Error            | 0x90 | Indicates an error
 
+## Programming API
+Have a look in the "Libraries" folder for libraries to let you easily use RNode in your own software. Here's a Python example:
+
+```python
+import RNodeInterface
+
+def gotPacket(data, rnode):
+	print "Received a packet: "+data
+
+rnode = RNodeInterface(
+	callback = gotPacket,
+	name = "My RNode",
+	port = "/dev/ttyUSB0",
+	frequency = 868000000,
+	bandwidth = 125000,
+	txpower = 2,
+	sf = 7,
+	cr = 5,
+	loglevel = *RnodeInterface.LOG_DEBUG)
+
+rnode.send("Hello World!")
+```
