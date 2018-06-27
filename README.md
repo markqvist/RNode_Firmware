@@ -4,7 +4,7 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 
 - Network adapter for [RNS](https://github.com/markqvist/Reticulum)
 - LoRa interface for your computer (or any device with a USB or serial port)
-- Packet sniffer for LoRa networks
+- [Packet sniffer](https://github.com/markqvist/LoRaMon) for LoRa networks
 - LoRa development board
 - A LoRa-based KISS-compatible TNC
 - A flexible platform for experiementing with LoRa technology
