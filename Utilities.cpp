@@ -199,6 +199,17 @@ void kiss_indicate_ready() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_promisc() {
+	Serial.write(FEND);
+	Serial.write(CMD_PROMISC);
+	if (promisc) {
+		Serial.write(0x01);
+	} else {
+		Serial.write(0x00);
+	}
+	Serial.write(FEND);
+}
+
 void kiss_indicate_detect() {
 	Serial.write(FEND);
 	Serial.write(CMD_DETECT);
@@ -276,6 +287,14 @@ uint8_t getRandom() {
 	} else {
 		return 0x00;
 	}
+}
+
+void promisc_enable() {
+	promisc = true;
+}
+
+void promisc_disable() {
+	promisc = false;
 }
 
 bool eeprom_info_locked() {

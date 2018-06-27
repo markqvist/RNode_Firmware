@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x04
+	#define MIN_VERS  0x05
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
@@ -77,6 +77,8 @@
 	bool radio_locked = true;
 	bool radio_online = false;
 	bool hw_ready     = false;
+	bool promisc      = false;
+
 	uint8_t op_mode   = MODE_HOST;
 	uint8_t model     = 0x00;
 	uint8_t hwrev     = 0x00;

@@ -89,53 +89,84 @@ void update_radio_lock() {
 }
 
 void receiveCallback(int packet_size) {
-  uint8_t header   = LoRa.read(); packet_size--;
-  uint8_t sequence = packetSequence(header);
-  bool    ready    = false;
+  if (!promisc) {
+    // The standard operating mode allows large
+    // packets with a payload up to 500 bytes,
+    // by combining two raw LoRa packets.
+    // We read the 1-byte header and extract
+    // packet sequence number and split flags
+    uint8_t header   = LoRa.read(); packet_size--;
+    uint8_t sequence = packetSequence(header);
+    bool    ready    = false;
 
-  if (isSplitPacket(header) && seq == SEQ_UNSET) {
-    // This is the first part of a split
-    // packet, so we set the seq variable
-    // and add the data to the buffer
-    read_len = 0;
-    seq = sequence;
-    last_rssi = LoRa.packetRssi();
-    getPacketData(packet_size);
-  } else if (isSplitPacket(header) && seq == sequence) {
-    // This is the second part of a split
-    // packet, so we add it to the buffer
-    // and set the ready flag.
-    last_rssi = (last_rssi+LoRa.packetRssi())/2;
-    getPacketData(packet_size);
-    seq = SEQ_UNSET;
-    ready = true;
-  } else if (isSplitPacket(header) && seq != sequence) {
-    // This split packet does not carry the
-    // same sequence id, so we must assume
-    // that we are seeing the first part of
-    // a new split packet.
-    read_len = 0;
-    seq = sequence;
-    last_rssi = LoRa.packetRssi();
-    getPacketData(packet_size);
-  } else if (!isSplitPacket(header)) {
-    // This is not a split packet, so we
-    // just read it and set the ready
-    // flag to true.
-
-    if (seq != SEQ_UNSET) {
-      // If we already had part of a split
-      // packet in the buffer, we clear it.
+    if (isSplitPacket(header) && seq == SEQ_UNSET) {
+      // This is the first part of a split
+      // packet, so we set the seq variable
+      // and add the data to the buffer
       read_len = 0;
+      seq = sequence;
+      last_rssi = LoRa.packetRssi();
+      getPacketData(packet_size);
+    } else if (isSplitPacket(header) && seq == sequence) {
+      // This is the second part of a split
+      // packet, so we add it to the buffer
+      // and set the ready flag.
+      last_rssi = (last_rssi+LoRa.packetRssi())/2;
+      getPacketData(packet_size);
       seq = SEQ_UNSET;
+      ready = true;
+    } else if (isSplitPacket(header) && seq != sequence) {
+      // This split packet does not carry the
+      // same sequence id, so we must assume
+      // that we are seeing the first part of
+      // a new split packet.
+      read_len = 0;
+      seq = sequence;
+      last_rssi = LoRa.packetRssi();
+      getPacketData(packet_size);
+    } else if (!isSplitPacket(header)) {
+      // This is not a split packet, so we
+      // just read it and set the ready
+      // flag to true.
+
+      if (seq != SEQ_UNSET) {
+        // If we already had part of a split
+        // packet in the buffer, we clear it.
+        read_len = 0;
+        seq = SEQ_UNSET;
+      }
+
+      last_rssi = LoRa.packetRssi();
+      getPacketData(packet_size);
+      ready = true;
     }
 
+    if (ready) {
+      // We first signal the RSSI of the
+      // recieved packet to the host.
+      Serial.write(FEND);
+      Serial.write(CMD_STAT_RSSI);
+      Serial.write((uint8_t)(last_rssi-rssi_offset));
+
+      // And then write the entire packet
+      Serial.write(FEND);
+      Serial.write(CMD_DATA);
+      for (int i = 0; i < read_len; i++) {
+        uint8_t byte = pbuf[i];
+        if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
+        if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
+        Serial.write(byte);
+      }
+      Serial.write(FEND);
+      read_len = 0;
+    }  
+  } else {
+    // In promiscuous mode, raw packets are
+    // output directly over to the host
+    read_len = 0;
     last_rssi = LoRa.packetRssi();
     getPacketData(packet_size);
-    ready = true;
-  }
 
-  if (ready) {
     // We first signal the RSSI of the
     // recieved packet to the host.
     Serial.write(FEND);
@@ -152,7 +183,7 @@ void receiveCallback(int packet_size) {
       Serial.write(byte);
     }
     Serial.write(FEND);
-    read_len = 0;
+    read_len = 0;    
   }
 }
 
@@ -216,39 +247,66 @@ void processQueue() {
 
 void transmit(size_t size) {
   if (radio_online) {
-    led_tx_on();
-    size_t  written = 0;
-    uint8_t header  = random(256) & 0xF0;
+    if (!promisc) {
+      led_tx_on();
+      size_t  written = 0;
+      uint8_t header  = random(256) & 0xF0;
 
-    if (size > SINGLE_MTU - HEADER_L) {
-      header = header | FLAG_SPLIT;
-    }
-
-    LoRa.beginPacket();
-    LoRa.write(header); written++;
-
-    for (size_t i; i < size; i++) {
-      #if QUEUE_SIZE > 0
-        LoRa.write(tbuf[i]);
-      #else
-        LoRa.write(sbuf[i]);
-      #endif
-
-      written++;
-
-      if (written == 255) {
-        LoRa.endPacket();
-        LoRa.beginPacket();
-        LoRa.write(header);
-        written = 1;
+      if (size > SINGLE_MTU - HEADER_L) {
+        header = header | FLAG_SPLIT;
       }
+
+      LoRa.beginPacket();
+      LoRa.write(header); written++;
+
+      for (size_t i; i < size; i++) {
+        #if QUEUE_SIZE > 0
+          LoRa.write(tbuf[i]);
+        #else
+          LoRa.write(sbuf[i]);
+        #endif
+
+        written++;
+
+        if (written == 255) {
+          LoRa.endPacket();
+          LoRa.beginPacket();
+          LoRa.write(header);
+          written = 1;
+        }
+      }
+
+      LoRa.endPacket();
+      led_tx_off();
+
+      LoRa.receive();
+    } else {
+      // In promiscuous mode, we only send out
+      // plain raw LoRa packets with a maximum
+      // payload of 255 bytes
+      led_tx_on();
+      size_t  written = 0;
+      
+      // Cap packets at 255 bytes
+      if (size > SINGLE_MTU) {
+        size = SINGLE_MTU;
+      }
+
+      LoRa.beginPacket();
+      for (size_t i; i < size; i++) {
+        #if QUEUE_SIZE > 0
+          LoRa.write(tbuf[i]);
+        #else
+          LoRa.write(sbuf[i]);
+        #endif
+
+        written++;
+      }
+      LoRa.endPacket();
+      led_tx_off();
+
+      LoRa.receive();
     }
-
-    LoRa.endPacket();
-    led_tx_off();
-
-    LoRa.receive();
-
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
     led_indicate_error(5);
@@ -400,6 +458,13 @@ void serialCallback(uint8_t sbyte) {
       if (sbyte == DETECT_REQ) {
         kiss_indicate_detect();
       }
+    } else if (command == CMD_PROMISC) {
+      if (sbyte == 0x01) {
+        promisc_enable();
+      } else if (sbyte == 0x00) {
+        promisc_disable();
+      }
+      kiss_indicate_promisc();
     } else if (command == CMD_UNLOCK_ROM) {
       if (sbyte == ROM_UNLOCK_BYTE) {
         unlock_rom();
