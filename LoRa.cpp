@@ -212,9 +212,18 @@ uint8_t LoRaClass::modemStatus() {
   return readRegister(REG_MODEM_STAT);
 }
 
-int LoRaClass::packetRssi()
-{
-  return (readRegister(REG_PKT_RSSI_VALUE) - (_frequency < 868E6 ? 164 : 157));
+uint8_t LoRaClass::packetRssiRaw() {
+  uint8_t pkt_rssi_value = readRegister(REG_PKT_RSSI_VALUE);
+  return pkt_rssi_value;
+}
+
+int LoRaClass::packetRssi() {
+  int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE);
+  // TODO: change this to look at the actual model code
+  if (_frequency < 820E6) pkt_rssi -= 7;
+  pkt_rssi -= 157;
+
+  return pkt_rssi;
 }
 
 float LoRaClass::packetSnr()

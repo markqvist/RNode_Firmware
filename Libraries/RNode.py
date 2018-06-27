@@ -66,6 +66,8 @@ class RNodeInterface():
 	LOG_DEBUG    = 6
 	LOG_EXTREME  = 7
 
+	RSSI_OFFSET  = 292
+
 	def __init__(self, callback, name, port, frequency = None, bandwidth = None, txpower = None, sf = None, cr = None, loglevel = -1, flow_control = True):
 		self.serial      = None
 		self.loglevel    = loglevel
@@ -410,7 +412,7 @@ class RNodeInterface():
 									self.r_stat_tx = ord(command_buffer[0]) << 24 | ord(command_buffer[1]) << 16 | ord(command_buffer[2]) << 8 | ord(command_buffer[3])
 
 						elif (command == KISS.CMD_STAT_RSSI):
-							self.r_stat_rssi = ord(byte)
+							self.r_stat_rssi = ord(byte)-RSSI_OFFSET
 						elif (command == KISS.CMD_RANDOM):
 							self.r_random = ord(byte)
 						elif (command == KISS.CMD_ERROR):

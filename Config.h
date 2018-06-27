@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x05
+	#define MIN_VERS  0x06
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
@@ -62,7 +62,7 @@
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
-	const int  rssi_offset      = 164;
+	const int  rssi_offset      = 292;
 
 	const int lora_rx_turnaround_ms = 50;
 
@@ -83,7 +83,8 @@
 	uint8_t model     = 0x00;
 	uint8_t hwrev     = 0x00;
 	
-	int		last_rssi		= -164;
+	int		last_rssi		= -292;
+	uint8_t last_rssi_raw   = 0x00;
 	size_t	read_len		= 0;
 	uint8_t seq				= 0xFF;
 	uint8_t pbuf[MTU];

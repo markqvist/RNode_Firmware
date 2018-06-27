@@ -131,9 +131,10 @@ void kiss_indicate_stat_tx() {
 }
 
 void kiss_indicate_stat_rssi() {
+	uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
 	Serial.write(FEND);
 	Serial.write(CMD_STAT_RSSI);
-	Serial.write((uint8_t)last_rssi+rssi_offset);
+	Serial.write(packet_rssi_val);
 	Serial.write(FEND);
 }
 

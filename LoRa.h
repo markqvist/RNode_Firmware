@@ -26,6 +26,7 @@ public:
 
   int parsePacket(int size = 0);
   int packetRssi();
+  uint8_t packetRssiRaw();
   float packetSnr();
   long packetFrequencyError();
 
