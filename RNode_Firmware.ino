@@ -16,10 +16,15 @@ void setup() {
   pinMode(pin_led_rx, OUTPUT);
   pinMode(pin_led_tx, OUTPUT);
 
-  // Set up buffers
+  // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
   memset(sbuf, 0, sizeof(sbuf));
   memset(cbuf, 0, sizeof(cbuf));
+  
+  #if QUEUE_SIZE > 0
+    memset(qbuf, 0, sizeof(qbuf));
+    memset(queued_lengths, 0, sizeof(queued_lengths));
+  #endif
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module
@@ -151,6 +156,64 @@ void receiveCallback(int packet_size) {
   }
 }
 
+
+bool outboundReady() {
+  #if QUEUE_SIZE > 0
+    if (queue_head != queue_tail) {
+      return true;
+    } else {
+      return false;
+    }
+  #else
+    return outbound_ready;
+  #endif
+}
+
+bool queueFull() {
+  size_t new_queue_head = (queue_head+1)%QUEUE_BUF_SIZE;
+  if (new_queue_head == queue_tail) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void enqueuePacket(size_t length) {
+  size_t new_queue_head = (queue_head+1)%QUEUE_BUF_SIZE;
+  if (new_queue_head != queue_tail) {
+    queued_lengths[queue_head] = length;
+    size_t insert_addr = queue_head * MTU;
+    for (int i = 0; i < length; i++) {
+      qbuf[insert_addr+i] = sbuf[i];
+    }
+    queue_head = new_queue_head;
+  } else {
+    kiss_indicate_error(ERROR_QUEUE_FULL);
+  }
+}
+
+#if QUEUE_SIZE > 0
+void processQueue() {
+  size_t fetch_address = queue_tail*MTU;
+  size_t fetch_length  = queued_lengths[queue_tail];
+
+  for (int i = 0; i < fetch_length; i++) {
+    tbuf[i] = qbuf[fetch_address+i];
+    qbuf[fetch_address+i] = 0x00;
+  }
+
+  queued_lengths[queue_tail] = 0;
+
+  queue_tail = ++queue_tail%QUEUE_BUF_SIZE;
+
+  transmit(fetch_length);
+
+  if (!queueFull()) {
+    kiss_indicate_ready();
+  }
+}
+#endif
+
 void transmit(size_t size) {
   if (radio_online) {
     led_tx_on();
@@ -165,7 +228,12 @@ void transmit(size_t size) {
     LoRa.write(header); written++;
 
     for (size_t i; i < size; i++) {
-      LoRa.write(sbuf[i]);
+      #if QUEUE_SIZE > 0
+        LoRa.write(tbuf[i]);
+      #else
+        LoRa.write(sbuf[i]);
+      #endif
+
       written++;
 
       if (written == 255) {
@@ -186,14 +254,25 @@ void transmit(size_t size) {
     led_indicate_error(5);
   }
 
-  if (FLOW_CONTROL_ENABLED)
-      kiss_indicate_ready();
+  #if QUEUE_SIZE == 0
+    if (FLOW_CONTROL_ENABLED)
+        kiss_indicate_ready();
+  #endif
 }
 
 void serialCallback(uint8_t sbyte) {
   if (IN_FRAME && sbyte == FEND && command == CMD_DATA) {
     IN_FRAME = false;
-    outbound_ready = true;
+
+    if (QUEUE_SIZE == 0) {
+      if (outbound_ready) {
+        kiss_indicate_error(ERROR_QUEUE_FULL);
+      } else {
+        outbound_ready = true;
+      }
+    } else {
+      enqueuePacket(frame_len);
+    }
   } else if (sbyte == FEND) {
     IN_FRAME = true;
     command = CMD_UNKNOWN;
@@ -412,20 +491,25 @@ void validateStatus() {
 void loop() {
   if (radio_online) {
     checkModemStatus();
-    if (outbound_ready) {
+    if (outboundReady() && !SERIAL_READING) {
       if (!dcd_waiting) updateModemStatus();
       if (!dcd && !dcd_led) {
         if (dcd_waiting) delay(lora_rx_turnaround_ms);
         updateModemStatus();
         if (!dcd) {
-          outbound_ready = false;
           dcd_waiting = false;
-          transmit(frame_len);
+          #if QUEUE_SIZE > 0
+            processQueue();
+          #else
+            outbound_ready = false;
+            transmit(frame_len);
+          #endif
         }
       } else {
         dcd_waiting = true;
       }
     }
+  
   } else {
     if (hw_ready) {
       led_indicate_standby();
@@ -436,7 +520,13 @@ void loop() {
   }
 
   if (Serial.available()) {
+    SERIAL_READING = true;
     char sbyte = Serial.read();
     serialCallback(sbyte);
+    last_serial_read = millis();
+  } else {
+    if (SERIAL_READING && millis()-last_serial_read >= serial_read_timeout_ms) {
+      SERIAL_READING = false;
+    }
   }
 }

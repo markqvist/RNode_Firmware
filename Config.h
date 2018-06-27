@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x03
+	#define MIN_VERS  0x04
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
@@ -51,6 +51,8 @@
 
 		#define FLOW_CONTROL_ENABLED true
 		#define QUEUE_SIZE 24
+		#define QUEUE_BUF_SIZE (QUEUE_SIZE+1)
+		#define QUEUE_MEM QUEUE_BUF_SIZE * MTU
 
 		#define EEPROM_SIZE 4096
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
@@ -86,10 +88,18 @@
 	uint8_t sbuf[MTU];
 	uint8_t cbuf[CMD_L];
 
+	#if QUEUE_SIZE > 0
+		uint8_t tbuf[MTU];
+		uint8_t qbuf[QUEUE_MEM];
+		size_t  queued_lengths[QUEUE_BUF_SIZE];
+	#endif
+
 	uint32_t stat_rx		= 0;
 	uint32_t stat_tx		= 0;
 
 	bool outbound_ready       = false;
+	size_t queue_head        = 0;
+	size_t queue_tail		  = 0;
 
 	bool stat_signal_detected = false;
 	bool stat_signal_synced   = false;
