@@ -414,7 +414,7 @@ void serialCallback(uint8_t sbyte) {
         kiss_indicate_spreadingfactor();
       } else {
         int sf = sbyte;
-        if (sf < 7) sf = 7;
+        if (sf < 6) sf = 6;
         if (sf > 12) sf = 12;
 
         lora_sf = sf;
