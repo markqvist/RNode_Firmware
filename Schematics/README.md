@@ -8,3 +8,5 @@ Using the schematics here, it is possible to build an RNode yourself. Schematics
 - A Semtech SX1276 module
 
 You can assemble the circuit like in the schematic, but only care about the connections going between the MCU and logic level converter, and from the logic level converter to the LoRa module, plus the supply lines, and optionally the LEDs.
+
+Fritzing files for breadboard setup and links to recommended components are coming soon.
