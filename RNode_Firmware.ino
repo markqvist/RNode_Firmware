@@ -220,6 +220,9 @@ void enqueuePacket(size_t length) {
       qbuf[insert_addr+i] = sbuf[i];
     }
     queue_head = new_queue_head;
+    if (!queueFull()) {
+      kiss_indicate_ready();
+    }
   } else {
     kiss_indicate_error(ERROR_QUEUE_FULL);
   }

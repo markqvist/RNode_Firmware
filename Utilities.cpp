@@ -55,7 +55,7 @@ void led_indicate_info(int cycles) {
 }
 
 uint8_t led_standby_min = 1;
-uint8_t led_standby_max = 22;
+uint8_t led_standby_max = 40;
 uint8_t led_standby_value = led_standby_min;
 int8_t  led_standby_direction = 0;
 unsigned long led_standby_ticks = 0;
