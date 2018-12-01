@@ -57,6 +57,6 @@
 	bool SERIAL_READING = false;
 	uint8_t command = CMD_UNKNOWN;
 	uint32_t last_serial_read = 0;
-	uint32_t serial_read_timeout_ms = 2;
+	uint32_t serial_read_timeout_ms = 60;
 
 #endif

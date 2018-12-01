@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x08
+	#define MIN_VERS  0x09
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
