@@ -4,7 +4,7 @@
 // Modifications and additions copyright 2018 by Mark Qvist
 // Obviously still under the MIT license.
 
-#include <LoRa.h>
+#include "LoRa.h"
 
 // Registers
 #define REG_FIFO                 0x00

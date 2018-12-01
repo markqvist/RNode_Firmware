@@ -1,5 +1,6 @@
+#include <Arduino.h>
 #include <SPI.h>
-#include <LoRa.h>
+#include "LoRa.h"
 #include "Config.h"
 #include "Framing.h"
 #include "Utilities.cpp"

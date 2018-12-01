@@ -1,6 +1,5 @@
-#include <Arduino.h>
 #include <EEPROM.h>
-#include <LoRa.h>
+#include "LoRa.h"
 #include "ROM.h"
 #include "Config.h"
 #include "Framing.h"
