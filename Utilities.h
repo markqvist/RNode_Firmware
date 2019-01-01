@@ -454,4 +454,3 @@ void unlock_rom() {
 	led_indicate_error(50);
 	eeprom_erase();
 }
-
