@@ -219,6 +219,12 @@ uint8_t LoRaClass::packetRssiRaw() {
 
 int LoRaClass::packetRssi() {
   int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE);
+  int8_t pkt_snr = ((int8_t)readRegister(REG_PKT_SNR_VALUE));
+  if pkt_snr < 0 {
+    pkt_rssi = pkt_rssi * 16 / 15;
+  } else {
+    pkt_rssi += pkt_snr / 4;
+  }
   // TODO: change this to look at the actual model code
   if (_frequency < 820E6) pkt_rssi -= 7;
   pkt_rssi -= 157;
