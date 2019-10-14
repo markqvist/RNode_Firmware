@@ -418,6 +418,8 @@ void LoRaClass::setSpreadingFactor(int sf)
   }
 
   writeRegister(REG_MODEM_CONFIG_2, (readRegister(REG_MODEM_CONFIG_2) & 0x0f) | ((sf << 4) & 0xf0));
+
+  handleLowDataRate();
 }
 
 long LoRaClass::getSignalBandwidth()
@@ -434,6 +436,18 @@ long LoRaClass::getSignalBandwidth()
     case 7: return 125E3; 
     case 8: return 250E3; 
     case 9: return 500E3; 
+  }
+}
+
+void LoRaClass::handleLowDataRate(){
+  int sf = (readRegister(REG_MODEM_CONFIG_2) >> 4);
+  if ( long( (1<<sf) / (getSignalBandwidth()/1000)) > 16) {
+    // set auto AGC and LowDataRateOptimize
+    writeRegister(REG_MODEM_CONFIG_3, (1<<3)|(1<<2));
+  }
+  else {
+    // set auto AGC
+    writeRegister(REG_MODEM_CONFIG_3, (1<<2));
   }
 }
 
@@ -464,6 +478,8 @@ void LoRaClass::setSignalBandwidth(long sbw)
   }
 
   writeRegister(REG_MODEM_CONFIG_1, (readRegister(REG_MODEM_CONFIG_1) & 0x0f) | (bw << 4));
+  
+  handleLowDataRate();
 }
 
 void LoRaClass::setCodingRate4(int denominator)

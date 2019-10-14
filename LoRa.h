@@ -82,6 +82,8 @@ private:
 
   static void onDio0Rise();
 
+  void handleLowDataRate();
+
 private:
   SPISettings _spiSettings;
   int _ss;
