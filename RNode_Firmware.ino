@@ -144,7 +144,7 @@ void receiveCallback(int packet_size) {
       // recieved packet to the host.
       Serial.write(FEND);
       Serial.write(CMD_STAT_RSSI);
-      Serial.write((uint8_t)(last_rssi+rssi_offset));
+      Serial.write((uint8_t)(last_rssi-rssi_offset));
       Serial.write(FEND);
 
       // And then write the entire packet
@@ -170,7 +170,7 @@ void receiveCallback(int packet_size) {
     // recieved packet to the host.
     Serial.write(FEND);
     Serial.write(CMD_STAT_RSSI);
-    Serial.write((uint8_t)(last_rssi+rssi_offset));
+    Serial.write((uint8_t)(last_rssi-rssi_offset));
     Serial.write(FEND);
 
     // And then write the entire packet
