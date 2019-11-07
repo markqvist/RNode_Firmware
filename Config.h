@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x0A
+	#define MIN_VERS  0x0B
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
@@ -62,9 +62,12 @@
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
-	const int  rssi_offset      = 292;
-
 	const int lora_rx_turnaround_ms = 50;
+
+	// SX1276 RSSI offset to get dBm value from
+	// packet RSSI register
+	const int  rssi_offset      = 157;
+	const int  snr_offset       = 128;
 
 	// Default LoRa settings
 	int  lora_sf   	   = 0;
@@ -85,6 +88,7 @@
 	
 	int		last_rssi		= -292;
 	uint8_t last_rssi_raw   = 0x00;
+	int8_t 	last_snr		= 0;
 	size_t	read_len		= 0;
 	uint8_t seq				= 0xFF;
 	uint8_t pbuf[MTU];

@@ -22,6 +22,7 @@
 	#define CMD_STAT_RX		0x21
 	#define CMD_STAT_TX		0x22
 	#define CMD_STAT_RSSI	0x23
+	#define CMD_STAT_SNR	0x24
 	#define CMD_BLINK		0x30
 	#define CMD_RANDOM		0x40
 

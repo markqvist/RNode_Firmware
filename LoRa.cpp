@@ -218,10 +218,19 @@ uint8_t LoRaClass::packetRssiRaw() {
 }
 
 int LoRaClass::packetRssi() {
-  int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE);
-  // TODO: change this to look at the actual model code
+  int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE) - RSSI_OFFSET;
+  int pkt_snr = packetSnr();
+
   if (_frequency < 820E6) pkt_rssi -= 7;
-  pkt_rssi -= 157;
+
+  if (pkt_snr < 0) {
+    pkt_rssi += pkt_snr;
+  } else {
+    // Slope correction is (16/15)*pkt_rssi,
+    // this estimation looses one floating point
+    // operation, and should be precise enough.
+    pkt_rssi = (int)(1.066 * pkt_rssi);
+  }
 
   return pkt_rssi;
 }

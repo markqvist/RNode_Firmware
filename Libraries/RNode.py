@@ -27,6 +27,7 @@ class KISS():
 	CMD_STAT_RX		= chr(0x21)
 	CMD_STAT_TX		= chr(0x22)
 	CMD_STAT_RSSI	= chr(0x23)
+	CMD_STAT_SNR	= chr(0x24)
 	CMD_BLINK		= chr(0x30)
 	CMD_RANDOM		= chr(0x40)
 	CMD_FW_VERSION  = chr(0x50)
@@ -66,7 +67,8 @@ class RNodeInterface():
 	LOG_DEBUG    = 6
 	LOG_EXTREME  = 7
 
-	RSSI_OFFSET  = 292
+	RSSI_OFFSET  = 157
+	SNR_OFFSET  = 128
 
 	def __init__(self, callback, name, port, frequency = None, bandwidth = None, txpower = None, sf = None, cr = None, loglevel = -1, flow_control = True):
 		self.serial      = None
@@ -99,6 +101,7 @@ class RNodeInterface():
 		self.r_stat_rx   = None
 		self.r_stat_tx   = None
 		self.r_stat_rssi = None
+		self.r_stat_snr  = None
 		self.r_random	 = None
 
 		self.packet_queue    = []
@@ -310,6 +313,7 @@ class RNodeInterface():
 			while self.serial.is_open:
 				if self.serial.in_waiting:
 					byte = self.serial.read(1)
+					
 					last_read_ms = int(time.time()*1000)
 
 					if (in_frame and byte == KISS.FEND and command == KISS.CMD_DATA):
@@ -412,7 +416,29 @@ class RNodeInterface():
 									self.r_stat_tx = ord(command_buffer[0]) << 24 | ord(command_buffer[1]) << 16 | ord(command_buffer[2]) << 8 | ord(command_buffer[3])
 
 						elif (command == KISS.CMD_STAT_RSSI):
-							self.r_stat_rssi = ord(byte)-self.RSSI_OFFSET
+							if (byte == KISS.FESC):
+								escape = True
+							else:
+								if (escape):
+									if (byte == KISS.TFEND):
+										byte = KISS.FEND
+									if (byte == KISS.TFESC):
+										byte = KISS.FESC
+									escape = False
+								self.r_stat_rssi = ord(byte)-self.RSSI_OFFSET
+
+						elif (command == KISS.CMD_STAT_SNR):
+							if (byte == KISS.FESC):
+								escape = True
+							else:
+								if (escape):
+									if (byte == KISS.TFEND):
+										byte = KISS.FEND
+									if (byte == KISS.TFESC):
+										byte = KISS.FESC
+									escape = False
+								self.r_stat_snr  = ord(byte)-self.SNR_OFFSET
+
 						elif (command == KISS.CMD_RANDOM):
 							self.r_random = ord(byte)
 						elif (command == KISS.CMD_ERROR):

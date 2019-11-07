@@ -14,6 +14,8 @@
 #define PA_OUTPUT_RFO_PIN      0
 #define PA_OUTPUT_PA_BOOST_PIN 1
 
+#define RSSI_OFFSET 157
+
 class LoRaClass : public Stream {
 public:
   LoRaClass();

@@ -104,12 +104,14 @@ void receiveCallback(int packet_size) {
       read_len = 0;
       seq = sequence;
       last_rssi = LoRa.packetRssi();
+      last_snr = LoRa.packetSnr();
       getPacketData(packet_size);
     } else if (isSplitPacket(header) && seq == sequence) {
       // This is the second part of a split
       // packet, so we add it to the buffer
       // and set the ready flag.
       last_rssi = (last_rssi+LoRa.packetRssi())/2;
+      last_snr = (last_snr+LoRa.packetSnr())/2;
       getPacketData(packet_size);
       seq = SEQ_UNSET;
       ready = true;
@@ -121,6 +123,7 @@ void receiveCallback(int packet_size) {
       read_len = 0;
       seq = sequence;
       last_rssi = LoRa.packetRssi();
+      last_snr = LoRa.packetSnr();
       getPacketData(packet_size);
     } else if (!isSplitPacket(header)) {
       // This is not a split packet, so we
@@ -135,6 +138,7 @@ void receiveCallback(int packet_size) {
       }
 
       last_rssi = LoRa.packetRssi();
+      last_snr = LoRa.packetSnr();
       getPacketData(packet_size);
       ready = true;
     }
@@ -142,10 +146,8 @@ void receiveCallback(int packet_size) {
     if (ready) {
       // We first signal the RSSI of the
       // recieved packet to the host.
-      Serial.write(FEND);
-      Serial.write(CMD_STAT_RSSI);
-      Serial.write((uint8_t)(last_rssi-rssi_offset));
-      Serial.write(FEND);
+      kiss_indicate_stat_rssi();
+      kiss_indicate_stat_snr();
 
       // And then write the entire packet
       Serial.write(FEND);
@@ -168,10 +170,8 @@ void receiveCallback(int packet_size) {
 
     // We first signal the RSSI of the
     // recieved packet to the host.
-    Serial.write(FEND);
-    Serial.write(CMD_STAT_RSSI);
-    Serial.write((uint8_t)(last_rssi-rssi_offset));
-    Serial.write(FEND);
+    kiss_indicate_stat_rssi();
+    kiss_indicate_stat_snr();
 
     // And then write the entire packet
     Serial.write(FEND);
