@@ -11,8 +11,16 @@ void setup() {
   while (!Serial);
 
   // Configure input and output pins
-  pinMode(pin_led_rx, OUTPUT);
-  pinMode(pin_led_tx, OUTPUT);
+  #if defined(ESP32)
+    ledcAttachPin(pin_led_rx, ch_led_rx);
+    ledcSetup(ch_led_rx, 5000, 8);
+      
+    ledcAttachPin(pin_led_tx, ch_led_tx);
+    ledcSetup(ch_led_tx, 5000, 8);
+  #else
+    pinMode(pin_led_rx, OUTPUT);
+    pinMode(pin_led_tx, OUTPUT);
+  #endif
 
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
@@ -28,6 +36,9 @@ void setup() {
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
 
+  #if defined(ESP32)
+    EEPROM.begin(EEPROM_SIZE);
+  #endif
   // Validate board health, EEPROM and config
   validateStatus();
 }
@@ -262,7 +273,7 @@ void transmit(size_t size) {
       LoRa.beginPacket();
       LoRa.write(header); written++;
 
-      for (size_t i; i < size; i++) {
+      for (size_t i=0; i < size; i++) {
         #if QUEUE_SIZE > 0
           LoRa.write(tbuf[i]);
         #else
@@ -587,6 +598,11 @@ void loop() {
     }
   }
 
+  //TODO Investigate and find best location for yielding
+  #if defined(ESP32)
+    yield();
+  #endif
+   
   if (Serial.available()) {
     SERIAL_READING = true;
     char sbyte = Serial.read();
@@ -597,4 +613,10 @@ void loop() {
       SERIAL_READING = false;
     }
   }
+
+  //TODO Investigate and find best location for yielding
+  #if defined(ESP32)
+    yield();
+  #endif
+
 }

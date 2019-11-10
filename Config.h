@@ -8,6 +8,7 @@
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
+  	#define MCU_ESP32 0x92
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
@@ -18,6 +19,9 @@
 	#elif defined(__AVR_ATmega1284P__)
 		#define MCU_VARIANT MCU_1284P
 		#warning "Firmware is being compiled for atmega1284p based boards"
+	#elif defined(ESP32)
+    	#define MCU_VARIANT MCU_ESP32
+    	#warning "Firmware is being compiled for esp32 based boards"
 	#else
 		#error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -42,12 +46,32 @@
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 	#endif
 
+    // ESP32 PWM channels
+    const int ch_led_rx = 0;
+    const int ch_led_tx = 1;
+    
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
 		const int pin_reset = 3;
 		const int pin_dio = 2;
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
+
+		#define FLOW_CONTROL_ENABLED true
+		#define QUEUE_SIZE 24
+		#define QUEUE_BUF_SIZE (QUEUE_SIZE+1)
+		#define QUEUE_MEM QUEUE_BUF_SIZE * MTU
+
+		#define EEPROM_SIZE 4096
+		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+	#endif
+
+	#if MCU_VARIANT == MCU_ESP32
+		const int pin_cs = SS;//18;
+		const int pin_reset = 23;
+		const int pin_dio = 26;
+		const int pin_led_rx = 14;
+		const int pin_led_tx = 14;
 
 		#define FLOW_CONTROL_ENABLED true
 		#define QUEUE_SIZE 24

@@ -69,7 +69,13 @@ void led_indicate_standby() {
 			led_standby_direction = -1;
 		}
 		led_standby_value += led_standby_direction;
+
+	#if defined(ESP32)
+		ledcWrite(ch_led_rx, led_standby_value);
+	#else
 		analogWrite(pin_led_rx, led_standby_value);
+	#endif
+		
 		digitalWrite(pin_led_tx, 0);
 	}
 }
@@ -84,7 +90,13 @@ void led_indicate_not_ready() {
 			led_standby_direction = -1;
 		}
 		led_standby_value += led_standby_direction;
+
+	#if defined(ESP32)
+		ledcWrite(ch_led_tx, led_standby_value);
+	#else
 		analogWrite(pin_led_tx, led_standby_value);
+	#endif
+		
 		digitalWrite(pin_led_rx, 0);
 	}
 }
@@ -336,7 +348,12 @@ void kiss_dump_eeprom() {
 
 void eeprom_write(uint8_t addr, uint8_t byte) {
 	if (!eeprom_info_locked() && addr >= 0 && addr < EEPROM_RESERVED) {
+	#if defined(ESP32)
+    	EEPROM.write(eeprom_addr(addr), byte);
+    	EEPROM.commit();
+	#else
 		EEPROM.update(eeprom_addr(addr), byte);
+    #endif
 	} else {
 		kiss_indicate_error(ERROR_EEPROM_LOCKED);
 	}
@@ -344,8 +361,15 @@ void eeprom_write(uint8_t addr, uint8_t byte) {
 
 void eeprom_erase() {
 	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-		EEPROM.update(eeprom_addr(addr), 0xFF);
+		#if defined(ESP32)
+	    	EEPROM.write(eeprom_addr(addr), 0xFF);
+		#else
+			EEPROM.update(eeprom_addr(addr), 0xFF);
+	    #endif
 	}
+	#if defined(ESP32)
+		EEPROM.commit();
+	#endif
 	while (true) { led_tx_on(); led_rx_off(); }
 }
 
@@ -367,7 +391,7 @@ bool eeprom_product_valid() {
 
 bool eeprom_model_valid() {
 	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
-	if (model == MODEL_A4 || model == MODEL_A9) {
+	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_B1) {
 		return true;
 	} else {
 		return false;
@@ -425,29 +449,54 @@ void eeprom_conf_load() {
 
 void eeprom_conf_save() {
 	if (hw_ready && radio_online) {
-		EEPROM.update(eeprom_addr(ADDR_CONF_SF), lora_sf);
-		EEPROM.update(eeprom_addr(ADDR_CONF_CR), lora_cr);
-		EEPROM.update(eeprom_addr(ADDR_CONF_TXP), lora_txp);
 
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
+	#if defined(ESP32)
+		EEPROM.write(eeprom_addr(ADDR_CONF_SF), lora_sf);
+		EEPROM.write(eeprom_addr(ADDR_CONF_CR), lora_cr);
+		EEPROM.write(eeprom_addr(ADDR_CONF_TXP), lora_txp);
 
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
+		EEPROM.write(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
+		EEPROM.write(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
+		EEPROM.write(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
+		EEPROM.write(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
 
-		EEPROM.update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
-		led_indicate_info(10);
+		EEPROM.write(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
+		EEPROM.write(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
+		EEPROM.write(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
+		EEPROM.write(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
+
+		EEPROM.write(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+		EEPROM.commit();
+	#else
+  		EEPROM.update(eeprom_addr(ADDR_CONF_SF), lora_sf);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_CR), lora_cr);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_TXP), lora_txp);
+  
+  		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
+  
+  		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
+  		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
+  
+  		EEPROM.update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+  	#endif
+    led_indicate_info(10);
 	} else {
 		led_indicate_warning(10);
 	}
 }
 
 void eeprom_conf_delete() {
-	EEPROM.update(eeprom_addr(ADDR_CONF_OK), 0x00);
+	#if defined(ESP32)
+    	EEPROM.write(eeprom_addr(ADDR_CONF_OK), 0x00);
+    	EEPROM.commit();
+	#else
+    	EEPROM.update(eeprom_addr(ADDR_CONF_OK), 0x00);
+	#endif
 }
 
 void unlock_rom() {
