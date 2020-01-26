@@ -2,6 +2,7 @@
 
 This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based communication device. RNode can functions as a:
 
+- A general purpose long-range data radio
 - Network adapter for [RNS](https://github.com/markqvist/Reticulum)
 - LoRa interface for your computer (or any device with a USB or serial port)
 - Generic [LoRa-based network adapter](https://unsigned.io/15-kilometre-ssh-link-with-rnode/) for your Linux devices
@@ -17,7 +18,7 @@ For adding RNode to your Arduino environment, please see [this post](https://uns
 For configuring an RNode with this firmware, please have a look at the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil).
 
 ## Current Status
-The RNode firmware is relatively well tested, but there's a lot of features being added, so you might still find a bug. If you do, please report it as an issue here, so I can fix it!
+The RNode firmware can be considered stable at this point. If you do find a bug or discover unintended behaviour, please report it as an issue here, so I can fix it!
 
 ## Operating Modes
 RNode can operate in two modes, host-controlled (default) and TNC mode:
