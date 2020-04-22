@@ -13,7 +13,7 @@ serialPort = "/dev/ttyUSB0"
 def gotPacket(data, rnode):
 	print "Received a packet: "+data
 	print "RSSI: "+str(rnode.r_stat_rssi)+" dBm"
-	print "SNR:  "+str(rnode.r_stat_snr)+" dBm"
+	print "SNR:  "+str(rnode.r_stat_snr)+" dB"
 
 # Create an RNode instance. This configures
 # and powers up the radio.
