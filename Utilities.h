@@ -207,6 +207,13 @@ void kiss_indicate_ready() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_not_ready() {
+	Serial.write(FEND);
+	Serial.write(CMD_READY);
+	Serial.write(0x00);
+	Serial.write(FEND);
+}
+
 void kiss_indicate_promisc() {
 	Serial.write(FEND);
 	Serial.write(CMD_PROMISC);

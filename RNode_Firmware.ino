@@ -468,6 +468,12 @@ void serialCallback(uint8_t sbyte) {
         promisc_disable();
       }
       kiss_indicate_promisc();
+    } else if (command == CMD_READY) {
+      if (!queueFull()) {
+        kiss_indicate_ready();
+      } else {
+        kiss_indicate_not_ready();
+      }
     } else if (command == CMD_UNLOCK_ROM) {
       if (sbyte == ROM_UNLOCK_BYTE) {
         unlock_rom();
