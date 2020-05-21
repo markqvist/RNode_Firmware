@@ -138,10 +138,9 @@ void kiss_indicate_stat_rssi() {
 }
 
 void kiss_indicate_stat_snr() {
-	uint8_t packet_snr_val = (uint8_t)(last_snr+snr_offset);
 	Serial.write(FEND);
 	Serial.write(CMD_STAT_SNR);
-	escapedSerialWrite(packet_snr_val);
+	escapedSerialWrite(last_snr_raw);
 	Serial.write(FEND);
 }
 

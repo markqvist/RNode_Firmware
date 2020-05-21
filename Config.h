@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x0C
+	#define MIN_VERS  0x0D
 
 	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
@@ -88,7 +88,7 @@
 	
 	int		last_rssi		= -292;
 	uint8_t last_rssi_raw   = 0x00;
-	int8_t 	last_snr		= 0;
+	uint8_t last_snr_raw	= 0x00;
 	size_t	read_len		= 0;
 	uint8_t seq				= 0xFF;
 	uint8_t pbuf[MTU];

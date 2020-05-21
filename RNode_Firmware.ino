@@ -104,14 +104,14 @@ void receiveCallback(int packet_size) {
       read_len = 0;
       seq = sequence;
       last_rssi = LoRa.packetRssi();
-      last_snr = LoRa.packetSnr();
+      last_snr_raw = LoRa.packetSnrRaw();
       getPacketData(packet_size);
     } else if (isSplitPacket(header) && seq == sequence) {
       // This is the second part of a split
       // packet, so we add it to the buffer
       // and set the ready flag.
       last_rssi = (last_rssi+LoRa.packetRssi())/2;
-      last_snr = (last_snr+LoRa.packetSnr())/2;
+      last_snr_raw = (last_snr_raw+LoRa.packetSnrRaw())/2;
       getPacketData(packet_size);
       seq = SEQ_UNSET;
       ready = true;
@@ -123,7 +123,7 @@ void receiveCallback(int packet_size) {
       read_len = 0;
       seq = sequence;
       last_rssi = LoRa.packetRssi();
-      last_snr = LoRa.packetSnr();
+      last_snr_raw = LoRa.packetSnrRaw();
       getPacketData(packet_size);
     } else if (!isSplitPacket(header)) {
       // This is not a split packet, so we
@@ -138,7 +138,7 @@ void receiveCallback(int packet_size) {
       }
 
       last_rssi = LoRa.packetRssi();
-      last_snr = LoRa.packetSnr();
+      last_snr_raw = LoRa.packetSnrRaw();
       getPacketData(packet_size);
       ready = true;
     }
@@ -166,6 +166,7 @@ void receiveCallback(int packet_size) {
     // output directly over to the host
     read_len = 0;
     last_rssi = LoRa.packetRssi();
+    last_snr_raw = LoRa.packetSnrRaw();
     getPacketData(packet_size);
 
     // We first signal the RSSI of the

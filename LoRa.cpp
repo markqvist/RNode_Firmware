@@ -235,8 +235,11 @@ int LoRaClass::packetRssi() {
   return pkt_rssi;
 }
 
-float LoRaClass::packetSnr()
-{
+uint8_t LoRaClass::packetSnrRaw() {
+  return readRegister(REG_PKT_SNR_VALUE);
+}
+
+float LoRaClass::packetSnr() {
   return ((int8_t)readRegister(REG_PKT_SNR_VALUE)) * 0.25;
 }
 
