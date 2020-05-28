@@ -55,9 +55,6 @@
 	size_t frame_len;
 	bool IN_FRAME = false;
 	bool ESCAPE = false;
-	bool SERIAL_READING = false;
 	uint8_t command = CMD_UNKNOWN;
-	uint32_t last_serial_read = 0;
-	uint32_t serial_read_timeout_ms = 60;
 
 #endif

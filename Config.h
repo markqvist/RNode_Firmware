@@ -4,18 +4,14 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x0D
+	#define MIN_VERS  0x0E
 
-	#define MCU_328P  0x90
 	#define MCU_1284P 0x91
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
 
-	#if defined(__AVR_ATmega328P__)
-		#define MCU_VARIANT MCU_328P
-		#warning "Firmware is being compiled for atmega328p based boards"
-	#elif defined(__AVR_ATmega1284P__)
+	#if defined(__AVR_ATmega1284P__)
 		#define MCU_VARIANT MCU_1284P
 		#warning "Firmware is being compiled for atmega1284p based boards"
 	#else
@@ -25,22 +21,11 @@
 	#define MTU   	   500
 	#define SINGLE_MTU 255
 	#define HEADER_L   1
+	#define MIN_L	   1
+
 	#define CMD_L      4
 
 	// MCU dependent configuration parameters
-	#if MCU_VARIANT == MCU_328P
-		const int pin_cs = 7;
-		const int pin_reset = 6;
-		const int pin_dio = 2;
-		const int pin_led_rx = 5;
-		const int pin_led_tx = 4;
-
-		#define FLOW_CONTROL_ENABLED true
-		#define QUEUE_SIZE 0
-
-		#define EEPROM_SIZE 512
-		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
-	#endif
 
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
@@ -49,10 +34,9 @@
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
 
-		#define FLOW_CONTROL_ENABLED true
-		#define QUEUE_SIZE 24
-		#define QUEUE_BUF_SIZE (QUEUE_SIZE+1)
-		#define QUEUE_MEM QUEUE_BUF_SIZE * MTU
+		#define CONFIG_UART_BUFFER_SIZE 6750
+		#define CONFIG_QUEUE_SIZE 6750
+		#define CONFIG_QUEUE_MAX_LENGTH 70
 
 		#define EEPROM_SIZE 4096
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
@@ -67,7 +51,6 @@
 	// SX1276 RSSI offset to get dBm value from
 	// packet RSSI register
 	const int  rssi_offset      = 157;
-	const int  snr_offset       = 128;
 
 	// Default LoRa settings
 	int  lora_sf   	   = 0;
@@ -91,22 +74,18 @@
 	uint8_t last_snr_raw	= 0x00;
 	size_t	read_len		= 0;
 	uint8_t seq				= 0xFF;
+	
+	// Incoming packet buffer
 	uint8_t pbuf[MTU];
-	uint8_t sbuf[MTU];
+
+	// KISS command buffer
 	uint8_t cbuf[CMD_L];
 
-	#if QUEUE_SIZE > 0
-		uint8_t tbuf[MTU];
-		uint8_t qbuf[QUEUE_MEM];
-		size_t  queued_lengths[QUEUE_BUF_SIZE];
-	#endif
+	// LoRa transmit buffer
+	uint8_t tbuf[MTU];
 
 	uint32_t stat_rx		= 0;
 	uint32_t stat_tx		= 0;
-
-	bool outbound_ready       = false;
-	size_t queue_head        = 0;
-	size_t queue_tail		  = 0;
 
 	bool stat_signal_detected = false;
 	bool stat_signal_synced   = false;
