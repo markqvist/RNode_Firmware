@@ -368,8 +368,7 @@ void LoRaClass::sleep()
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_SLEEP);
 }
 
-void LoRaClass::setTxPower(int level, int outputPin)
-{
+void LoRaClass::setTxPower(int level, int outputPin) {
   if (PA_OUTPUT_RFO_PIN == outputPin) {
     // RFO
     if (level < 0) {
@@ -379,6 +378,7 @@ void LoRaClass::setTxPower(int level, int outputPin)
     }
 
     writeRegister(REG_PA_CONFIG, 0x70 | level);
+
   } else {
     // PA BOOST
     if (level < 2) {

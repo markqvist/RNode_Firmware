@@ -17,6 +17,9 @@ volatile uint8_t queue_height = 0;
 volatile size_t queued_bytes = 0;
 volatile size_t queue_cursor = 0;
 volatile size_t current_packet_start = 0;
+volatile bool serial_buffering = false;
+
+char sbuf[128];
 
 void setup() {
   // Seed the PRNG
@@ -29,7 +32,7 @@ void setup() {
   Serial.begin(serial_baudrate);
   while (!Serial);
 
-  serial_timer_init();
+  serial_interrupt_init();
 
   // Configure input and output pins
   pinMode(pin_led_rx, OUTPUT);
@@ -211,7 +214,7 @@ void receiveCallback(int packet_size) {
 }
 
 bool queueFull() {
-  return (queue_height < CONFIG_QUEUE_MAX_LENGTH && queued_bytes < CONFIG_QUEUE_SIZE);
+  return (queue_height >= CONFIG_QUEUE_MAX_LENGTH || queued_bytes >= CONFIG_QUEUE_SIZE);
 }
 
 volatile bool queue_flushing = false;
@@ -220,11 +223,11 @@ void flushQueue(void) {
     queue_flushing = true;
 
     size_t processed = 0;
-    for (size_t n = 0; n < queue_height; n++) {
-      size_t start = fifo16_pop_locked(&packet_starts);
-      size_t length = fifo16_pop_locked(&packet_lengths);
+    while (!fifo16_isempty_locked(&packet_starts)) {
+      size_t start = fifo16_pop(&packet_starts);
+      size_t length = fifo16_pop(&packet_lengths);
 
-      if (length >= MIN_L) {
+      if (length >= MIN_L && length <= MTU) {
         for (size_t i = 0; i < length; i++) {
           size_t pos = (start+i)%CONFIG_QUEUE_SIZE;
           tbuf[i] = packet_queue[pos];
@@ -239,7 +242,6 @@ void flushQueue(void) {
   queue_height = 0;
   queued_bytes = 0;
   queue_flushing = false;
-  kiss_indicate_ready();
 }
 
 void transmit(size_t size) {
@@ -306,7 +308,7 @@ void serialCallback(uint8_t sbyte) {
   if (IN_FRAME && sbyte == FEND && command == CMD_DATA) {
     IN_FRAME = false;
 
-    if (queue_height < CONFIG_QUEUE_MAX_LENGTH && queued_bytes < CONFIG_QUEUE_SIZE) {
+    if (!fifo16_isfull(&packet_starts) && queued_bytes < CONFIG_QUEUE_SIZE) {
         size_t s = current_packet_start;
         size_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
         size_t l;
@@ -320,14 +322,13 @@ void serialCallback(uint8_t sbyte) {
         if (l >= MIN_L) {
             queue_height++;
 
-            fifo16_push_locked(&packet_starts, s);
-            fifo16_push_locked(&packet_lengths, l);
+            fifo16_push(&packet_starts, s);
+            fifo16_push(&packet_lengths, l);
 
             current_packet_start = queue_cursor;
         }
+
     }
-    
-    if (!queueFull()) kiss_indicate_ready();   
 
   } else if (sbyte == FEND) {
     IN_FRAME = true;
@@ -593,36 +594,51 @@ void loop() {
     }
   }
 
-  serial_poll();
+  if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
 }
 
+volatile bool serial_polling = false;
 void serial_poll() {
+  serial_polling = true;
+
   while (!fifo_isempty_locked(&serialFIFO)) {
-    char sbyte = fifo_pop_locked(&serialFIFO);
+    char sbyte = fifo_pop(&serialFIFO);
     serialCallback(sbyte);
   }
+
+  serial_polling = false;
 }
 
+#define MAX_CYCLES 20
 void buffer_serial() {
-  while (Serial.available()) {
-    char c = Serial.read();
-    if (!fifo_isfull_locked(&serialFIFO)) {
-      fifo_push_locked(&serialFIFO, c);
+  if (!serial_buffering) {
+    serial_buffering = true;
+
+    uint8_t c = 0;
+    while (c < MAX_CYCLES && Serial.available()) {
+      c++;
+
+      if (!fifo_isfull_locked(&serialFIFO)) {
+        fifo_push_locked(&serialFIFO, Serial.read());
+      }
     }
+
+    serial_buffering = false;
   }
 }
 
-void serial_timer_init() {
+void serial_interrupt_init() {
   TCCR3A = 0;
   TCCR3B = _BV(CS10) |
            _BV(WGM33)|
            _BV(WGM32);
 
-  ICR3 = 23704; // Approximation of 16Mhz / 675
+  // Buffer incoming frames every 1ms
+  ICR3 = 16000;
 
   TIMSK3 = _BV(ICIE3);
 }
 
 ISR(TIMER3_CAPT_vect) {
-    buffer_serial();
+  buffer_serial();
 }

@@ -44,7 +44,6 @@ All communications to and from the board uses [KISS framing](https://en.wikipedi
 | Radio Lock       | 0x07 | Sets or queries the radio lock
 | Device Detect    | 0x08 | Probe command for device detection
 | Promiscuous      | 0x0E | Sets or queries promiscuous mode
-| Ready            | 0x0F | Flow control command indicating ready for TX
 | RX Stats         | 0x21 | Queries received bytes
 | TX Stats         | 0x22 | Queries transmitted bytes
 | Last RSSI        | 0x23 | Indicates RSSI of last packet received
