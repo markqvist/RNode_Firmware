@@ -3,7 +3,7 @@
 #include "Utilities.h"
 
 FIFOBuffer serialFIFO;
-uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE];
+uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
 
 FIFOBuffer16 packet_starts;
 size_t packet_starts_buf[CONFIG_QUEUE_MAX_LENGTH+1];
@@ -27,7 +27,7 @@ void setup() {
 
   // Initialise serial communication
   memset(serialBuffer, 0, sizeof(serialBuffer));
-  fifo_init(&serialFIFO, serialBuffer, sizeof(serialBuffer));
+  fifo_init(&serialFIFO, serialBuffer, CONFIG_UART_BUFFER_SIZE);
 
   Serial.begin(serial_baudrate);
   while (!Serial);
@@ -43,11 +43,12 @@ void setup() {
   memset(cbuf, 0, sizeof(cbuf));
   
   memset(packet_queue, 0, sizeof(packet_queue));
-  memset(packet_starts_buf, 0, sizeof(packet_starts));
-  memset(packet_lengths_buf, 0, sizeof(packet_lengths));
 
-  fifo16_init(&packet_starts, packet_starts_buf, sizeof(packet_starts_buf));
-  fifo16_init(&packet_lengths, packet_lengths_buf, sizeof(packet_lengths_buf));
+  memset(packet_starts_buf, 0, sizeof(packet_starts_buf));
+  fifo16_init(&packet_starts, packet_starts_buf, CONFIG_QUEUE_MAX_LENGTH);
+  
+  memset(packet_lengths_buf, 0, sizeof(packet_starts_buf));
+  fifo16_init(&packet_lengths, packet_lengths_buf, CONFIG_QUEUE_MAX_LENGTH);
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module

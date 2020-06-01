@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x0F
+	#define MIN_VERS  0x10
 
 	#define MCU_1284P 0x91
 
@@ -34,9 +34,10 @@
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
 
+		// TODO: Reset
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
-		#define CONFIG_QUEUE_MAX_LENGTH 128
+		#define CONFIG_QUEUE_MAX_LENGTH 250
 
 		#define EEPROM_SIZE 4096
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
