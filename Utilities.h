@@ -167,6 +167,13 @@ void kiss_indicate_codingrate() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_implicit_length() {
+	Serial.write(FEND);
+	Serial.write(CMD_IMPLICIT);
+	Serial.write(implicit_l);
+	Serial.write(FEND);
+}
+
 void kiss_indicate_txpower() {
 	Serial.write(FEND);
 	Serial.write(CMD_TXPOWER);
@@ -261,6 +268,15 @@ void setSpreadingFactor() {
 
 void setCodingRate() {
 	if (radio_online) LoRa.setCodingRate4(lora_cr);
+}
+
+void set_implicit_length(uint8_t len) {
+	implicit_l = len;
+	if (implicit_l != 0) {
+		implicit = true;
+	} else {
+		implicit = false;
+	}
 }
 
 void setTXPower() {
@@ -626,4 +642,3 @@ inline void fifo16_init(FIFOBuffer16 *f, size_t *buffer, size_t size) {
 inline size_t fifo16_len(FIFOBuffer16 *f) {
   return (f->end - f->begin);
 }
-

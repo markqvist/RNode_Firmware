@@ -58,6 +58,14 @@ void setup() {
   validateStatus();
 }
 
+void lora_receive() {
+  if (!implicit) {
+    LoRa.receive();
+  } else {
+    LoRa.receive(implicit_l);
+  }
+}
+
 bool startRadio() {
   update_radio_lock();
   if (!radio_online) {
@@ -80,7 +88,7 @@ bool startRadio() {
         LoRa.enableCrc();
         LoRa.onReceive(receiveCallback);
 
-        LoRa.receive();
+        lora_receive();
 
         // Flash an info pattern to indicate
         // that the radio is now on
@@ -275,7 +283,7 @@ void transmit(size_t size) {
       LoRa.endPacket();
       led_tx_off();
 
-      LoRa.receive();
+      lora_receive();
     } else {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
@@ -288,7 +296,14 @@ void transmit(size_t size) {
         size = SINGLE_MTU;
       }
 
-      LoRa.beginPacket();
+      // If implicit header mode has been set,
+      // set packet length to payload data length
+      if (!implicit) {
+        LoRa.beginPacket();
+      } else {
+        LoRa.beginPacket(size);
+      }
+
       for (size_t i; i < size; i++) {
         LoRa.write(tbuf[i]);
 
@@ -297,7 +312,7 @@ void transmit(size_t size) {
       LoRa.endPacket();
       led_tx_off();
 
-      LoRa.receive();
+      lora_receive();
     }
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
@@ -435,6 +450,9 @@ void serialCallback(uint8_t sbyte) {
         if (op_mode == MODE_HOST) setCodingRate();
         kiss_indicate_codingrate();
       }
+    } else if (command == CMD_IMPLICIT) {
+      set_implicit_length(sbyte);
+      kiss_indicate_implicit_length();
     } else if (command == CMD_RADIO_STATE) {
       if (sbyte == 0xFF) {
         kiss_indicate_radiostate();

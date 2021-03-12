@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x10
+	#define MIN_VERS  0x11
 
 	#define MCU_1284P 0x91
 
@@ -61,10 +61,12 @@
 	uint32_t lora_freq = 0;
 
 	// Operational variables
-	bool radio_locked = true;
-	bool radio_online = false;
-	bool hw_ready     = false;
-	bool promisc      = false;
+	bool radio_locked  = true;
+	bool radio_online  = false;
+	bool hw_ready      = false;
+	bool promisc       = false;
+	bool implicit      = false;
+	uint8_t implicit_l = 0;
 
 	uint8_t op_mode   = MODE_HOST;
 	uint8_t model     = 0x00;

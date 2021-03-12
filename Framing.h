@@ -16,6 +16,7 @@
 	#define CMD_RADIO_STATE 0x06
 	#define CMD_RADIO_LOCK	0x07
 	#define CMD_DETECT		0x08
+	#define CMD_IMPLICIT	0x09
 	#define CMD_PROMISC		0x0E
 	#define CMD_READY		0x0F
 
