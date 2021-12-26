@@ -7,6 +7,13 @@
 #include "Framing.h"
 #include "MD5.h"
 
+uint8_t boot_vector = 0x00;
+uint8_t OPTIBOOT_MCUSR __attribute__ ((section(".noinit")));
+void resetFlagsInit(void) __attribute__ ((naked)) __attribute__ ((used)) __attribute__ ((section (".init0")));
+void resetFlagsInit(void) {
+    __asm__ __volatile__ ("sts %0, r2\n" : "=m" (OPTIBOOT_MCUSR) :);
+}
+
 void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
@@ -26,6 +33,17 @@ void led_indicate_error(int cycles) {
     }
     digitalWrite(pin_led_rx, LOW);
     digitalWrite(pin_led_tx, LOW);
+}
+
+void led_indicate_boot_error() {
+	while (true) {
+	    led_tx_on();
+	    led_rx_off();
+	    delay(10);
+	    led_rx_on();
+	    led_tx_off();
+	    delay(5);
+	}
 }
 
 void led_indicate_warning(int cycles) {

@@ -562,22 +562,39 @@ void checkModemStatus() {
 }
 
 void validateStatus() {
-  if (eeprom_lock_set()) {
-    if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
-      if (eeprom_checksum_valid()) {
-        hw_ready = true;
+  if (OPTIBOOT_MCUSR & (1<<PORF)) {
+    boot_vector = START_FROM_POWERON;
+  } else if (OPTIBOOT_MCUSR & (1<<BORF)) {
+    boot_vector = START_FROM_BROWNOUT;
+  } else if (OPTIBOOT_MCUSR & (1<<WDRF)) {
+    boot_vector = START_FROM_BOOTLOADER;
+  } else {
+      Serial.write("Error, indeterminate boot vector\r\n");
+      led_indicate_boot_error();
+  }
 
-        if (eeprom_have_conf()) {
-          eeprom_conf_load();
-          op_mode = MODE_TNC;
-          startRadio();
+  if (boot_vector == START_FROM_BOOTLOADER) {
+    if (eeprom_lock_set()) {
+      if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
+        if (eeprom_checksum_valid()) {
+          hw_ready = true;
+
+          if (eeprom_have_conf()) {
+            eeprom_conf_load();
+            op_mode = MODE_TNC;
+            startRadio();
+          }
         }
+      } else {
+        hw_ready = false;
       }
     } else {
       hw_ready = false;
     }
   } else {
     hw_ready = false;
+    Serial.write("Error, incorrect boot vector\r\n");
+    led_indicate_boot_error();
   }
 }
 

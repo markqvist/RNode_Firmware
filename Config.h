@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x11
+	#define MIN_VERS  0x12
 
 	#define MCU_1284P 0x91
 
@@ -106,5 +106,11 @@
 	const uint8_t SIG_DETECT = 0x01;
 	const uint8_t SIG_SYNCED = 0x02;
 	const uint8_t RX_ONGOING = 0x04;
+
+	// Boot flags
+	#define START_FROM_BOOTLOADER 0x01
+	#define START_FROM_POWERON 0x02
+	#define START_FROM_BROWNOUT 0x03
+	#define START_FROM_JTAG 0x04
 
 #endif
