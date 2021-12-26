@@ -84,3 +84,10 @@ rnode.send("Hello World!")
 
 ## Promiscuous Mode and LoRa Sniffing
 RNode can be put into LoRa promiscuous mode, which will dump raw LoRa frames to the host. Raw LoRa frames can also be sent in this mode, and have the standard LoRa payload size of 255 bytes. To enable promiscuous mode send the "Promiscuous" command to the board, or use one of the programming libraries. You can also use the example program [LoRaMon](https://github.com/markqvist/LoRaMon) for an easy to use LoRa packet sniffer.
+
+## Support RNode Development
+You can help support the continued development of open, free and private communications systems by donating via one of the following channels:
+
+- Ethereum: 0x81F7B979fEa6134bA9FD5c701b3501A2e61E897a
+- Bitcoin: 3CPmacGm34qYvR6XWLVEJmi2aNe3PZqUuq
+- Ko-Fi: https://ko-fi.com/markqvist
