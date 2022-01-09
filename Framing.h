@@ -27,6 +27,8 @@
 	#define CMD_BLINK		0x30
 	#define CMD_RANDOM		0x40
 
+	#define CMD_PLATFORM    0x48
+	#define CMD_MCU         0x49
 	#define CMD_FW_VERSION  0x50
 	#define CMD_ROM_READ	0x51
 	#define CMD_ROM_WRITE	0x52
@@ -34,6 +36,9 @@
 	#define CMD_CONF_DELETE 0x54
 	#define CMD_UNLOCK_ROM	0x59
 	#define ROM_UNLOCK_BYTE 0xF8
+	#define CMD_RESET       0x55
+	#define CMD_RESET_BYTE  0xF8
+
 
 	#define DETECT_REQ	 	0x73
 	#define DETECT_RESP		0x46

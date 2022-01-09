@@ -4,8 +4,13 @@
 	#define CHECKSUMMED_SIZE 0x0B
 
 	#define PRODUCT_RNODE 0x03
+	#define PRODUCT_HMBRW 0xF0
+	#define PRODUCT_TBEAM 0xE0
 	#define MODEL_A4 0xA4
 	#define MODEL_A9 0xA9
+	#define MODEL_E4 0xE4
+	#define MODEL_E9 0xE9
+	#define MODEL_FF 0xFF
 
 	#define ADDR_PRODUCT   0x00
 	#define ADDR_MODEL     0x01

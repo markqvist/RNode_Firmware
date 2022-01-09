@@ -1,23 +1,52 @@
 #include <EEPROM.h>
 #include <stddef.h>
-#include <util/atomic.h>
 #include "LoRa.h"
 #include "ROM.h"
 #include "Config.h"
 #include "Framing.h"
 #include "MD5.h"
 
-uint8_t boot_vector = 0x00;
-uint8_t OPTIBOOT_MCUSR __attribute__ ((section(".noinit")));
-void resetFlagsInit(void) __attribute__ ((naked)) __attribute__ ((used)) __attribute__ ((section (".init0")));
-void resetFlagsInit(void) {
-    __asm__ __volatile__ ("sts %0, r2\n" : "=m" (OPTIBOOT_MCUSR) :);
-}
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	#include <avr/wdt.h>
+	#include <util/atomic.h>
+#elif MCU_VARIANT == MCU_ESP32
+	// TODO: Hard reset on ESP32
+#endif
 
-void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
-void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
-void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
-void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+uint8_t boot_vector = 0x00;
+
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	uint8_t OPTIBOOT_MCUSR __attribute__ ((section(".noinit")));
+	void resetFlagsInit(void) __attribute__ ((naked)) __attribute__ ((used)) __attribute__ ((section (".init0")));
+	void resetFlagsInit(void) {
+	    __asm__ __volatile__ ("sts %0, r2\n" : "=m" (OPTIBOOT_MCUSR) :);
+	}
+#elif MCU_VARIANT == MCU_ESP32
+	// TODO: Get ESP32 boot flags
+#endif
+
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+	void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+	void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+	void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+#elif MCU_VARIANT == MCU_ESP32
+	void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
+	void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+	void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
+	void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+#endif
+
+void hard_reset(void) {
+	#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+		wdt_enable(WDTO_15MS);
+		while(true) {
+			led_tx_on(); led_rx_off();
+		}
+	#elif MCU_VARIANT == MCU_ESP32
+		ESP.restart();
+	#endif
+}
 
 void led_indicate_error(int cycles) {
 	bool forever = (cycles == 0) ? true : false;
@@ -31,8 +60,8 @@ void led_indicate_error(int cycles) {
         delay(100);
         if (!forever) cycles--;
     }
-    digitalWrite(pin_led_rx, LOW);
-    digitalWrite(pin_led_tx, LOW);
+    led_rx_off();
+    led_tx_off();
 }
 
 void led_indicate_boot_error() {
@@ -51,63 +80,131 @@ void led_indicate_warning(int cycles) {
 	cycles = forever ? 1 : cycles;
 	digitalWrite(pin_led_tx, HIGH);
 	while(cycles > 0) {
-        digitalWrite(pin_led_tx, LOW);
+        led_tx_off();
         delay(100);
-        digitalWrite(pin_led_tx, HIGH);
-        delay(100);
-        if (!forever) cycles--;
-    }
-    digitalWrite(pin_led_tx, LOW);
-}
-
-void led_indicate_info(int cycles) {
-	bool forever = (cycles == 0) ? true : false;
-	cycles = forever ? 1 : cycles;
-	while(cycles > 0) {
-        digitalWrite(pin_led_rx, LOW);
-        delay(100);
-        digitalWrite(pin_led_rx, HIGH);
+        led_tx_on();
         delay(100);
         if (!forever) cycles--;
     }
-    digitalWrite(pin_led_rx, LOW);
+   led_tx_off();
 }
 
-uint8_t led_standby_min = 1;
-uint8_t led_standby_max = 40;
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	void led_indicate_info(int cycles) {
+		bool forever = (cycles == 0) ? true : false;
+		cycles = forever ? 1 : cycles;
+		while(cycles > 0) {
+	    led_rx_off();
+	    delay(100);
+	    led_rx_on();
+	    delay(100);
+	    if (!forever) cycles--;
+	  }
+	  led_rx_off();
+	}
+#elif MCU_VARIANT == MCU_ESP32
+	void led_indicate_info(int cycles) {
+		bool forever = (cycles == 0) ? true : false;
+		cycles = forever ? 1 : cycles;
+		while(cycles > 0) {
+	    led_tx_off();
+	    delay(100);
+	    led_tx_on();
+	    delay(100);
+	    if (!forever) cycles--;
+	  }
+	  led_tx_off();
+	}
+#endif
+
+
+unsigned long led_standby_ticks = 0;
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	uint8_t led_standby_min = 1;
+	uint8_t led_standby_max = 40;
+	unsigned long led_standby_wait = 11000;
+#elif MCU_VARIANT == MCU_ESP32
+	uint8_t led_standby_min = 200;
+	uint8_t led_standby_max = 255;
+	uint8_t led_notready_min = 0;
+	uint8_t led_notready_max = 255;
+	uint8_t led_notready_value = led_notready_min;
+	int8_t  led_notready_direction = 0;
+	unsigned long led_notready_ticks = 0;
+	unsigned long led_standby_wait = 4000;
+	unsigned long led_notready_wait = 150;
+#endif
 uint8_t led_standby_value = led_standby_min;
 int8_t  led_standby_direction = 0;
-unsigned long led_standby_ticks = 0;
-unsigned long led_standby_wait = 11000;
-void led_indicate_standby() {
-	led_standby_ticks++;
-	if (led_standby_ticks > led_standby_wait) {
-		led_standby_ticks = 0;
-		if (led_standby_value <= led_standby_min) {
-			led_standby_direction = 1;
-		} else if (led_standby_value >= led_standby_max) {
-			led_standby_direction = -1;
-		}
-		led_standby_value += led_standby_direction;
-		analogWrite(pin_led_rx, led_standby_value);
-		digitalWrite(pin_led_tx, 0);
-	}
-}
 
-void led_indicate_not_ready() {
-	led_standby_ticks++;
-	if (led_standby_ticks > led_standby_wait) {
-		led_standby_ticks = 0;
-		if (led_standby_value <= led_standby_min) {
-			led_standby_direction = 1;
-		} else if (led_standby_value >= led_standby_max) {
-			led_standby_direction = -1;
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	void led_indicate_standby() {
+		led_standby_ticks++;
+		if (led_standby_ticks > led_standby_wait) {
+			led_standby_ticks = 0;
+			if (led_standby_value <= led_standby_min) {
+				led_standby_direction = 1;
+			} else if (led_standby_value >= led_standby_max) {
+				led_standby_direction = -1;
+			}
+			led_standby_value += led_standby_direction;
+			analogWrite(pin_led_rx, led_standby_value);
+			led_tx_off();
 		}
-		led_standby_value += led_standby_direction;
-		analogWrite(pin_led_tx, led_standby_value);
-		digitalWrite(pin_led_rx, 0);
 	}
-}
+#elif MCU_VARIANT == MCU_ESP32
+	void led_indicate_standby() {
+		led_standby_ticks++;
+		if (led_standby_ticks > led_standby_wait) {
+			led_standby_ticks = 0;
+			if (led_standby_value <= led_standby_min) {
+				led_standby_direction = 1;
+			} else if (led_standby_value >= led_standby_max) {
+				led_standby_direction = -1;
+			}
+			led_standby_value += led_standby_direction;
+			analogWrite(pin_led_tx, led_standby_value);
+			led_rx_off();
+
+		}
+	}
+#endif
+
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+	void led_indicate_not_ready() {
+		led_standby_ticks++;
+		if (led_standby_ticks > led_standby_wait) {
+			led_standby_ticks = 0;
+			if (led_standby_value <= led_standby_min) {
+				led_standby_direction = 1;
+			} else if (led_standby_value >= led_standby_max) {
+				led_standby_direction = -1;
+			}
+			led_standby_value += led_standby_direction;
+			analogWrite(pin_led_tx, led_standby_value);
+			led_rx_off();
+		}
+	}
+#elif MCU_VARIANT == MCU_ESP32
+	void led_indicate_not_ready() {
+		led_notready_ticks++;
+		if (led_notready_ticks > led_notready_wait) {
+			led_notready_ticks = 0;
+			if (led_notready_value <= led_notready_min) {
+				led_notready_direction = 1;
+			} else if (led_notready_value >= led_notready_max) {
+				led_notready_direction = -1;
+			}
+			led_notready_value += led_notready_direction;
+			if (led_notready_value > 128) {
+				led_tx_on();
+			} else {
+				led_tx_off();
+			}
+			led_rx_off();
+		}
+	}
+#endif
 
 void escapedSerialWrite(uint8_t byte) {
 	if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
@@ -266,6 +363,20 @@ void kiss_indicate_version() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_platform() {
+	Serial.write(FEND);
+	Serial.write(CMD_PLATFORM);
+	Serial.write(PLATFORM);
+	Serial.write(FEND);
+}
+
+void kiss_indicate_mcu() {
+	Serial.write(FEND);
+	Serial.write(CMD_MCU);
+	Serial.write(MCU_VARIANT);
+	Serial.write(FEND);
+}
+
 bool isSplitPacket(uint8_t header) {
 	return (header & FLAG_SPLIT);
 }
@@ -384,9 +495,21 @@ void kiss_dump_eeprom() {
 	Serial.write(FEND);
 }
 
+void eeprom_update(int mapped_addr, uint8_t byte) {
+	#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+		EEPROM.update(mapped_addr, byte);
+	#elif MCU_VARIANT == MCU_ESP32
+		if (EEPROM.read(mapped_addr) != byte) {
+			EEPROM.write(mapped_addr, byte);
+			EEPROM.commit();
+		}
+	#endif
+
+}
+
 void eeprom_write(uint8_t addr, uint8_t byte) {
 	if (!eeprom_info_locked() && addr >= 0 && addr < EEPROM_RESERVED) {
-		EEPROM.update(eeprom_addr(addr), byte);
+		eeprom_update(eeprom_addr(addr), byte);
 	} else {
 		kiss_indicate_error(ERROR_EEPROM_LOCKED);
 	}
@@ -394,9 +517,9 @@ void eeprom_write(uint8_t addr, uint8_t byte) {
 
 void eeprom_erase() {
 	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-		EEPROM.update(eeprom_addr(addr), 0xFF);
+		eeprom_update(eeprom_addr(addr), 0xFF);
 	}
-	while (true) { led_tx_on(); led_rx_off(); }
+	hard_reset();
 }
 
 bool eeprom_lock_set() {
@@ -408,7 +531,8 @@ bool eeprom_lock_set() {
 }
 
 bool eeprom_product_valid() {
-	if (EEPROM.read(eeprom_addr(ADDR_PRODUCT)) == PRODUCT_RNODE) {
+	uint8_t rval = EEPROM.read(eeprom_addr(ADDR_PRODUCT));
+	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM) {
 		return true;
 	} else {
 		return false;
@@ -417,7 +541,7 @@ bool eeprom_product_valid() {
 
 bool eeprom_model_valid() {
 	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
-	if (model == MODEL_A4 || model == MODEL_A9) {
+	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF || model == MODEL_E4 || model == MODEL_E9) {
 		return true;
 	} else {
 		return false;
@@ -475,21 +599,21 @@ void eeprom_conf_load() {
 
 void eeprom_conf_save() {
 	if (hw_ready && radio_online) {
-		EEPROM.update(eeprom_addr(ADDR_CONF_SF), lora_sf);
-		EEPROM.update(eeprom_addr(ADDR_CONF_CR), lora_cr);
-		EEPROM.update(eeprom_addr(ADDR_CONF_TXP), lora_txp);
+		eeprom_update(eeprom_addr(ADDR_CONF_SF), lora_sf);
+		eeprom_update(eeprom_addr(ADDR_CONF_CR), lora_cr);
+		eeprom_update(eeprom_addr(ADDR_CONF_TXP), lora_txp);
 
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
-		EEPROM.update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x00, lora_bw>>24);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x01, lora_bw>>16);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x02, lora_bw>>8);
+		eeprom_update(eeprom_addr(ADDR_CONF_BW)+0x03, lora_bw);
 
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
-		EEPROM.update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x00, lora_freq>>24);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x01, lora_freq>>16);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x02, lora_freq>>8);
+		eeprom_update(eeprom_addr(ADDR_CONF_FREQ)+0x03, lora_freq);
 
-		EEPROM.update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+		eeprom_update(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
 		led_indicate_info(10);
 	} else {
 		led_indicate_warning(10);
@@ -497,7 +621,7 @@ void eeprom_conf_save() {
 }
 
 void eeprom_conf_delete() {
-	EEPROM.update(eeprom_addr(ADDR_CONF_OK), 0x00);
+	eeprom_update(eeprom_addr(ADDR_CONF_OK), 0x00);
 }
 
 void unlock_rom() {
@@ -544,28 +668,31 @@ inline void fifo_flush(FIFOBuffer *f) {
   f->head = f->tail;
 }
 
-static inline bool fifo_isempty_locked(const FIFOBuffer *f) {
-  bool result;
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    result = fifo_isempty(f);
-  }
-  return result;
-}
+#if MCU_VARIANT != MCU_ESP32
+	static inline bool fifo_isempty_locked(const FIFOBuffer *f) {
+	  bool result;
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    result = fifo_isempty(f);
+	  }
+	  return result;
+	}
 
-static inline bool fifo_isfull_locked(const FIFOBuffer *f) {
-  bool result;
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    result = fifo_isfull(f);
-  }
-  return result;
-}
+	static inline bool fifo_isfull_locked(const FIFOBuffer *f) {
+	  bool result;
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    result = fifo_isfull(f);
+	  }
+	  return result;
+	}
 
-static inline void fifo_push_locked(FIFOBuffer *f, unsigned char c) {
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    fifo_push(f, c);
-  }
-}
+	static inline void fifo_push_locked(FIFOBuffer *f, unsigned char c) {
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    fifo_push(f, c);
+	  }
+	}
+#endif
 
+/*
 static inline unsigned char fifo_pop_locked(FIFOBuffer *f) {
   unsigned char c;
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -573,6 +700,7 @@ static inline unsigned char fifo_pop_locked(FIFOBuffer *f) {
   }
   return c;
 }
+*/
 
 inline void fifo_init(FIFOBuffer *f, unsigned char *buffer, size_t size) {
   f->head = f->tail = f->begin = buffer;
@@ -622,14 +750,18 @@ inline void fifo16_flush(FIFOBuffer16 *f) {
   f->head = f->tail;
 }
 
-static inline bool fifo16_isempty_locked(const FIFOBuffer16 *f) {
-  bool result;
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    result = fifo16_isempty(f);
-  }
-  return result;
-}
+#if MCU_VARIANT != MCU_ESP32
+	static inline bool fifo16_isempty_locked(const FIFOBuffer16 *f) {
+	  bool result;
+	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+	    result = fifo16_isempty(f);
+	  }
 
+	  return result;
+	}
+#endif
+
+/*
 static inline bool fifo16_isfull_locked(const FIFOBuffer16 *f) {
   bool result;
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -637,6 +769,7 @@ static inline bool fifo16_isfull_locked(const FIFOBuffer16 *f) {
   }
   return result;
 }
+
 
 static inline void fifo16_push_locked(FIFOBuffer16 *f, size_t c) {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -651,6 +784,7 @@ static inline size_t fifo16_pop_locked(FIFOBuffer16 *f) {
   }
   return c;
 }
+*/
 
 inline void fifo16_init(FIFOBuffer16 *f, size_t *buffer, size_t size) {
   f->head = f->tail = f->begin = buffer;

@@ -4,20 +4,30 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x12
+	#define MIN_VERS  0x13
+
+	#define PLATFORM_AVR   0x90
+    #define PLATFORM_ESP32 0x80
 
 	#define MCU_1284P 0x91
 	#define MCU_2560  0x92
+	#define MCU_ESP32 0x81
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
 
 	#if defined(__AVR_ATmega1284P__)
+		#define PLATFORM PLATFORM_AVR
 		#define MCU_VARIANT MCU_1284P
 		#warning "Firmware is being compiled for atmega1284p based boards"
 	#elif defined(__AVR_ATmega2560__)
+		#define PLATFORM PLATFORM_AVR
 		#define MCU_VARIANT MCU_2560
 		#warning "Firmware is being compiled for atmega2560 based boards"
+	#elif defined(ESP32)
+		#define PLATFORM PLATFORM_ESP32
+		#define MCU_VARIANT MCU_ESP32
+		#warning "Firmware is being compiled for ESP32 based boards"
 	#else
 		#error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -38,28 +48,39 @@
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
 
-		// TODO: Reset
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
 		#define CONFIG_QUEUE_MAX_LENGTH 250
 
 		#define EEPROM_SIZE 4096
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
-	#endif
-
-	#if MCU_VARIANT == MCU_2560
+	
+	#elif MCU_VARIANT == MCU_2560
 		const int pin_cs = 10;
 		const int pin_reset = 9;
 		const int pin_dio = 2;
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
 
-		// TODO: Reset
 		#define CONFIG_UART_BUFFER_SIZE 2048
 		#define CONFIG_QUEUE_SIZE 2048
-		#define CONFIG_QUEUE_MAX_LENGTH 250
+		#define CONFIG_QUEUE_MAX_LENGTH 80
 
 		#define EEPROM_SIZE 4096
+		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+
+	#elif MCU_VARIANT == MCU_ESP32
+		const int pin_cs = 18;
+		const int pin_reset = 23;
+		const int pin_dio = 26;
+		const int pin_led_rx = 2;
+		const int pin_led_tx = 4;
+
+		#define CONFIG_UART_BUFFER_SIZE 6144
+		#define CONFIG_QUEUE_SIZE 6144
+		#define CONFIG_QUEUE_MAX_LENGTH 250
+
+		#define EEPROM_SIZE 1024
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 	#endif
 
@@ -71,7 +92,7 @@
 
 	// SX1276 RSSI offset to get dBm value from
 	// packet RSSI register
-	const int  rssi_offset      = 157;
+	const int  rssi_offset = 157;
 
 	// Default LoRa settings
 	int  lora_sf   	   = 0;

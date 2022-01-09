@@ -449,6 +449,8 @@ long LoRaClass::getSignalBandwidth()
     case 8: return 250E3; 
     case 9: return 500E3; 
   }
+  
+  return 0;
 }
 
 void LoRaClass::handleLowDataRate(){

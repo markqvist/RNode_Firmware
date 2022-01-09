@@ -22,6 +22,12 @@ volatile bool serial_buffering = false;
 char sbuf[128];
 
 void setup() {
+  #if MCU_VARIANT == MCU_ESP32
+    delay(1500);
+    EEPROM.begin(EEPROM_SIZE);
+    Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
+  #endif
+
   // Seed the PRNG
   randomSeed(analogRead(0));
 
@@ -54,6 +60,12 @@ void setup() {
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
 
+  #if MCU_VARIANT == MCU_ESP32
+    radio_locked  = true;
+    radio_online  = false;
+    hw_ready      = false;
+  #endif
+
   // Validate board health, EEPROM and config
   validateStatus();
 }
@@ -76,6 +88,7 @@ bool startRadio() {
         // serial port and with the onboard LEDs
         kiss_indicate_error(ERROR_INITRADIO);
         led_indicate_error(0);
+        return false;
       } else {
         radio_online = true;
 
@@ -86,13 +99,17 @@ bool startRadio() {
         getFrequency();
 
         LoRa.enableCrc();
-        LoRa.onReceive(receiveCallback);
+
+        #if MCU_VARIANT != MCU_ESP32
+          LoRa.onReceive(receive_callback);
+        #endif
 
         lora_receive();
 
         // Flash an info pattern to indicate
         // that the radio is now on
         led_indicate_info(3);
+        return true;
       }
 
     } else {
@@ -100,10 +117,12 @@ bool startRadio() {
       // that the radio was locked, and thus
       // not started
       led_indicate_warning(3);
+      return false;
     }
   } else {
     // If radio is already on, we silently
     // ignore the request.
+    return true;
   }
 }
 
@@ -120,7 +139,7 @@ void update_radio_lock() {
   }
 }
 
-void receiveCallback(int packet_size) {
+void receive_callback(int packet_size) {
   if (!promisc) {
     // The standard operating mode allows large
     // packets with a payload up to 500 bytes,
@@ -197,7 +216,7 @@ void receiveCallback(int packet_size) {
     }  
   } else {
     // In promiscuous mode, raw packets are
-    // output directly over to the host
+    // output directly to the host
     read_len = 0;
     last_rssi = LoRa.packetRssi();
     last_snr_raw = LoRa.packetSnrRaw();
@@ -232,7 +251,13 @@ void flushQueue(void) {
     queue_flushing = true;
 
     size_t processed = 0;
+
+    #if MCU_VARIANT == MCU_ESP32
+    while (!fifo16_isempty(&packet_starts)) {
+    #else
     while (!fifo16_isempty_locked(&packet_starts)) {
+    #endif
+
       size_t start = fifo16_pop(&packet_starts);
       size_t length = fifo16_pop(&packet_lengths);
 
@@ -497,6 +522,10 @@ void serialCallback(uint8_t sbyte) {
       if (sbyte == ROM_UNLOCK_BYTE) {
         unlock_rom();
       }
+    } else if (command == CMD_RESET) {
+      if (sbyte == CMD_RESET_BYTE) {
+        hard_reset();
+      }
     } else if (command == CMD_ROM_READ) {
       kiss_dump_eeprom();
     } else if (command == CMD_ROM_WRITE) {
@@ -516,6 +545,10 @@ void serialCallback(uint8_t sbyte) {
         }
     } else if (command == CMD_FW_VERSION) {
       kiss_indicate_version();
+    } else if (command == CMD_PLATFORM) {
+      kiss_indicate_platform();
+    } else if (command == CMD_MCU) {
+      kiss_indicate_mcu();
     } else if (command == CMD_CONF_SAVE) {
       eeprom_conf_save();
     } else if (command == CMD_CONF_DELETE) {
@@ -562,18 +595,31 @@ void checkModemStatus() {
 }
 
 void validateStatus() {
-  if (OPTIBOOT_MCUSR & (1<<PORF)) {
+  #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+      uint8_t boot_flags = OPTIBOOT_MCUSR;
+      uint8_t F_POR = PORF;
+      uint8_t F_BOR = BORF;
+      uint8_t F_WDR = WDRF;
+  #elif MCU_VARIANT == MCU_ESP32
+      // TODO: Get ESP32 boot flags
+      uint8_t boot_flags = 0x02;
+      uint8_t F_POR = 0x00;
+      uint8_t F_BOR = 0x00;
+      uint8_t F_WDR = 0x01;
+  #endif
+
+  if (boot_flags & (1<<F_POR)) {
     boot_vector = START_FROM_POWERON;
-  } else if (OPTIBOOT_MCUSR & (1<<BORF)) {
+  } else if (boot_flags & (1<<F_BOR)) {
     boot_vector = START_FROM_BROWNOUT;
-  } else if (OPTIBOOT_MCUSR & (1<<WDRF)) {
+  } else if (boot_flags & (1<<F_WDR)) {
     boot_vector = START_FROM_BOOTLOADER;
   } else {
       Serial.write("Error, indeterminate boot vector\r\n");
       led_indicate_boot_error();
   }
 
-  if (boot_vector == START_FROM_BOOTLOADER) {
+  if (boot_vector == START_FROM_BOOTLOADER || boot_vector == START_FROM_POWERON) {
     if (eeprom_lock_set()) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
@@ -601,6 +647,13 @@ void validateStatus() {
 void loop() {
   if (radio_online) {
     checkModemStatus();
+
+    #if MCU_VARIANT == MCU_ESP32
+      int packet_size = LoRa.parsePacket();
+      if (packet_size) {
+        receive_callback(packet_size);
+      }
+    #endif
 
     if (queue_height > 0) {
       if (!dcd_waiting) updateModemStatus();
@@ -630,20 +683,33 @@ void loop() {
     }
   }
 
-  if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
+  #if MCU_VARIANT == MCU_ESP32
+    buffer_serial();
+  #endif
+
+  #if MCU_VARIANT != MCU_ESP32
+    if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
+  #else
+    if (!fifo_isempty(&serialFIFO)) serial_poll();
+  #endif
 }
 
 volatile bool serial_polling = false;
 void serial_poll() {
   serial_polling = true;
 
+  #if MCU_VARIANT != MCU_ESP32
   while (!fifo_isempty_locked(&serialFIFO)) {
+  #else
+  while (!fifo_isempty(&serialFIFO)) {
+  #endif
     char sbyte = fifo_pop(&serialFIFO);
     serialCallback(sbyte);
   }
 
   serial_polling = false;
 }
+
 
 #define MAX_CYCLES 20
 void buffer_serial() {
@@ -654,9 +720,15 @@ void buffer_serial() {
     while (c < MAX_CYCLES && Serial.available()) {
       c++;
 
-      if (!fifo_isfull_locked(&serialFIFO)) {
-        fifo_push_locked(&serialFIFO, Serial.read());
-      }
+      #if MCU_VARIANT != MCU_ESP32
+        if (!fifo_isfull_locked(&serialFIFO)) {
+          fifo_push_locked(&serialFIFO, Serial.read());
+        }
+      #else
+        if (!fifo_isfull(&serialFIFO)) {
+          fifo_push(&serialFIFO, Serial.read());
+        }
+      #endif
     }
 
     serial_buffering = false;
@@ -664,17 +736,39 @@ void buffer_serial() {
 }
 
 void serial_interrupt_init() {
-  TCCR3A = 0;
-  TCCR3B = _BV(CS10) |
-           _BV(WGM33)|
-           _BV(WGM32);
+  #if MCU_VARIANT == MCU_1284P
+      TCCR3A = 0;
+      TCCR3B = _BV(CS10) |
+               _BV(WGM33)|
+               _BV(WGM32);
 
-  // Buffer incoming frames every 1ms
-  ICR3 = 16000;
+      // Buffer incoming frames every 1ms
+      ICR3 = 16000;
 
-  TIMSK3 = _BV(ICIE3);
+      TIMSK3 = _BV(ICIE3);
+
+  #elif MCU_VARIANT == MCU_2560
+      // TODO: This should probably be updated for
+      // atmega2560 support. Might be source of
+      // reported issues from snh.
+      TCCR3A = 0;
+      TCCR3B = _BV(CS10) |
+               _BV(WGM33)|
+               _BV(WGM32);
+
+      // Buffer incoming frames every 1ms
+      ICR3 = 16000;
+
+      TIMSK3 = _BV(ICIE3);
+
+  #elif MCU_VARIANT == MCU_ESP32
+      // No interrupt-based polling on ESP32
+  #endif
+
 }
 
-ISR(TIMER3_CAPT_vect) {
-  buffer_serial();
-}
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+  ISR(TIMER3_CAPT_vect) {
+    buffer_serial();
+  }
+#endif
