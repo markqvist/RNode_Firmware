@@ -713,10 +713,10 @@ inline size_t fifo_len(FIFOBuffer *f) {
 
 typedef struct FIFOBuffer16
 {
-  size_t *begin;
-  size_t *end;
-  size_t * volatile head;
-  size_t * volatile tail;
+  uint16_t *begin;
+  uint16_t *end;
+  uint16_t * volatile head;
+  uint16_t * volatile tail;
 } FIFOBuffer16;
 
 inline bool fifo16_isempty(const FIFOBuffer16 *f) {
@@ -727,7 +727,7 @@ inline bool fifo16_isfull(const FIFOBuffer16 *f) {
   return ((f->head == f->begin) && (f->tail == f->end)) || (f->tail == f->head - 1);
 }
 
-inline void fifo16_push(FIFOBuffer16 *f, size_t c) {
+inline void fifo16_push(FIFOBuffer16 *f, uint16_t c) {
   *(f->tail) = c;
 
   if (f->tail == f->end) {
@@ -737,7 +737,7 @@ inline void fifo16_push(FIFOBuffer16 *f, size_t c) {
   }
 }
 
-inline size_t fifo16_pop(FIFOBuffer16 *f) {
+inline uint16_t fifo16_pop(FIFOBuffer16 *f) {
   if(f->head == f->end) {
     f->head = f->begin;
     return *(f->end);
@@ -771,7 +771,7 @@ static inline bool fifo16_isfull_locked(const FIFOBuffer16 *f) {
 }
 
 
-static inline void fifo16_push_locked(FIFOBuffer16 *f, size_t c) {
+static inline void fifo16_push_locked(FIFOBuffer16 *f, uint16_t c) {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
     fifo16_push(f, c);
   }
@@ -786,11 +786,11 @@ static inline size_t fifo16_pop_locked(FIFOBuffer16 *f) {
 }
 */
 
-inline void fifo16_init(FIFOBuffer16 *f, size_t *buffer, size_t size) {
+inline void fifo16_init(FIFOBuffer16 *f, uint16_t *buffer, uint16_t size) {
   f->head = f->tail = f->begin = buffer;
   f->end = buffer + size;
 }
 
-inline size_t fifo16_len(FIFOBuffer16 *f) {
+inline uint16_t fifo16_len(FIFOBuffer16 *f) {
   return (f->end - f->begin);
 }

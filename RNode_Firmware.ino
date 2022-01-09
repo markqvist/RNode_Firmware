@@ -6,17 +6,17 @@ FIFOBuffer serialFIFO;
 uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
 
 FIFOBuffer16 packet_starts;
-size_t packet_starts_buf[CONFIG_QUEUE_MAX_LENGTH+1];
+uint16_t packet_starts_buf[CONFIG_QUEUE_MAX_LENGTH+1];
 
 FIFOBuffer16 packet_lengths;
-size_t packet_lengths_buf[CONFIG_QUEUE_MAX_LENGTH+1];
+uint16_t packet_lengths_buf[CONFIG_QUEUE_MAX_LENGTH+1];
 
 uint8_t packet_queue[CONFIG_QUEUE_SIZE];
 
 volatile uint8_t queue_height = 0;
-volatile size_t queued_bytes = 0;
-volatile size_t queue_cursor = 0;
-volatile size_t current_packet_start = 0;
+volatile uint16_t queued_bytes = 0;
+volatile uint16_t queue_cursor = 0;
+volatile uint16_t current_packet_start = 0;
 volatile bool serial_buffering = false;
 
 char sbuf[128];
@@ -250,7 +250,7 @@ void flushQueue(void) {
   if (!queue_flushing) {
     queue_flushing = true;
 
-    size_t processed = 0;
+    uint16_t processed = 0;
 
     #if MCU_VARIANT == MCU_ESP32
     while (!fifo16_isempty(&packet_starts)) {
@@ -258,12 +258,12 @@ void flushQueue(void) {
     while (!fifo16_isempty_locked(&packet_starts)) {
     #endif
 
-      size_t start = fifo16_pop(&packet_starts);
-      size_t length = fifo16_pop(&packet_lengths);
+      uint16_t start = fifo16_pop(&packet_starts);
+      uint16_t length = fifo16_pop(&packet_lengths);
 
       if (length >= MIN_L && length <= MTU) {
-        for (size_t i = 0; i < length; i++) {
-          size_t pos = (start+i)%CONFIG_QUEUE_SIZE;
+        for (uint16_t i = 0; i < length; i++) {
+          uint16_t pos = (start+i)%CONFIG_QUEUE_SIZE;
           tbuf[i] = packet_queue[pos];
         }
 
@@ -278,11 +278,11 @@ void flushQueue(void) {
   queue_flushing = false;
 }
 
-void transmit(size_t size) {
+void transmit(uint16_t size) {
   if (radio_online) {
     if (!promisc) {
       led_tx_on();
-      size_t  written = 0;
+      uint16_t  written = 0;
       uint8_t header  = random(256) & 0xF0;
 
       if (size > SINGLE_MTU - HEADER_L) {
@@ -292,7 +292,7 @@ void transmit(size_t size) {
       LoRa.beginPacket();
       LoRa.write(header); written++;
 
-      for (size_t i; i < size; i++) {
+      for (uint16_t i; i < size; i++) {
         LoRa.write(tbuf[i]);  
 
         written++;
@@ -314,7 +314,7 @@ void transmit(size_t size) {
       // plain raw LoRa packets with a maximum
       // payload of 255 bytes
       led_tx_on();
-      size_t  written = 0;
+      uint16_t  written = 0;
       
       // Cap packets at 255 bytes
       if (size > SINGLE_MTU) {
@@ -329,7 +329,7 @@ void transmit(size_t size) {
         LoRa.beginPacket(size);
       }
 
-      for (size_t i; i < size; i++) {
+      for (uint16_t i; i < size; i++) {
         LoRa.write(tbuf[i]);
 
         written++;
@@ -350,9 +350,9 @@ void serialCallback(uint8_t sbyte) {
     IN_FRAME = false;
 
     if (!fifo16_isfull(&packet_starts) && queued_bytes < CONFIG_QUEUE_SIZE) {
-        size_t s = current_packet_start;
-        size_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
-        size_t l;
+        uint16_t s = current_packet_start;
+        uint16_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
+        uint16_t l;
 
         if (s != e) {
             l = (s < e) ? e - s + 1 : CONFIG_QUEUE_SIZE - s + e + 1;
