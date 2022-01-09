@@ -23,7 +23,7 @@ char sbuf[128];
 
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
-    delay(1500);
+    delay(500);
     EEPROM.begin(EEPROM_SIZE);
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
