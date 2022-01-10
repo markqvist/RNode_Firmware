@@ -21,6 +21,14 @@ volatile bool serial_buffering = false;
 
 char sbuf[128];
 
+#if MCU_VARIANT == MCU_ESP32
+  #include "soc/rtc_wdt.h"
+  #define ISR_VECT IRAM_ATTR
+  bool packet_ready = false;
+#else
+  #define ISR_VECT
+#endif
+
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     delay(500);
@@ -62,9 +70,14 @@ void setup() {
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
 
   #if MCU_VARIANT == MCU_ESP32
-    radio_locked  = true;
-    radio_online  = false;
-    hw_ready      = false;
+    // ESP32-specific initialisation
+    // The WDT is disabled for now. This
+    // should be re-enabled as soon as any
+    // Core0-related features are used
+    rtc_wdt_protect_off();
+    rtc_wdt_disable();
+    // rtc_wdt_set_stage(RTC_WDT_STAGE0, RTC_WDT_STAGE_ACTION_RESET_SYSTEM);
+    // rtc_wdt_set_time(RTC_WDT_STAGE0, 25);
   #endif
 
   // Validate board health, EEPROM and config
@@ -78,6 +91,134 @@ void lora_receive() {
     LoRa.receive(implicit_l);
   }
 }
+
+inline void kiss_write_packet() {
+  Serial.write(FEND);
+  Serial.write(CMD_DATA);
+  for (int i = 0; i < read_len; i++) {
+    uint8_t byte = pbuf[i];
+    if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
+    if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
+    Serial.write(byte);
+  }
+  Serial.write(FEND);
+  read_len = 0;
+  #if MCU_VARIANT == MCU_ESP32
+    packet_ready = false;
+  #endif
+}
+
+void ISR_VECT receive_callback(int packet_size) {
+  if (!promisc) {
+    // The standard operating mode allows large
+    // packets with a payload up to 500 bytes,
+    // by combining two raw LoRa packets.
+    // We read the 1-byte header and extract
+    // packet sequence number and split flags
+    uint8_t header   = LoRa.read(); packet_size--;
+    uint8_t sequence = packetSequence(header);
+    bool    ready    = false;
+
+    if (isSplitPacket(header) && seq == SEQ_UNSET) {
+      // This is the first part of a split
+      // packet, so we set the seq variable
+      // and add the data to the buffer
+      read_len = 0;
+      seq = sequence;
+
+      #if MCU_VARIANT != MCU_ESP32
+        last_rssi = LoRa.packetRssi();
+        last_snr_raw = LoRa.packetSnrRaw();
+      #endif
+
+      getPacketData(packet_size);
+    } else if (isSplitPacket(header) && seq == sequence) {
+      // This is the second part of a split
+      // packet, so we add it to the buffer
+      // and set the ready flag.
+      
+      #if MCU_VARIANT != MCU_ESP32
+        last_rssi = (last_rssi+LoRa.packetRssi())/2;
+        last_snr_raw = (last_snr_raw+LoRa.packetSnrRaw())/2;
+      #endif
+      
+      getPacketData(packet_size);
+      seq = SEQ_UNSET;
+      ready = true;
+    } else if (isSplitPacket(header) && seq != sequence) {
+      // This split packet does not carry the
+      // same sequence id, so we must assume
+      // that we are seeing the first part of
+      // a new split packet.
+      read_len = 0;
+      seq = sequence;
+
+      #if MCU_VARIANT != MCU_ESP32
+        last_rssi = LoRa.packetRssi();
+        last_snr_raw = LoRa.packetSnrRaw();
+      #endif
+
+      getPacketData(packet_size);
+    } else if (!isSplitPacket(header)) {
+      // This is not a split packet, so we
+      // just read it and set the ready
+      // flag to true.
+
+      if (seq != SEQ_UNSET) {
+        // If we already had part of a split
+        // packet in the buffer, we clear it.
+        read_len = 0;
+        seq = SEQ_UNSET;
+      }
+
+      #if MCU_VARIANT != MCU_ESP32
+        last_rssi = LoRa.packetRssi();
+        last_snr_raw = LoRa.packetSnrRaw();
+      #endif
+
+      getPacketData(packet_size);
+      ready = true;
+    }
+
+    if (ready) {
+      #if MCU_VARIANT != MCU_ESP32
+        // We first signal the RSSI of the
+        // recieved packet to the host.
+        kiss_indicate_stat_rssi();
+        kiss_indicate_stat_snr();
+
+        // And then write the entire packet
+        kiss_write_packet();
+      #else
+        packet_ready = true;
+      #endif
+    }  
+  } else {
+    #if MCU_VARIANT != MCU_ESP32
+      // In promiscuous mode, raw packets are
+      // output directly to the host
+      read_len = 0;
+      last_rssi = LoRa.packetRssi();
+      last_snr_raw = LoRa.packetSnrRaw();
+      getPacketData(packet_size);
+
+      // We first signal the RSSI of the
+      // recieved packet to the host.
+      kiss_indicate_stat_rssi();
+      kiss_indicate_stat_snr();
+
+      // And then write the entire packet
+      kiss_write_packet();
+
+    #else
+      // Promiscous mode is not supported on ESP32 for now
+      getPacketData(packet_size);
+      read_len = 0;
+    #endif
+  }
+}
+
+
 
 bool startRadio() {
   update_radio_lock();
@@ -101,9 +242,7 @@ bool startRadio() {
 
         LoRa.enableCrc();
 
-        #if MCU_VARIANT != MCU_ESP32
-          LoRa.onReceive(receive_callback);
-        #endif
+        LoRa.onReceive(receive_callback);
 
         lora_receive();
 
@@ -137,108 +276,6 @@ void update_radio_lock() {
     radio_locked = false;
   } else {
     radio_locked = true;
-  }
-}
-
-void receive_callback(int packet_size) {
-  if (!promisc) {
-    // The standard operating mode allows large
-    // packets with a payload up to 500 bytes,
-    // by combining two raw LoRa packets.
-    // We read the 1-byte header and extract
-    // packet sequence number and split flags
-    uint8_t header   = LoRa.read(); packet_size--;
-    uint8_t sequence = packetSequence(header);
-    bool    ready    = false;
-
-    if (isSplitPacket(header) && seq == SEQ_UNSET) {
-      // This is the first part of a split
-      // packet, so we set the seq variable
-      // and add the data to the buffer
-      read_len = 0;
-      seq = sequence;
-      last_rssi = LoRa.packetRssi();
-      last_snr_raw = LoRa.packetSnrRaw();
-      getPacketData(packet_size);
-    } else if (isSplitPacket(header) && seq == sequence) {
-      // This is the second part of a split
-      // packet, so we add it to the buffer
-      // and set the ready flag.
-      last_rssi = (last_rssi+LoRa.packetRssi())/2;
-      last_snr_raw = (last_snr_raw+LoRa.packetSnrRaw())/2;
-      getPacketData(packet_size);
-      seq = SEQ_UNSET;
-      ready = true;
-    } else if (isSplitPacket(header) && seq != sequence) {
-      // This split packet does not carry the
-      // same sequence id, so we must assume
-      // that we are seeing the first part of
-      // a new split packet.
-      read_len = 0;
-      seq = sequence;
-      last_rssi = LoRa.packetRssi();
-      last_snr_raw = LoRa.packetSnrRaw();
-      getPacketData(packet_size);
-    } else if (!isSplitPacket(header)) {
-      // This is not a split packet, so we
-      // just read it and set the ready
-      // flag to true.
-
-      if (seq != SEQ_UNSET) {
-        // If we already had part of a split
-        // packet in the buffer, we clear it.
-        read_len = 0;
-        seq = SEQ_UNSET;
-      }
-
-      last_rssi = LoRa.packetRssi();
-      last_snr_raw = LoRa.packetSnrRaw();
-      getPacketData(packet_size);
-      ready = true;
-    }
-
-    if (ready) {
-      // We first signal the RSSI of the
-      // recieved packet to the host.
-      kiss_indicate_stat_rssi();
-      kiss_indicate_stat_snr();
-
-      // And then write the entire packet
-      Serial.write(FEND);
-      Serial.write(CMD_DATA);
-      for (int i = 0; i < read_len; i++) {
-        uint8_t byte = pbuf[i];
-        if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
-        if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
-        Serial.write(byte);
-      }
-      Serial.write(FEND);
-      read_len = 0;
-    }  
-  } else {
-    // In promiscuous mode, raw packets are
-    // output directly to the host
-    read_len = 0;
-    last_rssi = LoRa.packetRssi();
-    last_snr_raw = LoRa.packetSnrRaw();
-    getPacketData(packet_size);
-
-    // We first signal the RSSI of the
-    // recieved packet to the host.
-    kiss_indicate_stat_rssi();
-    kiss_indicate_stat_snr();
-
-    // And then write the entire packet
-    Serial.write(FEND);
-    Serial.write(CMD_DATA);
-    for (int i = 0; i < read_len; i++) {
-      uint8_t byte = pbuf[i];
-      if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
-      if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
-      Serial.write(byte);
-    }
-    Serial.write(FEND);
-    read_len = 0;    
   }
 }
 
@@ -650,9 +687,8 @@ void loop() {
     checkModemStatus();
 
     #if MCU_VARIANT == MCU_ESP32
-      int packet_size = LoRa.parsePacket();
-      if (packet_size) {
-        receive_callback(packet_size);
+      if (packet_ready) {
+        kiss_write_packet();
       }
     #endif
 
@@ -686,12 +722,9 @@ void loop() {
 
   #if MCU_VARIANT == MCU_ESP32
     buffer_serial();
-  #endif
-
-  #if MCU_VARIANT != MCU_ESP32
-    if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
-  #else
     if (!fifo_isempty(&serialFIFO)) serial_poll();
+  #else
+    if (!fifo_isempty_locked(&serialFIFO)) serial_poll();    
   #endif
 }
 

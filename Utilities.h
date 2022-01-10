@@ -381,15 +381,15 @@ void kiss_indicate_mcu() {
 	Serial.write(FEND);
 }
 
-bool isSplitPacket(uint8_t header) {
+inline bool isSplitPacket(uint8_t header) {
 	return (header & FLAG_SPLIT);
 }
 
-uint8_t packetSequence(uint8_t header) {
+inline uint8_t packetSequence(uint8_t header) {
 	return header >> 4;
 }
 
-void getPacketData(int len) {
+inline void getPacketData(int len) {
 	while (len--) {
 		pbuf[read_len++] = LoRa.read();
 	}
