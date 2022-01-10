@@ -131,7 +131,7 @@ unsigned long led_standby_ticks = 0;
 	uint8_t led_notready_value = led_notready_min;
 	int8_t  led_notready_direction = 0;
 	unsigned long led_notready_ticks = 0;
-	unsigned long led_standby_wait = 4000;
+	unsigned long led_standby_wait = 1768;
 	unsigned long led_notready_wait = 150;
 #endif
 uint8_t led_standby_value = led_standby_min;
@@ -163,7 +163,11 @@ int8_t  led_standby_direction = 0;
 				led_standby_direction = -1;
 			}
 			led_standby_value += led_standby_direction;
-			analogWrite(pin_led_tx, led_standby_value);
+			if (led_standby_value > 253) {
+				led_tx_on();
+			} else {
+				led_tx_off();
+			}
 			led_rx_off();
 
 		}

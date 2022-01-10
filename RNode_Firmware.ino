@@ -25,7 +25,8 @@ void setup() {
   #if MCU_VARIANT == MCU_ESP32
     delay(500);
     EEPROM.begin(EEPROM_SIZE);
-    Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
+    // TODO: Check this
+    //Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
 
   // Seed the PRNG
@@ -710,8 +711,11 @@ void serial_poll() {
   serial_polling = false;
 }
 
-
-#define MAX_CYCLES 20
+#if MCU_VARIANT != MCU_ESP32
+  #define MAX_CYCLES 20
+#else
+  #define MAX_CYCLES 1
+#endif
 void buffer_serial() {
   if (!serial_buffering) {
     serial_buffering = true;

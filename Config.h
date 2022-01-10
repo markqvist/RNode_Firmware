@@ -19,15 +19,12 @@
 	#if defined(__AVR_ATmega1284P__)
 		#define PLATFORM PLATFORM_AVR
 		#define MCU_VARIANT MCU_1284P
-		#warning "Firmware is being compiled for atmega1284p based boards"
 	#elif defined(__AVR_ATmega2560__)
 		#define PLATFORM PLATFORM_AVR
 		#define MCU_VARIANT MCU_2560
-		#warning "Firmware is being compiled for atmega2560 based boards"
 	#elif defined(ESP32)
 		#define PLATFORM PLATFORM_ESP32
 		#define MCU_VARIANT MCU_ESP32
-		#warning "Firmware is being compiled for ESP32 based boards"
 	#else
 		#error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -48,6 +45,8 @@
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
 
+		const long serial_baudrate  = 115200;
+
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
 		#define CONFIG_QUEUE_MAX_LENGTH 250
@@ -61,6 +60,8 @@
 		const int pin_dio = 2;
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
+
+		const long serial_baudrate  = 115200;
 
 		#define CONFIG_UART_BUFFER_SIZE 2048
 		#define CONFIG_QUEUE_SIZE 2048
@@ -76,6 +77,8 @@
 		const int pin_led_rx = 2;
 		const int pin_led_tx = 4;
 
+		const long serial_baudrate  = 921600;
+
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
 		#define CONFIG_QUEUE_MAX_LENGTH 250
@@ -87,7 +90,6 @@
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
 
 	// MCU independent configuration parameters
-	const long serial_baudrate  = 115200;
 	const int lora_rx_turnaround_ms = 50;
 
 	// SX1276 RSSI offset to get dBm value from
