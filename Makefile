@@ -29,5 +29,5 @@ release-tbeam:
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bin build/rnode_firmware_latest_tbeam.bin
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_tbeam.bootloader
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_tbeam.partitions
-	zip --junk-paths ./Precompiled/rnode_firmware_latest_tbeam.zip build/rnode_firmware_latest_tbeam.boot_app0 build/rnode_firmware_latest_tbeam.bin build/rnode_firmware_latest_tbeam.bootloader build/rnode_firmware_latest_tbeam.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_tbeam.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_tbeam.boot_app0 build/rnode_firmware_latest_tbeam.bin build/rnode_firmware_latest_tbeam.bootloader build/rnode_firmware_latest_tbeam.partitions
 	rm -r build
