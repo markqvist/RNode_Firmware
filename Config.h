@@ -79,6 +79,10 @@
 
 		#define EEPROM_SIZE 1024
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+
+		#define GPS_BAUD_RATE 9600
+		#define PIN_GPS_TX 12
+		#define PIN_GPS_RX 34
 	#endif
 
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)

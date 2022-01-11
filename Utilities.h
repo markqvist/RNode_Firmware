@@ -31,8 +31,8 @@ uint8_t boot_vector = 0x00;
 	void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 	void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 #elif MCU_VARIANT == MCU_ESP32
-	void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
-	void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+	void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+	void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 	void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
 	void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
 #endif
@@ -216,6 +216,13 @@ void escapedSerialWrite(uint8_t byte) {
     Serial.write(byte);
 }
 
+void kiss_indicate_reset() {
+	Serial.write(FEND);
+	Serial.write(CMD_RESET);
+	Serial.write(CMD_RESET_BYTE);
+	Serial.write(FEND);
+}
+
 void kiss_indicate_error(uint8_t error_code) {
 	Serial.write(FEND);
 	Serial.write(CMD_ERROR);
@@ -387,12 +394,6 @@ inline bool isSplitPacket(uint8_t header) {
 
 inline uint8_t packetSequence(uint8_t header) {
 	return header >> 4;
-}
-
-inline void getPacketData(int len) {
-	while (len--) {
-		pbuf[read_len++] = LoRa.read();
-	}
 }
 
 void setSpreadingFactor() {
