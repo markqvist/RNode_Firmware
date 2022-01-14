@@ -242,7 +242,7 @@ uint8_t LoRaClass::packetRssiRaw() {
   return pkt_rssi_value;
 }
 
-int LoRaClass::packetRssi() {
+int ISR_VECT LoRaClass::packetRssi() {
   int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE) - RSSI_OFFSET;
   int pkt_snr = packetSnr();
 
@@ -260,11 +260,11 @@ int LoRaClass::packetRssi() {
   return pkt_rssi;
 }
 
-uint8_t LoRaClass::packetSnrRaw() {
+uint8_t ISR_VECT LoRaClass::packetSnrRaw() {
   return readRegister(REG_PKT_SNR_VALUE);
 }
 
-float LoRaClass::packetSnr() {
+float ISR_VECT LoRaClass::packetSnr() {
   return ((int8_t)readRegister(REG_PKT_SNR_VALUE)) * 0.25;
 }
 
@@ -312,12 +312,12 @@ size_t LoRaClass::write(const uint8_t *buffer, size_t size)
   return size;
 }
 
-int LoRaClass::available()
+int ISR_VECT LoRaClass::available()
 {
   return (readRegister(REG_RX_NB_BYTES) - _packetIndex);
 }
 
-int LoRaClass::read()
+int ISR_VECT LoRaClass::read()
 {
   if (!available()) {
     return -1;
@@ -623,7 +623,7 @@ void ISR_VECT LoRaClass::handleDio0Rise()
   }
 }
 
-uint8_t LoRaClass::readRegister(uint8_t address)
+uint8_t ISR_VECT LoRaClass::readRegister(uint8_t address)
 {
   return singleTransfer(address & 0x7f, 0x00);
 }
@@ -633,7 +633,7 @@ void LoRaClass::writeRegister(uint8_t address, uint8_t value)
   singleTransfer(address | 0x80, value);
 }
 
-uint8_t LoRaClass::singleTransfer(uint8_t address, uint8_t value)
+uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
 {
   uint8_t response;
 

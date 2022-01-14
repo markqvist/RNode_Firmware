@@ -193,10 +193,11 @@ void ISR_VECT receive_callback(int packet_size) {
       #endif
     }  
   } else {
+    // In promiscuous mode, raw packets are
+    // output directly to the host
+    read_len = 0;
+
     #if MCU_VARIANT != MCU_ESP32
-      // In promiscuous mode, raw packets are
-      // output directly to the host
-      read_len = 0;
       last_rssi = LoRa.packetRssi();
       last_snr_raw = LoRa.packetSnrRaw();
       getPacketData(packet_size);
@@ -210,7 +211,6 @@ void ISR_VECT receive_callback(int packet_size) {
       kiss_write_packet();
 
     #else
-      read_len = 0;
       getPacketData(packet_size);
       packet_ready = true;
     #endif
@@ -700,6 +700,12 @@ void loop() {
 
     #if MCU_VARIANT == MCU_ESP32
       if (packet_ready) {
+        portENTER_CRITICAL(&update_lock);
+        last_rssi = LoRa.packetRssi();
+        last_snr_raw = LoRa.packetSnrRaw();
+        portEXIT_CRITICAL(&update_lock);
+        kiss_indicate_stat_rssi();
+        kiss_indicate_stat_snr();
         kiss_write_packet();
       }
     #endif
