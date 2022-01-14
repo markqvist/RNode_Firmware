@@ -512,7 +512,7 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
 
 }
 
-void eeprom_write(int addr, uint8_t byte) {
+void eeprom_write(uint8_t addr, uint8_t byte) {
 	if (!eeprom_info_locked() && (addr >= 0) && (addr < EEPROM_RESERVED)) {
 		eeprom_update(eeprom_addr(addr), byte);
 	} else {
