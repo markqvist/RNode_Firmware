@@ -363,7 +363,7 @@ void transmit(uint16_t size) {
       LoRa.beginPacket();
       LoRa.write(header); written++;
 
-      for (uint16_t i; i < size; i++) {
+      for (int i=0; i < size; i++) {
         LoRa.write(tbuf[i]);  
 
         written++;
@@ -400,7 +400,7 @@ void transmit(uint16_t size) {
         LoRa.beginPacket(size);
       }
 
-      for (uint16_t i; i < size; i++) {
+      for (int i=0; i < size; i++) {
         LoRa.write(tbuf[i]);
 
         written++;
@@ -805,7 +805,7 @@ void buffer_serial() {
       // Discard GPS data for now
       c = 0;
       while (c < MAX_CYCLES && Serial1.available()) {
-        uint8_t void_c = Serial1.read();
+        Serial1.read();
       }
     #endif
 
