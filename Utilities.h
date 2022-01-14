@@ -210,10 +210,10 @@ int8_t  led_standby_direction = 0;
 	}
 #endif
 
-void escapedSerialWrite(uint8_t vbyte) {
-	if (vbyte == FEND) { Serial.write(FESC); vbyte = TFEND; }
-    if (vbyte == FESC) { Serial.write(FESC); vbyte = TFESC; }
-    Serial.write(vbyte);
+void escapedSerialWrite(uint8_t byte) {
+	if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
+    if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
+    Serial.write(byte);
 }
 
 void kiss_indicate_reset() {
@@ -327,10 +327,10 @@ void kiss_indicate_frequency() {
 	Serial.write(FEND);
 }
 
-void kiss_indicate_random(uint8_t vbyte) {
+void kiss_indicate_random(uint8_t byte) {
 	Serial.write(FEND);
 	Serial.write(CMD_RANDOM);
-	Serial.write(vbyte);
+	Serial.write(byte);
 	Serial.write(FEND);
 }
 
@@ -474,22 +474,22 @@ bool eeprom_info_locked() {
 
 void eeprom_dump_info() {
 	for (int addr = ADDR_PRODUCT; addr <= ADDR_INFO_LOCK; addr++) {
-		uint8_t vbyte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(vbyte);
+		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+		escapedSerialWrite(byte);
 	}
 }
 
 void eeprom_dump_config() {
 	for (int addr = ADDR_CONF_SF; addr <= ADDR_CONF_OK; addr++) {
-		uint8_t vbyte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(vbyte);
+		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+		escapedSerialWrite(byte);
 	}
 }
 
 void eeprom_dump_all() {
 	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-		uint8_t vbyte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(vbyte);
+		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+		escapedSerialWrite(byte);
 	}
 }
 
@@ -500,21 +500,21 @@ void kiss_dump_eeprom() {
 	Serial.write(FEND);
 }
 
-void eeprom_update(int mapped_addr, uint8_t vbyte) {
+void eeprom_update(int mapped_addr, uint8_t byte) {
 	#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
-		EEPROM.update(mapped_addr, vbyte);
+		EEPROM.update(mapped_addr, byte);
 	#elif MCU_VARIANT == MCU_ESP32
-		if (EEPROM.read(mapped_addr) != vbyte) {
-			EEPROM.write(mapped_addr, vbyte);
+		if (EEPROM.read(mapped_addr) != byte) {
+			EEPROM.write(mapped_addr, byte);
 			EEPROM.commit();
 		}
 	#endif
 
 }
 
-void eeprom_write(int addr, uint8_t vbyte) {
+void eeprom_write(int addr, uint8_t byte) {
 	if (!eeprom_info_locked() && (addr >= 0) && (addr < EEPROM_RESERVED)) {
-		eeprom_update(eeprom_addr(addr), vbyte);
+		eeprom_update(eeprom_addr(addr), byte);
 	} else {
 		kiss_indicate_error(ERROR_EEPROM_LOCKED);
 	}
@@ -565,8 +565,8 @@ bool eeprom_hwrev_valid() {
 bool eeprom_checksum_valid() {
 	char *data = (char*)malloc(CHECKSUMMED_SIZE);
 	for (uint8_t  i = 0; i < CHECKSUMMED_SIZE; i++) {
-		char vbyte = EEPROM.read(eeprom_addr(i));
-		data[i] = vbyte;
+		char byte = EEPROM.read(eeprom_addr(i));
+		data[i] = byte;
 	}
 	
 	unsigned char *hash = MD5::make_hash(data, CHECKSUMMED_SIZE);

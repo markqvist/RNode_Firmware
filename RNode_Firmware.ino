@@ -363,7 +363,7 @@ void transmit(uint16_t size) {
       LoRa.beginPacket();
       LoRa.write(header); written++;
 
-      for (int i=0; i < size; i++) {
+      for (uint16_t i=0; i < size; i++) {
         LoRa.write(tbuf[i]);  
 
         written++;
@@ -400,7 +400,7 @@ void transmit(uint16_t size) {
         LoRa.beginPacket(size);
       }
 
-      for (int i=0; i < size; i++) {
+      for (uint16_t i=0; i < size; i++) {
         LoRa.write(tbuf[i]);
 
         written++;
@@ -422,7 +422,7 @@ void serialCallback(uint8_t sbyte) {
 
     if (!fifo16_isfull(&packet_starts) && queued_bytes < CONFIG_QUEUE_SIZE) {
         uint16_t s = current_packet_start;
-        int e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
+        int16_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
         uint16_t l;
 
         if (s != e) {
