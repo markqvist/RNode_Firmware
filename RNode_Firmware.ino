@@ -363,7 +363,7 @@ void transmit(uint16_t size) {
       LoRa.beginPacket();
       LoRa.write(header); written++;
 
-      for (uint16_t i; i < size; i++) {
+      for (int i=0; i < size; i++) {
         LoRa.write(tbuf[i]);  
 
         written++;
@@ -400,7 +400,7 @@ void transmit(uint16_t size) {
         LoRa.beginPacket(size);
       }
 
-      for (uint16_t i; i < size; i++) {
+      for (int i=0; i < size; i++) {
         LoRa.write(tbuf[i]);
 
         written++;
@@ -422,7 +422,7 @@ void serialCallback(uint8_t sbyte) {
 
     if (!fifo16_isfull(&packet_starts) && queued_bytes < CONFIG_QUEUE_SIZE) {
         uint16_t s = current_packet_start;
-        uint16_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
+        int e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
         uint16_t l;
 
         if (s != e) {
@@ -631,9 +631,9 @@ void serialCallback(uint8_t sbyte) {
 void updateModemStatus() {
   uint8_t status = LoRa.modemStatus();
   last_status_update = millis();
-  if (status & SIG_DETECT == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
-  if (status & SIG_SYNCED == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
-  if (status & RX_ONGOING == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
+  if ((status & SIG_DETECT) == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
+  if ((status & SIG_SYNCED) == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
+  if ((status & RX_ONGOING) == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
 
   if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
     if (dcd_count < dcd_threshold) {
@@ -805,7 +805,7 @@ void buffer_serial() {
       // Discard GPS data for now
       c = 0;
       while (c < MAX_CYCLES && Serial1.available()) {
-        uint8_t void_c = Serial1.read();
+        Serial1.read();
       }
     #endif
 
