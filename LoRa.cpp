@@ -6,6 +6,31 @@
 
 #include "LoRa.h"
 
+#define MCU_1284P 0x91
+#define MCU_2560  0x92
+#define MCU_ESP32 0x81
+#if defined(__AVR_ATmega1284P__)
+  #define PLATFORM PLATFORM_AVR
+  #define MCU_VARIANT MCU_1284P
+#elif defined(__AVR_ATmega2560__)
+  #define PLATFORM PLATFORM_AVR
+  #define MCU_VARIANT MCU_2560
+#elif defined(ESP32)
+  #define PLATFORM PLATFORM_ESP32
+  #define MCU_VARIANT MCU_ESP32
+#endif
+
+#ifndef MCU_VARIANT
+  #error No MCU variant defined, cannot compile
+#endif
+
+#if MCU_VARIANT == MCU_ESP32
+  #include "soc/rtc_wdt.h"
+  #define ISR_VECT IRAM_ATTR
+#else
+  #define ISR_VECT
+#endif
+
 // Registers
 #define REG_FIFO                 0x00
 #define REG_OP_MODE              0x01
@@ -571,7 +596,8 @@ void LoRaClass::implicitHeaderMode()
   writeRegister(REG_MODEM_CONFIG_1, readRegister(REG_MODEM_CONFIG_1) | 0x01);
 }
 
-void LoRaClass::handleDio0Rise()
+
+void ISR_VECT LoRaClass::handleDio0Rise()
 {
   int irqFlags = readRegister(REG_IRQ_FLAGS);
 
@@ -623,7 +649,7 @@ uint8_t LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   return response;
 }
 
-void LoRaClass::onDio0Rise()
+void ISR_VECT LoRaClass::onDio0Rise()
 {
   LoRa.handleDio0Rise();
 }
