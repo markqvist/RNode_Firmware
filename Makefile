@@ -31,3 +31,14 @@ release-tbeam:
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_tbeam.partitions
 	zip --junk-paths ./Precompiled/rnode_firmware_latest_tbeam.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_tbeam.boot_app0 build/rnode_firmware_latest_tbeam.bin build/rnode_firmware_latest_tbeam.bootloader build/rnode_firmware_latest_tbeam.partitions
 	rm -r build
+
+firmware-mega2560:
+	arduino-cli compile --fqbn arduino:avr:mega
+
+release-mega2560:
+	arduino-cli compile --fqbn arduino:avr:mega -e
+	cp build/arduino.avr.mega/RNode_Firmware.ino.hex Precompiled/rnode_firmware_latest_m2560.hex
+	rm -r build
+
+upload-mega2560:
+	arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:mega
