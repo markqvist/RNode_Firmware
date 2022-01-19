@@ -11,6 +11,8 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 - A LoRa-based KISS-compatible TNC
 - A flexible platform for experiementing with LoRa technology
 
+To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards.
+
 RNode is controlled by a powerful ATmega1284p MCU, and is fully Arduino compatible. You can use this firmware, or it can be programmed any way you like, either from the Arduino IDE, or using any of the available tools for AVR development. This firmware can also be edited and compiled directly from the Arduino IDE.
 
 For adding RNode to your Arduino environment, please see [this post](https://unsigned.io/board-support-in-arduino-ide/).
