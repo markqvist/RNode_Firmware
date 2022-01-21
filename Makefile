@@ -2,29 +2,54 @@ prep:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install unsignedio:avr
 
+prep-esp32:
+	arduino-cli core update-index --config-file arduino-cli.yaml
+	arduino-cli core install esp32:esp32
+
+prep-samd:
+	arduino-cli core update-index --config-file arduino-cli.yaml
+	arduino-cli core install adafruit:samd
+
+
+
 firmware:
 	arduino-cli compile --fqbn unsignedio:avr:rnode
 
-release:
-	arduino-cli compile --fqbn unsignedio:avr:rnode -e
-	cp build/unsignedio.avr.rnode/RNode_Firmware.ino.hex Precompiled/rnode_firmware_latest.hex
-	rm -r build
+firmware-tbeam:
+	arduino-cli compile --fqbn esp32:esp32:t-beam --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\""
+
+firmware-featheresp32:
+	arduino-cli compile --fqbn esp32:esp32:featheresp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
+
+firmware-genericesp32:
+	arduino-cli compile --fqbn esp32:esp32:esp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\""
+
+firmware-mega2560:
+	arduino-cli compile --fqbn arduino:avr:mega
+
+
 
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
 
-prep-tbeam:
-	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install esp32:esp32
-
-firmware-tbeam:
-	arduino-cli compile --fqbn esp32:esp32:t-beam
-
 upload-tbeam:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:t-beam
 
+upload-featheresp32:
+	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:featheresp32
+
+upload-mega2560:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:mega
+
+release-all: release-rnode release-tbeam release-featheresp32 release-genericesp32
+
+release-rnode:
+	arduino-cli compile --fqbn unsignedio:avr:rnode -e
+	cp build/unsignedio.avr.rnode/RNode_Firmware.ino.hex Precompiled/rnode_firmware_latest.hex
+	rm -r build
+
 release-tbeam:
-	arduino-cli compile --fqbn esp32:esp32:t-beam -e
+	arduino-cli compile --fqbn esp32:esp32:t-beam -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\""
 	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_tbeam.boot_app0
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bin build/rnode_firmware_latest_tbeam.bin
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_tbeam.bootloader
@@ -32,13 +57,25 @@ release-tbeam:
 	zip --junk-paths ./Precompiled/rnode_firmware_latest_tbeam.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_tbeam.boot_app0 build/rnode_firmware_latest_tbeam.bin build/rnode_firmware_latest_tbeam.bootloader build/rnode_firmware_latest_tbeam.partitions
 	rm -r build
 
-firmware-mega2560:
-	arduino-cli compile --fqbn arduino:avr:mega
+release-featheresp32:
+	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_featheresp32.boot_app0
+	cp build/esp32.esp32.featheresp32/RNode_Firmware.ino.bin build/rnode_firmware_latest_featheresp32.bin
+	cp build/esp32.esp32.featheresp32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_featheresp32.bootloader
+	cp build/esp32.esp32.featheresp32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_featheresp32.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_featheresp32.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_featheresp32.boot_app0 build/rnode_firmware_latest_featheresp32.bin build/rnode_firmware_latest_featheresp32.bootloader build/rnode_firmware_latest_featheresp32.partitions
+	rm -r build
+
+release-genericesp32:
+	arduino-cli compile --fqbn esp32:esp32:esp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_esp32_generic.boot_app0
+	cp build/esp32.esp32.esp32/RNode_Firmware.ino.bin build/rnode_firmware_latest_esp32_generic.bin
+	cp build/esp32.esp32.esp32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_esp32_generic.bootloader
+	cp build/esp32.esp32.esp32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_esp32_generic.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_esp32_generic.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_esp32_generic.boot_app0 build/rnode_firmware_latest_esp32_generic.bin build/rnode_firmware_latest_esp32_generic.bootloader build/rnode_firmware_latest_esp32_generic.partitions
+	rm -r build
 
 release-mega2560:
 	arduino-cli compile --fqbn arduino:avr:mega -e
 	cp build/arduino.avr.mega/RNode_Firmware.ino.hex Precompiled/rnode_firmware_latest_m2560.hex
 	rm -r build
-
-upload-mega2560:
-	arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:mega

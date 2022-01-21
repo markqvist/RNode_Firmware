@@ -13,9 +13,13 @@
 	#define MCU_2560  0x92
 	#define MCU_ESP32 0x81
 
-	#define BOARD_RNODE 0x31
-	#define BOARD_HMBRW 0x32
-	#define BOARD_TBEAM 0x33
+	#define BOARD_RNODE         0x31
+	#define BOARD_HMBRW         0x32
+	#define BOARD_TBEAM         0x33
+	#define BOARD_HUZZAH32      0x34
+	#define BOARD_GENERIC_ESP32 0x35
+	#define BOARD_LORA32_V2_0   0x36
+	#define BOARD_LORA32_V2_1   0x37
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
@@ -53,7 +57,7 @@
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
-		#define CONFIG_QUEUE_MAX_LENGTH 250
+		#define CONFIG_QUEUE_MAX_LENGTH 200
 
 		#define EEPROM_SIZE 4096
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
@@ -67,25 +71,40 @@
 
 		#define BOARD_MODEL BOARD_HMBRW
 
-		#define CONFIG_UART_BUFFER_SIZE 1024
-		#define CONFIG_QUEUE_SIZE 4096
-		#define CONFIG_QUEUE_MAX_LENGTH 80
+		#define CONFIG_UART_BUFFER_SIZE 768
+		#define CONFIG_QUEUE_SIZE 5120
+		#define CONFIG_QUEUE_MAX_LENGTH 24
 
 		#define EEPROM_SIZE 4096
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 
 	#elif MCU_VARIANT == MCU_ESP32
-		const int pin_cs = 18;
-		const int pin_reset = 23;
-		const int pin_dio = 26;
-		const int pin_led_rx = 2;
-		const int pin_led_tx = 4;
 
-		#define BOARD_MODEL BOARD_TBEAM
+		#if BOARD_MODEL == BOARD_GENERIC_ESP32
+			const int pin_cs = 4;
+			const int pin_reset = 36;
+			const int pin_dio = 39;
+			const int pin_led_rx = 14;
+			const int pin_led_tx = 32;
+		#elif BOARD_MODEL == BOARD_TBEAM
+			const int pin_cs = 18;
+			const int pin_reset = 23;
+			const int pin_dio = 26;
+			const int pin_led_rx = 2;
+			const int pin_led_tx = 4;
+		#elif BOARD_MODEL == BOARD_HUZZAH32
+			const int pin_cs = 4;
+			const int pin_reset = 36;
+			const int pin_dio = 39;
+			const int pin_led_rx = 14;
+			const int pin_led_tx = 32;
+		#else
+			#error An unsupported board was selected. Cannot compile RNode firmware.
+		#endif
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
-		#define CONFIG_QUEUE_MAX_LENGTH 250
+		#define CONFIG_QUEUE_MAX_LENGTH 200
 
 		#define EEPROM_SIZE 1024
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED

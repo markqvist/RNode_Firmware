@@ -64,9 +64,12 @@ void setup() {
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
 
-  #if MCU_VARIANT == MCU_ESP32    
-    Wire.begin(I2C_SDA, I2C_SCL);
-    initPMU();
+  #if MCU_VARIANT == MCU_ESP32
+    #if BOARD_MODEL == BOARD_TBEAM
+      Wire.begin(I2C_SDA, I2C_SCL);
+      initPMU();
+    #endif
+
     kiss_indicate_reset();
   #endif
 
@@ -645,8 +648,14 @@ void checkModemStatus() {
 }
 
 void validateStatus() {
-  #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+  #if MCU_VARIANT == MCU_1284P
       uint8_t boot_flags = OPTIBOOT_MCUSR;
+      uint8_t F_POR = PORF;
+      uint8_t F_BOR = BORF;
+      uint8_t F_WDR = WDRF;
+  #elif MCU_VARIANT == MCU_2560
+      uint8_t boot_flags = OPTIBOOT_MCUSR;
+      if (boot_flags == 0x00) boot_flags = 0x03;
       uint8_t F_POR = PORF;
       uint8_t F_BOR = BORF;
       uint8_t F_WDR = WDRF;
@@ -742,7 +751,7 @@ void loop() {
     buffer_serial();
     if (!fifo_isempty(&serialFIFO)) serial_poll();
   #else
-    if (!fifo_isempty_locked(&serialFIFO)) serial_poll();    
+    if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif
 }
 
