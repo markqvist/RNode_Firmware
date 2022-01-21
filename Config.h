@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x17
+	#define MIN_VERS  0x18
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -63,8 +63,8 @@
 		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 	
 	#elif MCU_VARIANT == MCU_2560
-		const int pin_cs = 10;
-		const int pin_reset = 9;
+		const int pin_cs = 5;
+		const int pin_reset = 4;
 		const int pin_dio = 2;
 		const int pin_led_rx = 12;
 		const int pin_led_tx = 13;
