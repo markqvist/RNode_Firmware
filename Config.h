@@ -98,6 +98,19 @@
 			const int pin_dio = 39;
 			const int pin_led_rx = 14;
 			const int pin_led_tx = 32;
+		#elif BOARD_MODEL == BOARD_LORA32_V2_0
+			// TODO: Add correct pins here
+			// const int pin_cs = 18;
+			// const int pin_reset = 23;
+			// const int pin_dio = 26;
+			// const int pin_led_rx = 2;
+			// const int pin_led_tx = 25;
+		#elif BOARD_MODEL == BOARD_LORA32_V2_1
+			const int pin_cs = 18;
+			const int pin_reset = 23;
+			const int pin_dio = 26;
+			const int pin_led_rx = 2;
+			const int pin_led_tx = 25;
 		#else
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif

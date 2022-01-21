@@ -18,6 +18,12 @@ firmware:
 firmware-tbeam:
 	arduino-cli compile --fqbn esp32:esp32:t-beam --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\""
 
+firmware-lora32_v20:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\""
+
+firmware-lora32_v21:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\""
+
 firmware-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
 
@@ -34,6 +40,12 @@ upload:
 
 upload-tbeam:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:t-beam
+
+upload-lora32_v20:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:ttgo-lora32
+
+upload-lora32_v21:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:ttgo-lora32
 
 upload-featheresp32:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:featheresp32
@@ -55,6 +67,24 @@ release-tbeam:
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_tbeam.bootloader
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_tbeam.partitions
 	zip --junk-paths ./Precompiled/rnode_firmware_latest_tbeam.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_tbeam.boot_app0 build/rnode_firmware_latest_tbeam.bin build/rnode_firmware_latest_tbeam.bootloader build/rnode_firmware_latest_tbeam.partitions
+	rm -r build
+
+release-lora32_v20:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_lora32v20.boot_app0
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bin build/rnode_firmware_latest_lora32v20.bin
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_lora32v20.bootloader
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_lora32v20.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_lora32v20.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_lora32v20.boot_app0 build/rnode_firmware_latest_lora32v20.bin build/rnode_firmware_latest_lora32v20.bootloader build/rnode_firmware_latest_lora32v20.partitions
+	rm -r build
+
+release-lora32_v21:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_lora32v21.boot_app0
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bin build/rnode_firmware_latest_lora32v21.bin
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_lora32v21.bootloader
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_lora32v21.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_lora32v21.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_lora32v21.boot_app0 build/rnode_firmware_latest_lora32v21.bin build/rnode_firmware_latest_lora32v21.bootloader build/rnode_firmware_latest_lora32v21.partitions
 	rm -r build
 
 release-featheresp32:
