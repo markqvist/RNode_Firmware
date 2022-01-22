@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x19
+	#define MIN_VERS  0x20
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -133,9 +133,9 @@
 	#endif
 
 	#if BOARD_MODEL == BOARD_TBEAM
-		#define I2C_SDA                     21
-		#define I2C_SCL                     22
-		#define PMU_IRQ                     35
+		#define I2C_SDA 21
+		#define I2C_SCL 22
+		#define PMU_IRQ 35
 	#endif
 
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)

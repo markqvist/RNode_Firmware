@@ -429,6 +429,13 @@ void kiss_indicate_platform() {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_board() {
+	Serial.write(FEND);
+	Serial.write(CMD_BOARD);
+	Serial.write(BOARD_MODEL);
+	Serial.write(FEND);
+}
+
 void kiss_indicate_mcu() {
 	Serial.write(FEND);
 	Serial.write(CMD_MCU);

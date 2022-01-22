@@ -27,6 +27,7 @@
 	#define CMD_BLINK		0x30
 	#define CMD_RANDOM		0x40
 
+	#define CMD_BOARD		0x47
 	#define CMD_PLATFORM    0x48
 	#define CMD_MCU         0x49
 	#define CMD_FW_VERSION  0x50

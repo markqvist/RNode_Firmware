@@ -615,6 +615,8 @@ void serialCallback(uint8_t sbyte) {
       kiss_indicate_platform();
     } else if (command == CMD_MCU) {
       kiss_indicate_mcu();
+    } else if (command == CMD_BOARD) {
+      kiss_indicate_board();
     } else if (command == CMD_CONF_SAVE) {
       eeprom_conf_save();
     } else if (command == CMD_CONF_DELETE) {
