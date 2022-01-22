@@ -618,6 +618,10 @@ bool eeprom_model_valid() {
 	if (model == MODEL_B3 || model == MODEL_B8) {
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 	if (model == MODEL_B4 || model == MODEL_B9) {
+	#elif BOARD_MODEL == BOARD_HUZZAH32
+	if (model == MODEL_FF) {
+	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
+	if (model == MODEL_FF) {
 	#else
 	if (false) {
 	#endif
