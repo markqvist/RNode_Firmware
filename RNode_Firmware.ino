@@ -250,6 +250,7 @@ bool startRadio() {
 
         // Flash an info pattern to indicate
         // that the radio is now on
+        kiss_indicate_radiostate();
         led_indicate_info(3);
         return true;
       }
@@ -258,12 +259,15 @@ bool startRadio() {
       // Flash a warning pattern to indicate
       // that the radio was locked, and thus
       // not started
+      radio_online = false;
+      kiss_indicate_radiostate();
       led_indicate_warning(3);
       return false;
     }
   } else {
     // If radio is already on, we silently
     // ignore the request.
+    kiss_indicate_radiostate();
     return true;
   }
 }

@@ -49,8 +49,8 @@ uint8_t boot_vector = 0x00;
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
-		void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
-		void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -130,18 +130,33 @@ void led_indicate_warning(int cycles) {
 	  led_rx_off();
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	void led_indicate_info(int cycles) {
-		bool forever = (cycles == 0) ? true : false;
-		cycles = forever ? 1 : cycles;
-		while(cycles > 0) {
-	    led_tx_off();
-	    delay(100);
-	    led_tx_on();
-	    delay(100);
-	    if (!forever) cycles--;
-	  }
-	  led_tx_off();
-	}
+	#if BOARD_MODEL == BOARD_LORA32_V2_1
+		void led_indicate_info(int cycles) {
+			bool forever = (cycles == 0) ? true : false;
+			cycles = forever ? 1 : cycles;
+			while(cycles > 0) {
+		    led_rx_off();
+		    delay(100);
+		    led_rx_on();
+		    delay(100);
+		    if (!forever) cycles--;
+		  }
+		  led_rx_off();
+		}
+	#else
+		void led_indicate_info(int cycles) {
+			bool forever = (cycles == 0) ? true : false;
+			cycles = forever ? 1 : cycles;
+			while(cycles > 0) {
+		    led_tx_off();
+		    delay(100);
+		    led_tx_on();
+		    delay(100);
+		    if (!forever) cycles--;
+		  }
+		  led_tx_off();
+		}
+	#endif
 #endif
 
 
@@ -195,7 +210,13 @@ int8_t  led_standby_direction = 0;
 			} else {
 				led_tx_off();
 			}
-			led_rx_off();
+			#if BOARD_MODEL == BOARD_LORA32_V2_1
+				#if defined(EXTERNAL_LEDS)
+					led_rx_off();
+				#endif
+			#else
+				led_rx_off();
+			#endif
 
 		}
 	}
@@ -564,7 +585,14 @@ bool eeprom_lock_set() {
 
 bool eeprom_product_valid() {
 	uint8_t rval = EEPROM.read(eeprom_addr(ADDR_PRODUCT));
-	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM) {
+
+	#if PLATFORM == PLATFORM_AVR
+	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
+	#elif PLATFORM == PLATFORM_ESP32
+	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21) {
+	#else
+	if (false) {
+	#endif
 		return true;
 	} else {
 		return false;
@@ -573,7 +601,19 @@ bool eeprom_product_valid() {
 
 bool eeprom_model_valid() {
 	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
-	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF || model == MODEL_E4 || model == MODEL_E9) {
+	#if BOARD_MODEL == BOARD_RNODE
+	if (model == MODEL_A4 || model == MODEL_A9) {
+	#elif BOARD_MODEL == BOARD_HMBRW
+	if (model == MODEL_FF) {
+	#elif BOARD_MODEL == BOARD_TBEAM
+	if (model == MODEL_E4 || model == MODEL_E9) {
+	#elif BOARD_MODEL == BOARD_LORA32_V2_0
+	if (model == MODEL_B3 || model == MODEL_B8) {
+	#elif BOARD_MODEL == BOARD_LORA32_V2_1
+	if (model == MODEL_B4 || model == MODEL_B9) {
+	#else
+	if (false) {
+	#endif
 		return true;
 	} else {
 		return false;

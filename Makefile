@@ -24,6 +24,9 @@ firmware-lora32_v20:
 firmware-lora32_v21:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\""
 
+firmware-lora32_v21_extled:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
+
 firmware-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
 
@@ -52,6 +55,8 @@ upload-featheresp32:
 
 upload-mega2560:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:mega
+
+
 
 release-all: release-rnode release-tbeam release-lora32_v21 release-featheresp32 release-genericesp32
 

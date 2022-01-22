@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x18
+	#define MIN_VERS  0x19
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -109,8 +109,13 @@
 			const int pin_cs = 18;
 			const int pin_reset = 23;
 			const int pin_dio = 26;
-			const int pin_led_rx = 2;
-			const int pin_led_tx = 25;
+			#if defined(EXTERNAL_LEDS)
+				const int pin_led_rx = 15;
+				const int pin_led_tx = 4;
+			#else
+				const int pin_led_rx = 25;
+				const int pin_led_tx = 25;
+			#endif
 		#else
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif
