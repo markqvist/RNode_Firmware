@@ -103,11 +103,11 @@
 			const int pin_reset = 12;
 			const int pin_dio = 26;
 			#if defined(EXTERNAL_LEDS)
-				const int pin_led_rx = 15;
-				const int pin_led_tx = 4;
+				const int pin_led_rx = 2;
+				const int pin_led_tx = 0;
 			#else
-				const int pin_led_rx = 23;
-				const int pin_led_tx = 23;
+				const int pin_led_rx = 22;
+				const int pin_led_tx = 22;
 			#endif
 		#elif BOARD_MODEL == BOARD_LORA32_V2_1
 			const int pin_cs = 18;

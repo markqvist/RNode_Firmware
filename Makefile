@@ -48,7 +48,7 @@ upload-tbeam:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:t-beam
 
 upload-lora32_v20:
-	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:ttgo-lora32
+	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:ttgo-lora32
 
 upload-lora32_v21:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:ttgo-lora32

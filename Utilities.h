@@ -42,10 +42,17 @@ uint8_t boot_vector = 0x00;
 		void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
 		void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
 	#elif BOARD_MODEL == BOARD_LORA32_V2_0
-		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
-		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
-		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
-		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		#if defined(EXTERNAL_LEDS)
+			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		#else
+			void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
+			void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+			void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
+			void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+		#endif
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -143,6 +150,19 @@ void led_indicate_warning(int cycles) {
 		  }
 		  led_rx_off();
 		}
+	#elif BOARD_MODEL == BOARD_LORA32_V2_0
+		void led_indicate_info(int cycles) {
+			bool forever = (cycles == 0) ? true : false;
+			cycles = forever ? 1 : cycles;
+			while(cycles > 0) {
+		    led_rx_off();
+		    delay(100);
+		    led_rx_on();
+		    delay(100);
+		    if (!forever) cycles--;
+		  }
+		  led_rx_off();
+		}
 	#else
 		void led_indicate_info(int cycles) {
 			bool forever = (cycles == 0) ? true : false;
@@ -214,10 +234,13 @@ int8_t  led_standby_direction = 0;
 				#if defined(EXTERNAL_LEDS)
 					led_rx_off();
 				#endif
+			#elif BOARD_MODEL == BOARD_LORA32_V2_0
+				#if defined(EXTERNAL_LEDS)
+					led_rx_off();
+				#endif
 			#else
 				led_rx_off();
 			#endif
-
 		}
 	}
 #endif
@@ -253,7 +276,17 @@ int8_t  led_standby_direction = 0;
 			} else {
 				led_tx_off();
 			}
-			led_rx_off();
+			#if BOARD_MODEL == BOARD_LORA32_V2_1
+				#if defined(EXTERNAL_LEDS)
+					led_rx_off();
+				#endif
+			#elif BOARD_MODEL == BOARD_LORA32_V2_0
+				#if defined(EXTERNAL_LEDS)
+					led_rx_off();
+				#endif
+			#else
+				led_rx_off();
+			#endif
 		}
 	}
 #endif
