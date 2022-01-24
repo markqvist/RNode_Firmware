@@ -24,6 +24,9 @@ firmware-lora32_v20:
 firmware-lora32_v21:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\""
 
+firmware-lora32_v20_extled:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\" \"-DEXTERNAL_LEDS=true\""
+
 firmware-lora32_v21_extled:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
 
@@ -58,7 +61,7 @@ upload-mega2560:
 
 
 
-release-all: release-rnode release-tbeam release-lora32_v21 release-featheresp32 release-genericesp32
+release-all: release-rnode release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32
 
 release-rnode:
 	arduino-cli compile --fqbn unsignedio:avr:rnode -e
@@ -90,6 +93,24 @@ release-lora32_v21:
 	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_lora32v21.bootloader
 	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_lora32v21.partitions
 	zip --junk-paths ./Precompiled/rnode_firmware_latest_lora32v21.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_lora32v21.boot_app0 build/rnode_firmware_latest_lora32v21.bin build/rnode_firmware_latest_lora32v21.bootloader build/rnode_firmware_latest_lora32v21.partitions
+	rm -r build
+
+release-lora32_v20_extled:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\" \"-DEXTERNAL_LEDS=true\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_lora32v20.boot_app0
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin build/rnode_firmware_latest_lora32v20.bin
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_lora32v20.bootloader
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_lora32v20.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_lora32v20_extled.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_lora32v20.boot_app0 build/rnode_firmware_latest_lora32v20.bin build/rnode_firmware_latest_lora32v20.bootloader build/rnode_firmware_latest_lora32v20.partitions
+	rm -r build
+
+release-lora32_v21_extled:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_lora32v21.boot_app0
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin build/rnode_firmware_latest_lora32v21.bin
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_lora32v21.bootloader
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_lora32v21.partitions
+	zip --junk-paths ./Precompiled/rnode_firmware_latest_lora32v21_extled.zip ./Precompiled/esptool/esptool.py build/rnode_firmware_latest_lora32v21.boot_app0 build/rnode_firmware_latest_lora32v21.bin build/rnode_firmware_latest_lora32v21.bootloader build/rnode_firmware_latest_lora32v21.partitions
 	rm -r build
 
 release-featheresp32:
