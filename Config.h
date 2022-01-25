@@ -80,6 +80,13 @@
 
 	#elif MCU_VARIANT == MCU_ESP32
 
+		// Board models for ESP32 based builds are
+		// defined by the build target in the makefile.
+		// If you are not using make to compile this
+		// firmware, you can manually define model here.
+		//
+		// #define BOARD_MODEL BOARD_GENERIC_ESP32
+
 		#if BOARD_MODEL == BOARD_GENERIC_ESP32
 			const int pin_cs = 4;
 			const int pin_reset = 36;
