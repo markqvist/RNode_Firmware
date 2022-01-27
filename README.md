@@ -13,6 +13,17 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 
 To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
 
+The RNode Firmware supports the following boards:
+
+- The original RNode from [unsigned.io](https://unsigned.io/)
+- Homebrew RNodes based on ATmega1284p boards
+- Homebrew RNodes based on ATmega2560 boards
+- Homebrew RNodes based on Adafruit Feather ESP32 boards
+- Homebrew RNodes based on generic ESP32 boards
+- LilyGO T-Beam v1.1 devices
+- LilyGO LoRa32 v2.0 devices
+- LilyGO LoRa32 v2.1 devices
+
 The original RNode from [unsigned.io](https://unsigned.io) is controlled by a powerful ATmega1284p MCU, and is fully Arduino compatible. You can use this firmware, or it can be programmed any way you like, either from the Arduino IDE, or using any of the available tools for AVR development. This firmware can also be edited and compiled directly from the Arduino IDE.
 
 For adding RNode to your Arduino environment, please see [this post](https://unsigned.io/board-support-in-arduino-ide/).
