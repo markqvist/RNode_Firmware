@@ -151,3 +151,6 @@ obj/MD5.o: MD5.cpp MD5.h Config.h ROM.h Platform.h prep-linux
 obj/LoRa.o: LoRa.cpp LoRa.h Platform.h prep-linux
 	$(CC) -c -o $@ $<
 	
+obj/RNode_firmware.o: RNode_firmware.ino Utilities.h Config.h LoRa.h ROM.h Framing.h MD5.h Platform.h prep-linux
+	$(CC) -c -o $@ $<
+	

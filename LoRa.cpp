@@ -11,6 +11,10 @@
   #include <unistd.h>
   // And we need to use the filesystem and IOCTLs instead of an SPI global
   #include <fcntl.h>
+  #include <sys/ioctl.h>
+  #include <linux/spi/spidev.h>
+  // And to have memset
+  #include <cstring>
   // And we need to be able to report errors
   #include <stdio.h>
   #include <errno.h>
@@ -683,6 +687,7 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   uint8_t response;
   
 #if LIBRARY_TYPE == LIBRARY_ARDUINO
+  // Select chip, send address, and send/read data, the Arduino way
   digitalWrite(_ss, LOW);
 
   SPI.beginTransaction(_spiSettings);
@@ -692,7 +697,47 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
 
   digitalWrite(_ss, HIGH);
 #elif LIBRARY_TYPE == LIBRARY_C
-
+  // Select chip, send address, and send/read data, the Linux way
+  
+  // In Linux, chip select is automatically turned off outside of transactions.
+  
+  int status;
+  
+  // Configure SPI speed and mode to match settings
+  status = ioctl(_fd, SPI_IOC_WR_MODE, &_spiSettings.mode);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_WR_MODE failed");
+    exit(1);
+  }
+  status = ioctl(_fd, SPI_IOC_WR_LSB_FIRST, &_spiSettings.bitness);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_WR_LSB_FIRST failed");
+    exit(1);
+  }
+  status = ioctl(_fd, SPI_IOC_WR_MAX_SPEED_HZ, &_spiSettings.frequency);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_WR_MAX_SPEED_HZ failed");
+    exit(1);
+  }
+  
+  // We have two transfers: one send-only to send the address, and one
+  // send/receive, to send the value and get the response. 
+  struct spi_ioc_transfer xfer[2];
+  memset(xfer, 0, sizeof xfer);
+  
+  xfer[0].tx_buf = (unsigned long) &address;
+  xfer[0].len = 1;
+  
+  xfer[1].tx_buf = (unsigned long) &value;
+  xfer[1].rx_buf = (unsigned long) &response;
+  xfer[1].len = 1;
+  
+  // Do the transaction
+  status = ioctl(_fd, SPI_IOC_MESSAGE(2), xfer);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_MESSAGE failed");
+    exit(1);
+  }
 #else
     #error "SPI transfer not implemented for library type"
 #endif

@@ -22,16 +22,20 @@
     
     typedef unsigned char byte;
     
-    // Arduino SPI is not available.
+    // Arduino SPI is not available, so make a Linux-ish version of SPISettings
     #define MSBFIRST 0
-    #define SPI_MODE0 0
+    #define LSBFIRST 1
+    #define SPI_MODE0 SPI_MODE_0
+    #define SPI_MODE1 SPI_MODE_1
+    #define SPI_MODE2 SPI_MODE_2
+    #define SPI_MODE3 SPI_MODE_3
     class SPISettings {
     public:
-      inline SPISettings(int frequency, int bitness, int mode) : frequency(frequency), bitness(bitness), mode(mode) {};
+      inline SPISettings(uint32_t frequency, byte bitness, byte mode) : frequency(frequency), bitness(bitness), mode(mode) {};
       SPISettings& operator=(const SPISettings& other) = default;
-      int frequency;
-      int bitness;
-      int mode;
+      uint32_t frequency;
+      byte bitness;
+      byte mode;
     };
     
 #endif
