@@ -15,7 +15,25 @@
 #elif LIBRARY_TYPE == LIBRARY_C
     #include <cstdlib>
     #include <cstdint>
-    #include "ArduinoOnLinux/Stream.h"
+    #include <iostream>
+    
+    // Arduino Stream is not available, but not actually needed.
+    class Stream {};
+    
+    typedef unsigned char byte;
+    
+    // Arduino SPI is not available.
+    #define MSBFIRST 0
+    #define SPI_MODE0 0
+    class SPISettings {
+    public:
+      inline SPISettings(int frequency, int bitness, int mode) : frequency(frequency), bitness(bitness), mode(mode) {};
+      SPISettings& operator=(const SPISettings& other) = default;
+      int frequency;
+      int bitness;
+      int mode;
+    };
+    
 #endif
 
 #define LORA_DEFAULT_SS_PIN    10
@@ -81,8 +99,12 @@ public:
 
   void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN);
   void setSPIFrequency(uint32_t frequency);
-
+  
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   void dumpRegisters(Stream& out);
+#elif LIBRARY_TYPE == LIBRARY_C
+  void dumpRegisters(std::ostream& out);
+#endif
 
 private:
   void explicitHeaderMode();
@@ -107,6 +129,9 @@ private:
   int _packetIndex;
   int _implicitHeaderMode;
   void (*_onReceive)(int);
+  #if LIBRARY_TYPE == LIBRARY_C
+    int _fd;
+  #endif
 };
 
 extern LoRaClass LoRa;

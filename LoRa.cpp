@@ -6,6 +6,20 @@
 
 #include "LoRa.h"
 
+#if LIBRARY_TYPE == LIBRARY_C
+  // We need sleep() to use instead of yield()  
+  #include <unistd.h>
+  // And we need to use the filesystem and IOCTLs instead of an SPI global
+  #include <fcntl.h>
+  // And we need to be able to report errors
+  #include <stdio.h>
+  #include <errno.h>
+  // And we need IO formatting functions for the C++-stream dumpRegisters()
+  #include <iomanip>
+#endif
+
+
+
 #if MCU_VARIANT == MCU_ESP32
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
@@ -72,18 +86,26 @@ LoRaClass::LoRaClass() :
   _implicitHeaderMode(0),
   _onReceive(NULL)
 {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   // overide Stream timeout value
   setTimeout(0);
+#elif LIBRARY_TYPE == LIBRARY_C
+  _fd = 0;
+#endif
 }
 
 int LoRaClass::begin(long frequency)
 {
-  // setup pins
-  pinMode(_ss, OUTPUT);
-  // set SS high
-  digitalWrite(_ss, HIGH);
+
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+    // setup pins
+    pinMode(_ss, OUTPUT);
+    // set SS high
+    digitalWrite(_ss, HIGH);
+#endif
 
   if (_reset != -1) {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
     pinMode(_reset, OUTPUT);
 
     // perform reset
@@ -91,11 +113,21 @@ int LoRaClass::begin(long frequency)
     delay(10);
     digitalWrite(_reset, HIGH);
     delay(10);
+#endif
+    // TODO: No reset pin hooked up on BOARD_SPIDEV
   }
 
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   // start SPI
   SPI.begin();
-
+#elif LIBRARY_TYPE == LIBRARY_C
+  _fd = open("/dev/spidev0.0", O_RDWR);
+  if (_fd < 0) {
+    perror("could not open SPI device");
+    exit(1);
+  }
+#endif
+  
   // check version
   uint8_t version = readRegister(REG_VERSION);
   if (version != 0x12) {
@@ -103,7 +135,7 @@ int LoRaClass::begin(long frequency)
   }
 
   // put in sleep mode
-  sleep();
+  this->sleep();
 
   // set frequency
   setFrequency(frequency);
@@ -130,10 +162,17 @@ int LoRaClass::begin(long frequency)
 void LoRaClass::end()
 {
   // put in sleep mode
-  sleep();
+  this->sleep();
 
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   // stop SPI
   SPI.end();
+#elif LIBRARY_TYPE == LIBRARY_C
+  if (_fd >= 0) {
+    close(_fd);
+    _fd = -1;
+  }
+#endif
 }
 
 int LoRaClass::beginPacket(int implicitHeader)
@@ -161,7 +200,11 @@ int LoRaClass::endPacket()
 
   // wait for TX done
   while ((readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0) {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
     yield();
+#elif LIBRARY_TYPE == LIBRARY_C
+    ::sleep(1);
+#endif
   }
 
   // clear IRQ's
@@ -253,13 +296,13 @@ float ISR_VECT LoRaClass::packetSnr() {
 long LoRaClass::packetFrequencyError()
 {
   int32_t freqError = 0;
-  freqError = static_cast<int32_t>(readRegister(REG_FREQ_ERROR_MSB) & B111);
+  freqError = static_cast<int32_t>(readRegister(REG_FREQ_ERROR_MSB) & 0b111);
   freqError <<= 8L;
   freqError += static_cast<int32_t>(readRegister(REG_FREQ_ERROR_MID));
   freqError <<= 8L;
   freqError += static_cast<int32_t>(readRegister(REG_FREQ_ERROR_LSB));
 
-  if (readRegister(REG_FREQ_ERROR_MSB) & B1000) { // Sign bit is on
+  if (readRegister(REG_FREQ_ERROR_MSB) & 0b1000) { // Sign bit is on
      freqError -= 524288; // B1000'0000'0000'0000'0000
   }
 
@@ -337,17 +380,26 @@ void LoRaClass::onReceive(void(*callback)(int))
   _onReceive = callback;
 
   if (callback) {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
     pinMode(_dio0, INPUT);
+#endif
 
     writeRegister(REG_DIO_MAPPING_1, 0x00);
+    
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
+#endif
+    // TODO: What do we do if we want to use C library with a board that
+    // actually has dio0 connected?  
   } else {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
+#endif
 #endif
   }
 }
@@ -554,6 +606,7 @@ void LoRaClass::setSPIFrequency(uint32_t frequency)
   _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0);
 }
 
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
 void LoRaClass::dumpRegisters(Stream& out)
 {
   for (int i = 0; i < 128; i++) {
@@ -563,6 +616,16 @@ void LoRaClass::dumpRegisters(Stream& out)
     out.println(readRegister(i), HEX);
   }
 }
+#elif LIBRARY_TYPE == LIBRARY_C
+void LoRaClass::dumpRegisters(std::ostream& out)
+{
+  for (int i = 0; i < 128; i++) {
+    out << "0x" << std::hex << i << ": 0x" << std::hex << readRegister(i) << std::endl;
+  }
+  out << std::dec;
+}
+#endif
+
 
 void LoRaClass::explicitHeaderMode()
 {
@@ -618,7 +681,8 @@ void LoRaClass::writeRegister(uint8_t address, uint8_t value)
 uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
 {
   uint8_t response;
-
+  
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   digitalWrite(_ss, LOW);
 
   SPI.beginTransaction(_spiSettings);
@@ -627,6 +691,11 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   SPI.endTransaction();
 
   digitalWrite(_ss, HIGH);
+#elif LIBRARY_TYPE == LIBRARY_C
+
+#else
+    #error "SPI transfer not implemented for library type"
+#endif
 
   return response;
 }

@@ -864,3 +864,12 @@ void serial_interrupt_init() {
     buffer_serial();
   }
 #endif
+
+#if PLATFORM == PLATFORM_LINUX
+  int main(int argc, char** argv) {
+    setup();
+    while (true) {
+      loop();
+    }
+  }
+#endif
