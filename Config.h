@@ -1,19 +1,12 @@
 #include "ROM.h"
 
+#include "Platform.h"
+
 #ifndef CONFIG_H
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
 	#define MIN_VERS  0x1B
-
-	#define PLATFORM_AVR   0x90
-    #define PLATFORM_ESP32 0x80
-    #define PLATFORM_LINUX 0x70
-
-	#define MCU_1284P 0x91
-	#define MCU_2560  0x92
-	#define MCU_ESP32 0x81
-    #define MCU_LINUX 0x71
 
 	#define BOARD_RNODE         0x31
 	#define BOARD_HMBRW         0x32
@@ -24,24 +17,25 @@
 	#define BOARD_LORA32_V2_1   0x37
     #define BOARD_SPIDEV        0x38
     
-    #define LIBRARY_ARDUINO     0x1
-    #define LIBRARY_C           0x2
-
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
 
 	#if defined(__AVR_ATmega1284P__)
 	    #define PLATFORM PLATFORM_AVR
 	    #define MCU_VARIANT MCU_1284P
+        #define LIBRARY_TYPE LIBRARY_ARDUINO
 	#elif defined(__AVR_ATmega2560__)
 	    #define PLATFORM PLATFORM_AVR
 	    #define MCU_VARIANT MCU_2560
+        #define LIBRARY_TYPE LIBRARY_ARDUINO
 	#elif defined(ESP32)
 	    #define PLATFORM PLATFORM_ESP32
 	    #define MCU_VARIANT MCU_ESP32
+        #define LIBRARY_TYPE LIBRARY_ARDUINO
     #elif defined(__unix__)
         #define PLATFORM PLATFORM_LINUX
         #define MCU_VARIANT MCU_LINUX
+        #define LIBRARY_TYPE LIBRARY_C
 	#else
 	    #error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -63,7 +57,6 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_RNODE
-        #define LIBRARY_TYPE LIBRARY_ARDUINO
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
@@ -80,7 +73,6 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_HMBRW
-        #define LIBRARY_TYPE LIBRARY_ARDUINO
 
 		#define CONFIG_UART_BUFFER_SIZE 768
 		#define CONFIG_QUEUE_SIZE 5120
@@ -142,8 +134,6 @@
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif
         
-        #define LIBRARY_TYPE LIBRARY_ARDUINO
-
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
 		#define CONFIG_QUEUE_MAX_LENGTH 200
@@ -162,7 +152,6 @@
 		const int pin_led_tx = -1;
 
 		#define BOARD_MODEL BOARD_SPIDEV
-        #define LIBRARY_TYPE LIBRARY_C
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144

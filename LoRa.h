@@ -7,8 +7,16 @@
 #ifndef LORA_H
 #define LORA_H
 
-#include <Arduino.h>
-#include <SPI.h>
+#include "Platform.h"
+
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+    #include <Arduino.h>
+    #include <SPI.h>
+#elif LIBRARY_TYPE == LIBRARY_C
+    #include <cstdlib>
+    #include <cstdint>
+    #include "ArduinoOnLinux/Stream.h"
+#endif
 
 #define LORA_DEFAULT_SS_PIN    10
 #define LORA_DEFAULT_RESET_PIN 9

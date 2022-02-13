@@ -145,6 +145,9 @@ clean:
 	rm -Rf bin
 	rm -Rf obj
 	
-obj/MD5.o: MD5.cpp MD5.h Config.h ROM.h prep-linux
+obj/MD5.o: MD5.cpp MD5.h Config.h ROM.h Platform.h prep-linux
+	$(CC) -c -o $@ $<
+	
+obj/LoRa.o: LoRa.cpp LoRa.h Platform.h prep-linux
 	$(CC) -c -o $@ $<
 	

@@ -6,24 +6,6 @@
 
 #include "LoRa.h"
 
-#define MCU_1284P 0x91
-#define MCU_2560  0x92
-#define MCU_ESP32 0x81
-#if defined(__AVR_ATmega1284P__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_1284P
-#elif defined(__AVR_ATmega2560__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_2560
-#elif defined(ESP32)
-  #define PLATFORM PLATFORM_ESP32
-  #define MCU_VARIANT MCU_ESP32
-#endif
-
-#ifndef MCU_VARIANT
-  #error No MCU variant defined, cannot compile
-#endif
-
 #if MCU_VARIANT == MCU_ESP32
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
