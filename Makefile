@@ -10,6 +10,9 @@ prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:samd
 
+prep-linux:
+	mkdir -p bin
+	mkdir -p obj
 
 
 firmware:
@@ -135,3 +138,13 @@ release-mega2560:
 	arduino-cli compile --fqbn arduino:avr:mega -e
 	cp build/arduino.avr.mega/RNode_Firmware.ino.hex Release/rnode_firmware_latest_m2560.hex
 	rm -r build
+    
+.PHONY: clean prep-linux
+
+clean:
+	rm -Rf bin
+	rm -Rf obj
+	
+obj/MD5.o: MD5.cpp MD5.h Config.h ROM.h prep-linux
+	$(CC) -c -o $@ $<
+	
