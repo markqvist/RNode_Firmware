@@ -20,8 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <Arduino.h>
-#include <SPI.h>
+#include "Platform.h"
+
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+  #include <Arduino.h>
+  #include <SPI.h>
+#endif
 #include "Utilities.h"
 
 FIFOBuffer serialFIFO;
@@ -47,6 +51,16 @@ char sbuf[128];
   bool packet_ready = false;
 #endif
 
+// Arduino C doesn't need pre-declarations to call functions that appear later,
+// but standard C does.
+void serial_interrupt_init();
+void validateStatus();
+void update_radio_lock();
+void transmit(uint16_t size);
+void buffer_serial();
+void serial_poll();
+
+
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     delay(500);
@@ -54,8 +68,10 @@ void setup() {
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
 
-  // Seed the PRNG
-  randomSeed(analogRead(0));
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    // Seed the PRNG
+    randomSeed(analogRead(0));
+  #endif
 
   // Initialise serial communication
   memset(serialBuffer, 0, sizeof(serialBuffer));
@@ -66,9 +82,11 @@ void setup() {
 
   serial_interrupt_init();
 
-  // Configure input and output pins
-  pinMode(pin_led_rx, OUTPUT);
-  pinMode(pin_led_tx, OUTPUT);
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    // Configure input and output pins
+    pinMode(pin_led_rx, OUTPUT);
+    pinMode(pin_led_tx, OUTPUT);
+  #endif
 
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
@@ -318,7 +336,7 @@ void flushQueue(void) {
 
     uint16_t processed = 0;
 
-    #if MCU_VARIANT == MCU_ESP32
+    #if SERIAL_EVENTS == SERIAL_POLLING
     while (!fifo16_isempty(&packet_starts)) {
     #else
     while (!fifo16_isempty_locked(&packet_starts)) {
@@ -683,13 +701,19 @@ void validateStatus() {
       uint8_t F_WDR = WDRF;
   #elif MCU_VARIANT == MCU_2560
       uint8_t boot_flags = OPTIBOOT_MCUSR;
-      if (boot_flags == 0x00) boot_flags = 0x03;
+      if (boot_flags == 0x00) boot_flags = START_FROM_BROWNOUT;
       uint8_t F_POR = PORF;
       uint8_t F_BOR = BORF;
       uint8_t F_WDR = WDRF;
   #elif MCU_VARIANT == MCU_ESP32
       // TODO: Get ESP32 boot flags
-      uint8_t boot_flags = 0x02;
+      uint8_t boot_flags = START_FROM_POWERON;
+      uint8_t F_POR = 0x00;
+      uint8_t F_BOR = 0x00;
+      uint8_t F_WDR = 0x01;
+  #elif MCU_VARIANT == MCU_LINUX
+      // Linux build always works like a clean boot.
+      uint8_t boot_flags = START_FROM_POWERON;
       uint8_t F_POR = 0x00;
       uint8_t F_BOR = 0x00;
       uint8_t F_WDR = 0x01;
@@ -707,7 +731,7 @@ void validateStatus() {
   }
 
   if (boot_vector == START_FROM_BOOTLOADER || boot_vector == START_FROM_POWERON) {
-    if (eeprom_lock_set()) {
+    if (eeprom_info_locked()) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
           hw_ready = true;
@@ -775,7 +799,7 @@ void loop() {
     }
   }
 
-  #if MCU_VARIANT == MCU_ESP32
+  #if SERIAL_EVENTS == SERIAL_POLLING
     buffer_serial();
     if (!fifo_isempty(&serialFIFO)) serial_poll();
   #else
@@ -787,7 +811,7 @@ volatile bool serial_polling = false;
 void serial_poll() {
   serial_polling = true;
 
-  #if MCU_VARIANT != MCU_ESP32
+  #if SERIAL_EVENTS == SERIAL_INTERRUPT
   while (!fifo_isempty_locked(&serialFIFO)) {
   #else
   while (!fifo_isempty(&serialFIFO)) {
@@ -812,7 +836,7 @@ void buffer_serial() {
     while (c < MAX_CYCLES && Serial.available()) {
       c++;
 
-      #if MCU_VARIANT != MCU_ESP32
+      #if SERIAL_EVENTS == SERIAL_INTERRUPT
         if (!fifo_isfull_locked(&serialFIFO)) {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
@@ -853,8 +877,8 @@ void serial_interrupt_init() {
 
       TIMSK3 = _BV(ICIE3);
 
-  #elif MCU_VARIANT == MCU_ESP32
-      // No interrupt-based polling on ESP32
+  #else
+      // No interrupt-based polling on other MCUs.
   #endif
 
 }

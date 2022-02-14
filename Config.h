@@ -17,28 +17,11 @@
 	#define BOARD_LORA32_V2_1   0x37
     #define BOARD_SPIDEV        0x38
     
+    #define SERIAL_INTERRUPT    0x1
+    #define SERIAL_POLLING      0x2
+    
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
-
-	#if defined(__AVR_ATmega1284P__)
-	    #define PLATFORM PLATFORM_AVR
-	    #define MCU_VARIANT MCU_1284P
-        #define LIBRARY_TYPE LIBRARY_ARDUINO
-	#elif defined(__AVR_ATmega2560__)
-	    #define PLATFORM PLATFORM_AVR
-	    #define MCU_VARIANT MCU_2560
-        #define LIBRARY_TYPE LIBRARY_ARDUINO
-	#elif defined(ESP32)
-	    #define PLATFORM PLATFORM_ESP32
-	    #define MCU_VARIANT MCU_ESP32
-        #define LIBRARY_TYPE LIBRARY_ARDUINO
-    #elif defined(__unix__)
-        #define PLATFORM PLATFORM_LINUX
-        #define MCU_VARIANT MCU_LINUX
-        #define LIBRARY_TYPE LIBRARY_C
-	#else
-	    #error "The firmware cannot be compiled for the selected MCU variant"
-	#endif
 
 	#define MTU   	   500
 	#define SINGLE_MTU 255
@@ -57,6 +40,7 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_RNODE
+        #define SERIAL_EVENTS SERIAL_INTERRUPT
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
@@ -73,6 +57,7 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_HMBRW
+        #define SERIAL_EVENTS SERIAL_INTERRUPT
 
 		#define CONFIG_UART_BUFFER_SIZE 768
 		#define CONFIG_QUEUE_SIZE 5120
@@ -134,6 +119,8 @@
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif
         
+        #define SERIAL_EVENTS SERIAL_POLLING
+        
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
 		#define CONFIG_QUEUE_MAX_LENGTH 200
@@ -152,6 +139,7 @@
 		const int pin_led_tx = -1;
 
 		#define BOARD_MODEL BOARD_SPIDEV
+        #define SERIAL_EVENTS SERIAL_POLLING
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144

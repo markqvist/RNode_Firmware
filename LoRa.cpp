@@ -207,7 +207,7 @@ int LoRaClass::endPacket()
 #if LIBRARY_TYPE == LIBRARY_ARDUINO
     yield();
 #elif LIBRARY_TYPE == LIBRARY_C
-    ::sleep(1);
+    ::sleep(0);
 #endif
   }
 

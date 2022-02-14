@@ -1,13 +1,7 @@
 #ifndef MD5_h
 #define MD5_h
 
-#include "Config.h"
-
-#if LIBRARY_TYPE == LIBRARY_ARDUINO
-    #include "Arduino.h"
-#elif LIBRARY_TYPE == LIBRARY_C
-    #include <cstdlib>
-#endif
+#include "Platform.h"
 
 /*
  * This is an OpenSSL-compatible implementation of the RSA Data Security,

@@ -10,11 +10,6 @@ prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:samd
 
-prep-linux:
-	mkdir -p bin
-	mkdir -p obj
-
-
 firmware:
 	arduino-cli compile --fqbn unsignedio:avr:rnode
 
@@ -139,18 +134,22 @@ release-mega2560:
 	cp build/arduino.avr.mega/RNode_Firmware.ino.hex Release/rnode_firmware_latest_m2560.hex
 	rm -r build
     
-.PHONY: clean prep-linux
-
 clean:
 	rm -Rf bin
 	rm -Rf obj
 	
-obj/MD5.o: MD5.cpp MD5.h Config.h ROM.h Platform.h prep-linux
+obj/MD5.o: MD5.cpp MD5.h Platform.h
+	mkdir -p obj
 	$(CC) -c -o $@ $<
 	
-obj/LoRa.o: LoRa.cpp LoRa.h Platform.h prep-linux
+obj/LoRa.o: LoRa.cpp LoRa.h Platform.h
+	mkdir -p obj
 	$(CC) -c -o $@ $<
 	
-obj/RNode_firmware.o: RNode_firmware.ino Utilities.h Config.h LoRa.h ROM.h Framing.h MD5.h Platform.h prep-linux
-	$(CC) -c -o $@ $<
+obj/RNode_Firmware.o: RNode_Firmware.ino Utilities.h Config.h LoRa.h ROM.h Framing.h MD5.h Platform.h
+	mkdir -p obj
+	$(CC) -c -o $@ -x c++ $<
 	
+bin/rnode: obj/RNode_Firmware.o obj/LoRa.o obj/MD5.o
+	mkdir -p bin
+	$(CC) -o $@ $^ -lstdc++
