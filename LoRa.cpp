@@ -88,7 +88,8 @@ LoRaClass::LoRaClass() :
   _frequency(0),
   _packetIndex(0),
   _implicitHeaderMode(0),
-  _onReceive(NULL)
+  _onReceive(NULL),
+  _spiBegun(false)
 {
 #if LIBRARY_TYPE == LIBRARY_ARDUINO
   // overide Stream timeout value
@@ -118,7 +119,7 @@ int LoRaClass::begin(long frequency)
     digitalWrite(_reset, HIGH);
     delay(10);
 #endif
-    // TODO: No reset pin hooked up on BOARD_SPIDEV
+    // TODO: No reset pin hooked up on Linux
   }
 
 #if LIBRARY_TYPE == LIBRARY_ARDUINO
@@ -126,13 +127,19 @@ int LoRaClass::begin(long frequency)
   SPI.begin();
 #elif LIBRARY_TYPE == LIBRARY_C
   const char* spi_filename = "/dev/spidev0.0";
-  std::cerr << "Opening SPI device " << spi_filename << std::endl;
-  _fd = open(spi_filename, O_RDWR);
+  // We need to be re-entrant for restart
   if (_fd <= 0) {
-    perror("could not open SPI device");
-    exit(1);
+    std::cerr << "Opening SPI device " << spi_filename << std::endl;
+    _fd = open(spi_filename, O_RDWR);
+    if (_fd <= 0) {
+      perror("could not open SPI device");
+      exit(1);
+    }
+  } else {
+    std::cerr << "Skipping LoRa SPI reinitialization" << std::endl;
   }
 #endif
+  _spiBegun = true;
   
   // check version
   uint8_t version = readRegister(REG_VERSION);
@@ -167,8 +174,13 @@ int LoRaClass::begin(long frequency)
 
 void LoRaClass::end()
 {
-  // put in sleep mode
-  this->sleep();
+  // We need to be safe to call when the main loop is shutting down because
+  // it's in a bad state, even if we ourselves haven't been begun yet. We can't
+  // safely talk to the modem if the SPI link isn't begun, though.
+  if (_spiBegun) {
+    // put in sleep mode
+    this->sleep();
+  }
 
 #if LIBRARY_TYPE == LIBRARY_ARDUINO
   // stop SPI
@@ -179,6 +191,7 @@ void LoRaClass::end()
     _fd = -1;
   }
 #endif
+  _spiBegun = false;
 }
 
 int LoRaClass::beginPacket(int implicitHeader)
@@ -706,6 +719,9 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   int status;
   
   std::cerr << "Access SPI at " << _fd << std::endl;
+  if (_fd <= 0) {
+    throw std::runtime_error("Accessing SPI device without begin()!");
+  }
   
   // Configure SPI speed and mode to match settings
   status = ioctl(_fd, SPI_IOC_WR_MODE, &_spiSettings.mode);

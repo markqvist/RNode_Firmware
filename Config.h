@@ -15,7 +15,6 @@
 	#define BOARD_GENERIC_ESP32 0x35
 	#define BOARD_LORA32_V2_0   0x36
 	#define BOARD_LORA32_V2_1   0x37
-    #define BOARD_SPIDEV        0x38
     
     #define SERIAL_INTERRUPT    0x1
     #define SERIAL_POLLING      0x2
@@ -138,7 +137,7 @@
 		const int pin_led_rx = -1;
 		const int pin_led_tx = -1;
 
-		#define BOARD_MODEL BOARD_SPIDEV
+		#define BOARD_MODEL BOARD_HMBRW
         #define SERIAL_EVENTS SERIAL_POLLING
 
 		#define CONFIG_UART_BUFFER_SIZE 6144

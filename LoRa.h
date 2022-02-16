@@ -133,6 +133,7 @@ private:
   int _packetIndex;
   int _implicitHeaderMode;
   void (*_onReceive)(int);
+  bool _spiBegun;
   #if LIBRARY_TYPE == LIBRARY_C
     int _fd;
   #endif

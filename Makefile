@@ -137,19 +137,21 @@ release-mega2560:
 clean:
 	rm -Rf bin
 	rm -Rf obj
-	
+
+CFLAGS += -g
+
 obj/MD5.o: MD5.cpp MD5.h Platform.h
 	mkdir -p obj
-	$(CC) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 	
 obj/LoRa.o: LoRa.cpp LoRa.h Platform.h
 	mkdir -p obj
-	$(CC) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 	
 obj/RNode_Firmware.o: RNode_Firmware.ino Utilities.h Config.h LoRa.h ROM.h Framing.h MD5.h Platform.h
 	mkdir -p obj
-	$(CC) -c -o $@ -x c++ $<
+	$(CC) $(CFLAGS) -c -o $@ -x c++ $<
 	
 bin/rnode: obj/RNode_Firmware.o obj/LoRa.o obj/MD5.o
 	mkdir -p bin
-	$(CC) -o $@ $^ -lstdc++ -lutil
+	$(CC) $(CFLAGS) -o $@ $^ -lstdc++ -lutil

@@ -64,9 +64,8 @@ void serial_poll();
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     delay(500);
-    EEPROM.begin(EEPROM_SIZE);
-    Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
+  eeprom_open(EEPROM_SIZE);
 
   #if LIBRARY_TYPE == LIBRARY_ARDUINO
     // Seed the PRNG
@@ -79,6 +78,10 @@ void setup() {
 
   Serial.begin(serial_baudrate);
   while (!Serial);
+  
+  #if MCU_VARIANT == MCU_ESP32
+    Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
+  #endif
 
   serial_interrupt_init();
 
@@ -726,7 +729,7 @@ void validateStatus() {
   } else if (boot_flags & (1<<F_WDR)) {
     boot_vector = START_FROM_BOOTLOADER;
   } else {
-      Serial.write("Error, indeterminate boot vector\r\n");
+      debug("Error, indeterminate boot vector\r\n");
       led_indicate_boot_error();
   }
 
@@ -741,16 +744,21 @@ void validateStatus() {
             op_mode = MODE_TNC;
             startRadio();
           }
+        } else {
+          hw_ready = false;
+          debug("Error, EEPROM checksum incorrect\r\n");
         }
       } else {
         hw_ready = false;
+        debug("Error, EEPROM product, model, or revision not valid\r\n");
       }
     } else {
       hw_ready = false;
+      debug("Error, EEPROM info not locked\r\n");
     }
   } else {
     hw_ready = false;
-    Serial.write("Error, incorrect boot vector\r\n");
+    debug("Error, incorrect boot vector\r\n");
     led_indicate_boot_error();
   }
 }
