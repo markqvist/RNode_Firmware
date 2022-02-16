@@ -10,6 +10,9 @@
 
 #if LIBRARY_TYPE == LIBRARY_C
   #include <time.h>
+  #include <poll.h>
+  #include <unistd.h>
+  #include <pty.h>
   // We need a delay()
   void delay(int ms) {
     struct timespec interval;
@@ -40,39 +43,69 @@
   // We also need a Serial
   class SerialClass {
   public:
-    const char* fifoPath = "rnode_socket";
     void begin(int baud) {
-      int status = mkfifo(fifoPath, 0666);
+      int other_end = 0;
+      int status = openpty(&_fd, &other_end, NULL, NULL, NULL); 
       if (status) {
-        perror("Making fifo failed");
+        perror("could not open PTY");
         exit(1);
       }
-      // TODO: Need a bidirectional thing here: openpty???
-      _fd = open(fifoPath, O_RDWR);
-      if (_fd < 0) {
-        perror("could not open fifo");
-        exit(1);
-      }
+      
+      std::cout << "Listening on " << ttyname(other_end) << std::endl;
     }
-    // Be truthy if connected
+    
     operator bool() {
       return _fd > 0; 
     }
     void write(int b) {
-      ssize_t written = ::write(_fd, 
+      uint8_t to_write = b;
+      ssize_t written = ::write(_fd, &to_write, 1);
+      while (written != 1) {
+        if (written < 0) {
+          perror("could not write to PTY");
+          exit(1);
+        }
+        written = ::write(_fd, &to_write, 1);
+      }
     }
     void write(const char* data) {
-      throw std::runtime_error("Unimplemented");
+      while(*data) {
+        write(*data);
+        ++data;
+      }
     }
     bool available() {
-      throw std::runtime_error("Unimplemented");
+      struct pollfd request;
+      request.fd = _fd;
+      request.events = POLLIN;
+      request.revents = 0;
+      
+      int result = poll(&request, 1, 0);
+      
+      if (result == -1) {
+        perror("could not poll");
+        exit(1);
+      }
+      
+      return result > 0;
     }
     uint8_t read() {
-      throw std::runtime_error("Unimplemented");
+      uint8_t buffer;
+      ssize_t count = ::read(_fd, &buffer, 1);
+      while (count != 1) {
+        if (count < 0) {
+          perror("could not read from PTY");
+          exit(1);
+        }
+        count = ::read(_fd, &buffer, 1);
+      }
+      return buffer;
     }
   protected:
-    int _fd = -1;
+    int _fd;
   };
+  
+  
   SerialClass Serial;
   
   // And random(below);

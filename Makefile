@@ -152,4 +152,4 @@ obj/RNode_Firmware.o: RNode_Firmware.ino Utilities.h Config.h LoRa.h ROM.h Frami
 	
 bin/rnode: obj/RNode_Firmware.o obj/LoRa.o obj/MD5.o
 	mkdir -p bin
-	$(CC) -o $@ $^ -lstdc++
+	$(CC) -o $@ $^ -lstdc++ -lutil

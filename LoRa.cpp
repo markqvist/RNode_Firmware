@@ -125,8 +125,10 @@ int LoRaClass::begin(long frequency)
   // start SPI
   SPI.begin();
 #elif LIBRARY_TYPE == LIBRARY_C
-  _fd = open("/dev/spidev0.0", O_RDWR);
-  if (_fd < 0) {
+  const char* spi_filename = "/dev/spidev0.0";
+  std::cerr << "Opening SPI device " << spi_filename << std::endl;
+  _fd = open(spi_filename, O_RDWR);
+  if (_fd <= 0) {
     perror("could not open SPI device");
     exit(1);
   }
@@ -702,6 +704,8 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   // In Linux, chip select is automatically turned off outside of transactions.
   
   int status;
+  
+  std::cerr << "Access SPI at " << _fd << std::endl;
   
   // Configure SPI speed and mode to match settings
   status = ioctl(_fd, SPI_IOC_WR_MODE, &_spiSettings.mode);
