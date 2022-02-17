@@ -735,7 +735,6 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   
   int status;
   
-  std::cerr << "Access SPI at " << _fd << std::endl;
   if (_fd <= 0) {
     throw std::runtime_error("Accessing SPI device without begin()!");
   }
