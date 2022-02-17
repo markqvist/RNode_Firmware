@@ -38,11 +38,14 @@
 #define REG_FRF_MID              0x07
 #define REG_FRF_LSB              0x08
 #define REG_PA_CONFIG            0x09
+#define REG_PA_RAMP              0x0a
+#define REG_OCP                  0x0b
 #define REG_LNA                  0x0c
 #define REG_FIFO_ADDR_PTR        0x0d
 #define REG_FIFO_TX_BASE_ADDR    0x0e
 #define REG_FIFO_RX_BASE_ADDR    0x0f
 #define REG_FIFO_RX_CURRENT_ADDR 0x10
+#define REG_IRQ_FLAGS_MASK       0x11
 #define REG_IRQ_FLAGS            0x12
 #define REG_RX_NB_BYTES          0x13
 #define REG_MODEM_STAT           0x18
@@ -50,17 +53,27 @@
 #define REG_PKT_RSSI_VALUE       0x1a
 #define REG_MODEM_CONFIG_1       0x1d
 #define REG_MODEM_CONFIG_2       0x1e
+#define REG_SYMB_TIMEOUT_LSB     0x1f
 #define REG_PREAMBLE_MSB         0x20
 #define REG_PREAMBLE_LSB         0x21
 #define REG_PAYLOAD_LENGTH       0x22
+#define REG_PAYLOAD_MAX_LENGTH   0x23
+#define REG_HOP_PERIOD           0x24
 #define REG_MODEM_CONFIG_3       0x26
+#define REG_PPM_CORRECTION       0x27
 #define REG_FREQ_ERROR_MSB       0x28
 #define REG_FREQ_ERROR_MID       0x29
 #define REG_FREQ_ERROR_LSB       0x2a
 #define REG_RSSI_WIDEBAND        0x2c
+#define REG_IF_FREQ_2            0x2f
+#define REG_IF_FREQ_1            0x30
 #define REG_DETECTION_OPTIMIZE   0x31
+#define REG_INVERT_IQ            0x33
+#define REG_HIGH_BW_OPTIMIZE_1   0x36
 #define REG_DETECTION_THRESHOLD  0x37
 #define REG_SYNC_WORD            0x39
+#define REG_HIGH_BW_OPTIMIZE_2   0x3a
+#define REG_INVERT_IQ_2          0x3b
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
 
@@ -109,19 +122,6 @@ int LoRaClass::begin(long frequency)
     digitalWrite(_ss, HIGH);
 #endif
 
-  if (_reset != -1) {
-#if LIBRARY_TYPE == LIBRARY_ARDUINO
-    pinMode(_reset, OUTPUT);
-
-    // perform reset
-    digitalWrite(_reset, LOW);
-    delay(10);
-    digitalWrite(_reset, HIGH);
-    delay(10);
-#endif
-    // TODO: No reset pin hooked up on Linux
-  }
-
 #if LIBRARY_TYPE == LIBRARY_ARDUINO
   // start SPI
   SPI.begin();
@@ -141,6 +141,18 @@ int LoRaClass::begin(long frequency)
 #endif
   _spiBegun = true;
   
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    if (_reset != -1) {
+      pinMode(_reset, OUTPUT);
+
+      // perform reset
+      digitalWrite(_reset, LOW);
+      delay(10);
+      digitalWrite(_reset, HIGH);
+      delay(10);
+    }
+  #endif
+
   // check version
   uint8_t version = readRegister(REG_VERSION);
   if (version != 0x12) {
@@ -149,6 +161,40 @@ int LoRaClass::begin(long frequency)
 
   // put in sleep mode
   this->sleep();
+
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+  if (_reset == -1) {
+  #elif LIBRARY_TYPE == LIBRARY_C
+  if (true) {
+  #endif
+    // Manually set important registers to default values because we can't
+    // reset. We need to make sure our local state agrees with the modem state
+    // and we don't have a commit-everything function. We also don't have
+    // bindings for all of these, and we don't want any weird settings set by
+    // other modem users on Linux.
+    writeRegister(REG_PA_RAMP, 0x09);
+    writeRegister(REG_OCP, 0x2b);
+    writeRegister(REG_LNA, 0x20);
+    writeRegister(REG_FIFO_ADDR_PTR, 0x00);
+    writeRegister(REG_IRQ_FLAGS_MASK, 0x00);
+    writeRegister(REG_MODEM_CONFIG_1, 0x72);
+    writeRegister(REG_MODEM_CONFIG_2, 0x70);
+    writeRegister(REG_SYMB_TIMEOUT_LSB, 0x64);
+    writeRegister(REG_PREAMBLE_MSB, 0x00);
+    writeRegister(REG_PREAMBLE_LSB, 0x08);
+    writeRegister(REG_PAYLOAD_LENGTH, 0xff);
+    writeRegister(REG_HOP_PERIOD, 0x00);
+    writeRegister(REG_PPM_CORRECTION, 0x00);
+    writeRegister(REG_IF_FREQ_2, 0x20);
+    writeRegister(REG_IF_FREQ_1, 0x00);
+    writeRegister(REG_DETECTION_OPTIMIZE, 0xc3);
+    writeRegister(REG_INVERT_IQ, 0x13);
+    writeRegister(REG_HIGH_BW_OPTIMIZE_1, 0x20);
+    writeRegister(REG_DETECTION_THRESHOLD, 0x0a);
+    writeRegister(REG_SYNC_WORD, 0x12);
+    writeRegister(REG_HIGH_BW_OPTIMIZE_2, 0x20);
+    writeRegister(REG_INVERT_IQ_2, 0x1d);
+  }
 
   // set frequency
   setFrequency(frequency);
