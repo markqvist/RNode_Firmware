@@ -151,6 +151,9 @@ inline void getPacketData(uint16_t len) {
 }
 
 void ISR_VECT receive_callback(int packet_size) {
+#if LIBRARY_TYPE == LIBRARY_C
+    std::cerr << "Got packet of " << packet_size << " bytes" << std::endl;
+#endif
   if (!promisc) {
     // The standard operating mode allows large
     // packets with a payload up to 500 bytes,
@@ -165,6 +168,11 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the first part of a split
       // packet, so we set the seq variable
       // and add the data to the buffer
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs first part of split packet" << std::endl;
+#endif
+
       read_len = 0;
       seq = sequence;
 
@@ -179,7 +187,11 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the second part of a split
       // packet, so we add it to the buffer
       // and set the ready flag.
-      
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs second part of split packet" << std::endl;
+#endif
+
       #if MCU_VARIANT != MCU_ESP32
         last_rssi = (last_rssi+LoRa.packetRssi())/2;
         last_snr_raw = (last_snr_raw+LoRa.packetSnrRaw())/2;
@@ -194,6 +206,11 @@ void ISR_VECT receive_callback(int packet_size) {
       // same sequence id, so we must assume
       // that we are seeing the first part of
       // a new split packet.
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs first part of a different split packet" << std::endl;
+#endif
+
       read_len = 0;
       seq = sequence;
 
@@ -208,6 +225,10 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is not a split packet, so we
       // just read it and set the ready
       // flag to true.
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs complete packet" << std::endl;
+#endif
 
       if (seq != SEQ_UNSET) {
         // If we already had part of a split
@@ -368,6 +389,9 @@ void flushQueue(void) {
 void transmit(uint16_t size) {
   if (radio_online) {
     if (!promisc) {
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Sending RNode packet(s) of " << size << " bytes" << std::endl;
+#endif
       led_tx_on();
       uint16_t  written = 0;
       uint8_t header  = random(256) & 0xF0;
@@ -400,6 +424,11 @@ void transmit(uint16_t size) {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
       // payload of 255 bytes
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Sending standard packet of " << size << " bytes" << std::endl;
+#endif
+
       led_tx_on();
       uint16_t  written = 0;
       
