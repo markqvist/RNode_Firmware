@@ -778,6 +778,12 @@ void loop() {
         kiss_write_packet();
       }
     #endif
+    
+    #if MCU_VARIANT == MCU_LINUX
+      // We don't have interrupts, so we need to poll ofr received packets.
+      // TODO: Is this fast enough? Or do we need threads or something?
+      LoRa.pollReceive(); 
+    #endif
 
     if (queue_height > 0) {
       if (!dcd_waiting) updateModemStatus();

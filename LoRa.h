@@ -76,6 +76,7 @@ public:
   virtual int peek();
   virtual void flush();
 
+  void pollReceive();
   void onReceive(void(*callback)(int));
 
   void receive(int size = 0);
@@ -115,6 +116,7 @@ private:
   void implicitHeaderMode();
 
   void handleDio0Rise();
+  void handleRx();
 
   uint8_t readRegister(uint8_t address);
   void writeRegister(uint8_t address, uint8_t value);

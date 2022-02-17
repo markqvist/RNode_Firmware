@@ -394,6 +394,19 @@ void LoRaClass::flush()
 {
 }
 
+void LoRaClass::pollReceive()
+{
+  int irqFlags = readRegister(REG_IRQ_FLAGS);
+
+  // clear IRQ's
+  writeRegister(REG_IRQ_FLAGS, irqFlags);
+
+  if ((irqFlags & IRQ_RX_DONE_MASK) && !(irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK)) {
+    // received a packet
+    handleRx();
+  }
+}
+
 void LoRaClass::onReceive(void(*callback)(int))
 {
   _onReceive = callback;
@@ -404,17 +417,15 @@ void LoRaClass::onReceive(void(*callback)(int))
 #endif
 
     writeRegister(REG_DIO_MAPPING_1, 0x00);
-    
-#if LIBRARY_TYPE == LIBRARY_ARDUINO
+
+#if MCU_VARIANT != MCU_LINUX && LIBRARY_TYPE == LIBRARY_ARDUINO
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
 #endif
-    // TODO: What do we do if we want to use C library with a board that
-    // actually has dio0 connected?  
   } else {
-#if LIBRARY_TYPE == LIBRARY_ARDUINO
+#if MCU_VARIANT != MCU_LINUX && LIBRARY_TYPE == LIBRARY_ARDUINO
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
@@ -670,21 +681,27 @@ void ISR_VECT LoRaClass::handleDio0Rise()
 
   if ((irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0) {
     // received a packet
-    _packetIndex = 0;
-
-    // read packet length
-    int packetLength = _implicitHeaderMode ? readRegister(REG_PAYLOAD_LENGTH) : readRegister(REG_RX_NB_BYTES);
-
-    // set FIFO address to current RX address
-    writeRegister(REG_FIFO_ADDR_PTR, readRegister(REG_FIFO_RX_CURRENT_ADDR));
-
-    if (_onReceive) {
-      _onReceive(packetLength);
-    }
-
-    // reset FIFO address
-    writeRegister(REG_FIFO_ADDR_PTR, 0);
+    handleRx();
   }
+}
+
+void ISR_VECT LoRaClass::handleRx()
+{
+  // received a packet
+  _packetIndex = 0;
+
+  // read packet length
+  int packetLength = _implicitHeaderMode ? readRegister(REG_PAYLOAD_LENGTH) : readRegister(REG_RX_NB_BYTES);
+
+  // set FIFO address to current RX address
+  writeRegister(REG_FIFO_ADDR_PTR, readRegister(REG_FIFO_RX_CURRENT_ADDR));
+
+  if (_onReceive) {
+    _onReceive(packetLength);
+  }
+
+  // reset FIFO address
+  writeRegister(REG_FIFO_ADDR_PTR, 0);
 }
 
 uint8_t ISR_VECT LoRaClass::readRegister(uint8_t address)
