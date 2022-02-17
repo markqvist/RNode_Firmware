@@ -186,10 +186,7 @@ void LoRaClass::end()
   // stop SPI
   SPI.end();
 #elif LIBRARY_TYPE == LIBRARY_C
-  if (_fd >= 0) {
-    close(_fd);
-    _fd = -1;
-  }
+  // Don't do anything. We need to keep things open for restart. 
 #endif
   _spiBegun = false;
 }
