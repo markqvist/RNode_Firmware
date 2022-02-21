@@ -112,6 +112,8 @@ public:
 #endif
 
 private:
+  bool resetModem();
+
   void explicitHeaderMode();
   void implicitHeaderMode();
 

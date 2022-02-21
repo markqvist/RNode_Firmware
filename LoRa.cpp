@@ -76,6 +76,13 @@
 #define REG_INVERT_IQ_2          0x3b
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
+#define REG_TXCO                 0x4B
+#define REG_PA_DAC               0x4D
+#define REG_AGC_REF              0x61
+#define REG_AGC_THRESHOLD_1      0x62
+#define REG_AGC_THRESHOLD_2      0x63
+#define REG_AGC_THRESHOLD_3      0x64
+#define REG_PLL                  0x70
 
 // Modes
 #define MODE_LONG_RANGE_MODE     0x80
@@ -141,59 +148,8 @@ int LoRaClass::begin(long frequency)
 #endif
   _spiBegun = true;
   
-  #if LIBRARY_TYPE == LIBRARY_ARDUINO
-    if (_reset != -1) {
-      pinMode(_reset, OUTPUT);
-
-      // perform reset
-      digitalWrite(_reset, LOW);
-      delay(10);
-      digitalWrite(_reset, HIGH);
-      delay(10);
-    }
-  #endif
-
-  // check version
-  uint8_t version = readRegister(REG_VERSION);
-  if (version != 0x12) {
+  if (!resetModem()) {
     return 0;
-  }
-
-  // put in sleep mode
-  this->sleep();
-
-  #if LIBRARY_TYPE == LIBRARY_ARDUINO
-  if (_reset == -1) {
-  #elif LIBRARY_TYPE == LIBRARY_C
-  if (true) {
-  #endif
-    // Manually set important registers to default values because we can't
-    // reset. We need to make sure our local state agrees with the modem state
-    // and we don't have a commit-everything function. We also don't have
-    // bindings for all of these, and we don't want any weird settings set by
-    // other modem users on Linux.
-    writeRegister(REG_PA_RAMP, 0x09);
-    writeRegister(REG_OCP, 0x2b);
-    writeRegister(REG_LNA, 0x20);
-    writeRegister(REG_FIFO_ADDR_PTR, 0x00);
-    writeRegister(REG_IRQ_FLAGS_MASK, 0x00);
-    writeRegister(REG_MODEM_CONFIG_1, 0x72);
-    writeRegister(REG_MODEM_CONFIG_2, 0x70);
-    writeRegister(REG_SYMB_TIMEOUT_LSB, 0x64);
-    writeRegister(REG_PREAMBLE_MSB, 0x00);
-    writeRegister(REG_PREAMBLE_LSB, 0x08);
-    writeRegister(REG_PAYLOAD_LENGTH, 0xff);
-    writeRegister(REG_HOP_PERIOD, 0x00);
-    writeRegister(REG_PPM_CORRECTION, 0x00);
-    writeRegister(REG_IF_FREQ_2, 0x20);
-    writeRegister(REG_IF_FREQ_1, 0x00);
-    writeRegister(REG_DETECTION_OPTIMIZE, 0xc3);
-    writeRegister(REG_INVERT_IQ, 0x13);
-    writeRegister(REG_HIGH_BW_OPTIMIZE_1, 0x20);
-    writeRegister(REG_DETECTION_THRESHOLD, 0x0a);
-    writeRegister(REG_SYNC_WORD, 0x12);
-    writeRegister(REG_HIGH_BW_OPTIMIZE_2, 0x20);
-    writeRegister(REG_INVERT_IQ_2, 0x1d);
   }
 
   // set frequency
@@ -699,6 +655,83 @@ void LoRaClass::dumpRegisters(std::ostream& out)
 }
 #endif
 
+bool LoRaClass::resetModem()
+{
+  // Reset the modem to a known good default state and put it into sleep mode.
+  // Returns false if the modem doesn't appear to be the right version.
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    if (_reset != -1) {
+      pinMode(_reset, OUTPUT);
+
+      // perform reset
+      digitalWrite(_reset, LOW);
+      delay(10);
+      digitalWrite(_reset, HIGH);
+      delay(10);
+    }
+  #endif
+  // check version
+  uint8_t version = readRegister(REG_VERSION);
+  if (version != 0x12) {
+    return false;
+  }
+
+  this->sleep();
+
+  #if LIBRARY_TYPE == LIBRARY_C
+    byte CLEAN_STATE[] = {
+      REG_PA_RAMP, 0x09,
+      REG_FRF_MSB, 0x6c,
+      REG_FRF_MID, 0x80,
+      REG_FRF_LSB, 0x00,
+      REG_PA_CONFIG, 0x4f,
+      REG_PA_RAMP, 0x09,
+      REG_OCP, 0x2b,
+      REG_LNA, 0x20,
+      REG_FIFO_ADDR_PTR, 0x00,
+      REG_FIFO_TX_BASE_ADDR, 0x80,
+      REG_FIFO_RX_BASE_ADDR, 0x00,
+      REG_FIFO_RX_CURRENT_ADDR, 0x00,
+      REG_IRQ_FLAGS_MASK, 0x00,
+      REG_MODEM_CONFIG_1, 0x72,
+      REG_MODEM_CONFIG_2, 0x70,
+      REG_SYMB_TIMEOUT_LSB, 0x64,
+      REG_PREAMBLE_MSB, 0x00,
+      REG_PREAMBLE_LSB, 0x08,
+      REG_PAYLOAD_LENGTH, 0x01,
+      REG_PAYLOAD_MAX_LENGTH, 0xff,
+      REG_HOP_PERIOD, 0x00,
+      REG_MODEM_CONFIG_3, 0x04,
+      REG_PPM_CORRECTION, 0x00,
+      REG_DETECTION_OPTIMIZE, 0xc3, // Errata says this needs to be set before REG_IF_FREQ_1 and REG_IF_FREQ_2
+      REG_IF_FREQ_2, 0x45, // Datasheet says this defaults to 0x20, but dumping says 0x45.
+      REG_IF_FREQ_1, 0x55, // Datasheet says this defaults to 0x00, but dumping says 0x55.
+      REG_INVERT_IQ, 0x27,
+      REG_HIGH_BW_OPTIMIZE_1, 0x03,
+      REG_DETECTION_THRESHOLD, 0x0a,
+      REG_SYNC_WORD, 0x12,
+      REG_HIGH_BW_OPTIMIZE_2, 0x52, // Datasheet says this defaults to 0x20, but dumping says 0x52.
+      REG_INVERT_IQ_2, 0x1d,
+      REG_TXCO, 0x09,
+      REG_PA_DAC, 0x84,
+      REG_AGC_REF, 0x1C, // Datasheet says this defaults to 0x13, but dumping says 0x1c.
+      REG_AGC_THRESHOLD_1, 0x0e,
+      REG_AGC_THRESHOLD_2, 0x5b,
+      REG_AGC_THRESHOLD_3, 0xcc, // Datasheet says this defaults to 0xdb, but dumping says 0xcc.
+      REG_PLL, 0xd0,
+      0, 0;
+    };
+
+
+    // Manually set important registers to default values because we can't
+    // reset.
+    for (int i = 0; CLEAN_STATE[i] != 0; i += 2) {
+      writeRegister(CLEAN_STATE[i], CLEAN_STATE[i + 1]);
+    }
+  #endif
+
+  return true;
+}
 
 void LoRaClass::explicitHeaderMode()
 {
