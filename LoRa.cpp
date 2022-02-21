@@ -215,7 +215,7 @@ int LoRaClass::beginPacket(int implicitHeader)
 
 int LoRaClass::endPacket()
 {
-#elif LIBRARY_TYPE == LIBRARY_C
+#if LIBRARY_TYPE == LIBRARY_C
   std::cerr << "Entering transmit mode" << std::endl;
   for (uint8_t i = REG_OP_MODE ; i <= REG_PA_DAC; i++) {
     uint8_t val = readRegister(i);
