@@ -219,7 +219,7 @@ int LoRaClass::endPacket()
   std::cerr << "Entering transmit mode" << std::endl;
   for (uint8_t i = REG_OP_MODE ; i <= REG_PA_DAC; i++) {
     uint8_t val = readRegister(i);
-    std::cerr << std::hex << "0x" << i << " 0x" << val << std::dec << std::endl;
+    std::cerr << std::hex << "0x" << (int)i << " 0x" << (int)val << std::dec << std::endl;
   }
 #endif
   // put in TX mode
@@ -712,9 +712,9 @@ bool LoRaClass::resetModem()
       REG_HOP_PERIOD, 0x00,
       REG_MODEM_CONFIG_3, 0x04,
       REG_PPM_CORRECTION, 0x00,
-      REG_DETECTION_OPTIMIZE, 0xc3, // Errata says this needs to be set before REG_IF_FREQ_1 and REG_IF_FREQ_2
-      REG_IF_FREQ_2, 0x45, // Datasheet says this defaults to 0x20, but dumping says 0x45.
-      REG_IF_FREQ_1, 0x55, // Datasheet says this defaults to 0x00, but dumping says 0x55.
+      //REG_DETECTION_OPTIMIZE, 0xc3, // Errata says this needs to be set before REG_IF_FREQ_1 and REG_IF_FREQ_2
+      //REG_IF_FREQ_2, 0x45, // Datasheet says this defaults to 0x20, but dumping says 0x45.
+      //REG_IF_FREQ_1, 0x55, // Datasheet says this defaults to 0x00, but dumping says 0x55.
       REG_INVERT_IQ, 0x27,
       REG_HIGH_BW_OPTIMIZE_1, 0x03,
       REG_DETECTION_THRESHOLD, 0x0a,
