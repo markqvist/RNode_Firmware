@@ -792,20 +792,9 @@ void validateStatus() {
   }
 }
 
-bool started = false;
-
 void loop() {
   if (radio_online) {
     checkModemStatus();
-
-    if (!started) {
-      started = true;
-      //promisc = true;
-      tbuf[0] = 'R';
-      tbuf[1] = 'N';
-      transmit(2);
-      //promisc = false;
-    }
 
     #if MCU_VARIANT == MCU_ESP32
       if (packet_ready) {
