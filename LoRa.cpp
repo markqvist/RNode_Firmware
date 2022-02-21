@@ -78,6 +78,8 @@
 #define REG_VERSION              0x42
 #define REG_TXCO                 0x4B
 #define REG_PA_DAC               0x4D
+// These registers have different values in high and low frequency modes (flag 0x08 in mode)
+// We always stay in high frequency mode (flag is 0)
 #define REG_AGC_REF              0x61
 #define REG_AGC_THRESHOLD_1      0x62
 #define REG_AGC_THRESHOLD_2      0x63
@@ -714,12 +716,13 @@ bool LoRaClass::resetModem()
       REG_INVERT_IQ_2, 0x1d,
       REG_TXCO, 0x09,
       REG_PA_DAC, 0x84,
-      REG_AGC_REF, 0x1C, // Datasheet says this defaults to 0x13, but dumping says 0x1c.
+      // These are the high frequency mode (mode flag 0x08 is 0) values
+      REG_AGC_REF, 0x1C,
       REG_AGC_THRESHOLD_1, 0x0e,
       REG_AGC_THRESHOLD_2, 0x5b,
-      REG_AGC_THRESHOLD_3, 0xcc, // Datasheet says this defaults to 0xdb, but dumping says 0xcc.
+      REG_AGC_THRESHOLD_3, 0xcc,
       REG_PLL, 0xd0,
-      0, 0;
+      0, 0
     };
 
 
