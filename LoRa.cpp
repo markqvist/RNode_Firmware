@@ -215,6 +215,13 @@ int LoRaClass::beginPacket(int implicitHeader)
 
 int LoRaClass::endPacket()
 {
+#elif LIBRARY_TYPE == LIBRARY_C
+  std::cerr << "Entering transmit mode" << std::endl;
+  for (uint8_t i = REG_OP_MODE ; i <= REG_PA_DAC; i++) {
+    uint8_t val = readRegister(i);
+    std::cerr << std::hex << "0x" << i << " 0x" << val << std::dec << std::endl;
+  }
+#endif
   // put in TX mode
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
 
