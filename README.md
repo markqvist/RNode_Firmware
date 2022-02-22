@@ -3,15 +3,20 @@
 This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based communication device. RNode can functions as a:
 
 - A general purpose long-range data radio
-- Network adapter for [RNS](https://github.com/markqvist/Reticulum)
+- Network adapter for [Reticulum](https://github.com/markqvist/Reticulum)
 - LoRa interface for your computer (or any device with a USB or serial port)
 - Generic [LoRa-based network adapter](https://unsigned.io/15-kilometre-ssh-link-with-rnode/) for your Linux devices
 - [Packet sniffer](https://github.com/markqvist/LoRaMon) for LoRa networks
 - LoRa development board
-- A LoRa-based KISS-compatible TNC
+- A LoRa-based KISS-compatible TNC for amateur radio and AX.25 applications
 - A flexible platform for experiementing with LoRa technology
 
 To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
+
+## Current Status
+The RNode firmware can be considered stable at this point. If you do find a bug or discover unintended behaviour, please report it as an issue here, so I can fix it!
+
+## Supported Hardware
 
 The RNode Firmware supports the following boards:
 
@@ -29,9 +34,6 @@ The original RNode from [unsigned.io](https://unsigned.io) is controlled by a po
 For adding RNode to your Arduino environment, please see [this post](https://unsigned.io/board-support-in-arduino-ide/).
 
 For configuring an RNode with this firmware, please have a look at the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil).
-
-## Current Status
-The RNode firmware can be considered stable at this point. If you do find a bug or discover unintended behaviour, please report it as an issue here, so I can fix it!
 
 ## Operating Modes
 RNode can operate in two modes, host-controlled (default) and TNC mode:
