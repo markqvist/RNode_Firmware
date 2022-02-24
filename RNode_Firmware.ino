@@ -20,8 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include <Arduino.h>
-#include <SPI.h>
+#include "Platform.h"
+
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+  #include <Arduino.h>
+  #include <SPI.h>
+#endif
 #include "Utilities.h"
 
 FIFOBuffer serialFIFO;
@@ -47,15 +51,26 @@ char sbuf[128];
   bool packet_ready = false;
 #endif
 
+// Arduino C doesn't need pre-declarations to call functions that appear later,
+// but standard C does.
+void serial_interrupt_init();
+void validateStatus();
+void update_radio_lock();
+void transmit(uint16_t size);
+void buffer_serial();
+void serial_poll();
+
+
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     delay(500);
-    EEPROM.begin(EEPROM_SIZE);
-    Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
+  eeprom_open(EEPROM_SIZE);
 
-  // Seed the PRNG
-  randomSeed(analogRead(0));
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    // Seed the PRNG
+    randomSeed(analogRead(0));
+  #endif
 
   // Initialise serial communication
   memset(serialBuffer, 0, sizeof(serialBuffer));
@@ -63,12 +78,18 @@ void setup() {
 
   Serial.begin(serial_baudrate);
   while (!Serial);
+  
+  #if MCU_VARIANT == MCU_ESP32
+    Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
+  #endif
 
   serial_interrupt_init();
 
-  // Configure input and output pins
-  pinMode(pin_led_rx, OUTPUT);
-  pinMode(pin_led_tx, OUTPUT);
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    // Configure input and output pins
+    pinMode(pin_led_rx, OUTPUT);
+    pinMode(pin_led_tx, OUTPUT);
+  #endif
 
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
@@ -130,6 +151,9 @@ inline void getPacketData(uint16_t len) {
 }
 
 void ISR_VECT receive_callback(int packet_size) {
+#if LIBRARY_TYPE == LIBRARY_C
+    std::cerr << "Got packet of " << packet_size << " bytes" << std::endl;
+#endif
   if (!promisc) {
     // The standard operating mode allows large
     // packets with a payload up to 500 bytes,
@@ -144,6 +168,11 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the first part of a split
       // packet, so we set the seq variable
       // and add the data to the buffer
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs first part of split packet" << std::endl;
+#endif
+
       read_len = 0;
       seq = sequence;
 
@@ -158,7 +187,11 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the second part of a split
       // packet, so we add it to the buffer
       // and set the ready flag.
-      
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs second part of split packet" << std::endl;
+#endif
+
       #if MCU_VARIANT != MCU_ESP32
         last_rssi = (last_rssi+LoRa.packetRssi())/2;
         last_snr_raw = (last_snr_raw+LoRa.packetSnrRaw())/2;
@@ -173,6 +206,11 @@ void ISR_VECT receive_callback(int packet_size) {
       // same sequence id, so we must assume
       // that we are seeing the first part of
       // a new split packet.
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs first part of a different split packet" << std::endl;
+#endif
+
       read_len = 0;
       seq = sequence;
 
@@ -187,6 +225,10 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is not a split packet, so we
       // just read it and set the ready
       // flag to true.
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "\tIs complete packet" << std::endl;
+#endif
 
       if (seq != SEQ_UNSET) {
         // If we already had part of a split
@@ -318,7 +360,7 @@ void flushQueue(void) {
 
     uint16_t processed = 0;
 
-    #if MCU_VARIANT == MCU_ESP32
+    #if SERIAL_EVENTS == SERIAL_POLLING
     while (!fifo16_isempty(&packet_starts)) {
     #else
     while (!fifo16_isempty_locked(&packet_starts)) {
@@ -347,6 +389,9 @@ void flushQueue(void) {
 void transmit(uint16_t size) {
   if (radio_online) {
     if (!promisc) {
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Sending RNode packet(s) of " << size << " bytes" << std::endl;
+#endif
       led_tx_on();
       uint16_t  written = 0;
       uint8_t header  = random(256) & 0xF0;
@@ -379,6 +424,11 @@ void transmit(uint16_t size) {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
       // payload of 255 bytes
+
+#if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Sending standard packet of " << size << " bytes" << std::endl;
+#endif
+
       led_tx_on();
       uint16_t  written = 0;
       
@@ -683,13 +733,19 @@ void validateStatus() {
       uint8_t F_WDR = WDRF;
   #elif MCU_VARIANT == MCU_2560
       uint8_t boot_flags = OPTIBOOT_MCUSR;
-      if (boot_flags == 0x00) boot_flags = 0x03;
+      if (boot_flags == 0x00) boot_flags = START_FROM_BROWNOUT;
       uint8_t F_POR = PORF;
       uint8_t F_BOR = BORF;
       uint8_t F_WDR = WDRF;
   #elif MCU_VARIANT == MCU_ESP32
       // TODO: Get ESP32 boot flags
-      uint8_t boot_flags = 0x02;
+      uint8_t boot_flags = START_FROM_POWERON;
+      uint8_t F_POR = 0x00;
+      uint8_t F_BOR = 0x00;
+      uint8_t F_WDR = 0x01;
+  #elif MCU_VARIANT == MCU_LINUX
+      // Linux build always works like a clean boot.
+      uint8_t boot_flags = START_FROM_POWERON;
       uint8_t F_POR = 0x00;
       uint8_t F_BOR = 0x00;
       uint8_t F_WDR = 0x01;
@@ -702,12 +758,12 @@ void validateStatus() {
   } else if (boot_flags & (1<<F_WDR)) {
     boot_vector = START_FROM_BOOTLOADER;
   } else {
-      Serial.write("Error, indeterminate boot vector\r\n");
+      debug("Error, indeterminate boot vector\r\n");
       led_indicate_boot_error();
   }
 
   if (boot_vector == START_FROM_BOOTLOADER || boot_vector == START_FROM_POWERON) {
-    if (eeprom_lock_set()) {
+    if (eeprom_info_locked()) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
           hw_ready = true;
@@ -717,16 +773,21 @@ void validateStatus() {
             op_mode = MODE_TNC;
             startRadio();
           }
+        } else {
+          hw_ready = false;
+          debug("Error, EEPROM checksum incorrect\r\n");
         }
       } else {
         hw_ready = false;
+        debug("Error, EEPROM product, model, or revision not valid\r\n");
       }
     } else {
       hw_ready = false;
+      debug("Error, EEPROM info not locked\r\n");
     }
   } else {
     hw_ready = false;
-    Serial.write("Error, incorrect boot vector\r\n");
+    debug("Error, incorrect boot vector\r\n");
     led_indicate_boot_error();
   }
 }
@@ -745,6 +806,12 @@ void loop() {
         kiss_indicate_stat_snr();
         kiss_write_packet();
       }
+    #endif
+    
+    #if MCU_VARIANT == MCU_LINUX
+      // We don't have interrupts, so we need to poll ofr received packets.
+      // TODO: Is this fast enough? Or do we need threads or something?
+      LoRa.pollReceive(); 
     #endif
 
     if (queue_height > 0) {
@@ -775,7 +842,7 @@ void loop() {
     }
   }
 
-  #if MCU_VARIANT == MCU_ESP32
+  #if SERIAL_EVENTS == SERIAL_POLLING
     buffer_serial();
     if (!fifo_isempty(&serialFIFO)) serial_poll();
   #else
@@ -787,7 +854,7 @@ volatile bool serial_polling = false;
 void serial_poll() {
   serial_polling = true;
 
-  #if MCU_VARIANT != MCU_ESP32
+  #if SERIAL_EVENTS == SERIAL_INTERRUPT
   while (!fifo_isempty_locked(&serialFIFO)) {
   #else
   while (!fifo_isempty(&serialFIFO)) {
@@ -812,7 +879,7 @@ void buffer_serial() {
     while (c < MAX_CYCLES && Serial.available()) {
       c++;
 
-      #if MCU_VARIANT != MCU_ESP32
+      #if SERIAL_EVENTS == SERIAL_INTERRUPT
         if (!fifo_isfull_locked(&serialFIFO)) {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
@@ -853,8 +920,8 @@ void serial_interrupt_init() {
 
       TIMSK3 = _BV(ICIE3);
 
-  #elif MCU_VARIANT == MCU_ESP32
-      // No interrupt-based polling on ESP32
+  #else
+      // No interrupt-based polling on other MCUs.
   #endif
 
 }
@@ -862,5 +929,14 @@ void serial_interrupt_init() {
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
   ISR(TIMER3_CAPT_vect) {
     buffer_serial();
+  }
+#endif
+
+#if PLATFORM == PLATFORM_LINUX
+  int main(int argc, char** argv) {
+    setup();
+    while (true) {
+      loop();
+    }
   }
 #endif

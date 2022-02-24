@@ -1,7 +1,7 @@
 #ifndef MD5_h
 #define MD5_h
 
-#include "Arduino.h"
+#include "Platform.h"
 
 /*
  * This is an OpenSSL-compatible implementation of the RSA Data Security,

@@ -1,10 +1,149 @@
-#include <EEPROM.h>
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+  #include <EEPROM.h>
+#endif
 #include <stddef.h>
 #include "Config.h"
 #include "LoRa.h"
 #include "ROM.h"
 #include "Framing.h"
 #include "MD5.h"
+
+#if LIBRARY_TYPE == LIBRARY_C
+  #include <time.h>
+  #include <poll.h>
+  #include <unistd.h>
+  #include <pty.h>
+  #include <sys/stat.h>
+  #include <sys/mman.h>
+  #include <fcntl.h>
+  // We need a delay()
+  void delay(int ms) {
+    struct timespec interval;
+    interval.tv_sec = ms / 1000;
+    interval.tv_nsec = (ms % 1000) * 1000 * 1000;
+    // TODO: handle signals interrupting sleep
+    nanosleep(&interval, NULL);
+  }
+  
+  // And millis()
+  struct timespec millis_base;
+  uint32_t millis() {
+    // Time since first call is close enough.
+    static bool base_set(false);
+    if (!base_set) {
+      if (clock_gettime(CLOCK_MONOTONIC, &millis_base)) {
+        perror("Could not get time");
+        exit(1);
+      }
+      base_set = true;
+    }
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now)) {
+      perror("Could not get time");
+      exit(1);
+    }
+    return (now.tv_sec - millis_base.tv_sec) * 1000 + (now.tv_nsec - millis_base.tv_nsec)/(1000*1000);
+  }
+  
+  // Serial will want to poll the EEPROM a bit for help text
+  bool eeprom_info_locked();
+  
+  // We also need a Serial
+  class SerialClass {
+  public:
+    void begin(int baud) {
+      // Need to be rrentrant for restart
+      if (_fd <= 0) {
+        int other_end = 0;
+        int status = openpty(&_fd, &other_end, NULL, NULL, NULL); 
+        if (status) {
+          perror("could not open PTY");
+          exit(1);
+        }
+        
+        std::cerr << "Listening on " << ttyname(other_end) << std::endl;
+        if (!eeprom_info_locked()) {
+          std::cerr << "EEPROM configuration is not initialized. You will want to flash it with something like:" << std::endl;
+          std::cerr << "\trnodeconf --key" << std::endl;
+          std::cerr << "\trnodeconf --rom --platform " << std::hex << PLATFORM << " --product " << PRODUCT_HMBRW << " --model " << MODEL_FF << std::dec << " --hwrev 1 " << ttyname(other_end) << std::endl;
+        }
+      } else {
+        std::cerr << "Skipping Serial reinitialization" << std::endl;
+      }
+    }
+    
+    operator bool() {
+      return _fd > 0; 
+    }
+    void write(int b) {
+      uint8_t to_write = b;
+      ssize_t written = ::write(_fd, &to_write, 1);
+      while (written != 1) {
+        if (written < 0) {
+          perror("could not write to PTY");
+          exit(1);
+        }
+        written = ::write(_fd, &to_write, 1);
+      }
+    }
+    void write(const char* data) {
+      while(*data) {
+        write(*data);
+        ++data;
+      }
+    }
+    bool available() {
+      struct pollfd request;
+      request.fd = _fd;
+      request.events = POLLIN;
+      request.revents = 0;
+      
+      int result = poll(&request, 1, 0);
+      
+      if (result == -1) {
+        perror("could not poll");
+        exit(1);
+      }
+      
+      return result > 0;
+    }
+    uint8_t read() {
+      uint8_t buffer;
+      ssize_t count = ::read(_fd, &buffer, 1);
+      while (count != 1) {
+        if (count < 0) {
+          perror("could not read from PTY");
+          exit(1);
+        }
+        count = ::read(_fd, &buffer, 1);
+      }
+      return buffer;
+    }
+  protected:
+    int _fd;
+  };
+  
+  
+  SerialClass Serial;
+  
+  // And random(below);
+  int random(int below) {
+    return rand() % below;
+  }
+  
+  
+#endif
+
+// Log a debug message. Message should have a \r to return the cursor, if
+// needed.
+void debug(const char* message) {
+  #if LIBRARY_TYPE == LIBRARY_C
+    std::cerr << message << std::endl;
+  #endif
+  if (Serial) {
+    Serial.write(message);
+  }
+}
 
 #if MCU_VARIANT == MCU_ESP32
   #include "soc/rtc_wdt.h"
@@ -68,7 +207,18 @@ uint8_t boot_vector = 0x00;
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
-	#endif
+  #endif
+#elif MCU_VARIANT == MCU_LINUX
+  // No LEDs on Linux, probably. SPI only.
+  void led_rx_on()  { }
+  void led_rx_off() { }
+  void led_tx_on()  { }
+  void led_tx_off() { }
+#endif
+
+#if LIBRARY_TYPE == LIBRARY_C
+  // hard_reset needs a declaration for main
+  int main(int argc, char** argv);
 #endif
 
 void hard_reset(void) {
@@ -79,27 +229,39 @@ void hard_reset(void) {
 		}
 	#elif MCU_VARIANT == MCU_ESP32
 		ESP.restart();
+  #elif MCU_VARIANT == MCU_LINUX
+    // TODO: re-exec ourselves?
+    #if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Restarting" << std::endl;
+      exit(main(0, NULL));
+    #endif
 	#endif
 }
 
 void led_indicate_error(int cycles) {
+#if LIBRARY_TYPE == LIBRARY_C
+  std::cerr << "Indicating error" << std::endl;
+#endif
 	bool forever = (cycles == 0) ? true : false;
 	cycles = forever ? 1 : cycles;
-	while(cycles > 0) {
-        digitalWrite(pin_led_rx, HIGH);
-        digitalWrite(pin_led_tx, LOW);
-        delay(100);
-        digitalWrite(pin_led_rx, LOW);
-        digitalWrite(pin_led_tx, HIGH);
-        delay(100);
-        if (!forever) cycles--;
-    }
-    led_rx_off();
+	while(cycles > 0) { 
+    led_rx_on();
     led_tx_off();
+    delay(100);
+    led_rx_off();
+    led_tx_on();
+    delay(100);
+    if (!forever) cycles--;
+  }
+  led_rx_off();
+  led_tx_off();
 }
 
 void led_indicate_boot_error() {
-	while (true) {
+#if LIBRARY_TYPE == LIBRARY_C
+  std::cerr << "Indicating boot error" << std::endl;
+#endif
+  while (true) {
 	    led_tx_on();
 	    led_rx_off();
 	    delay(10);
@@ -110,9 +272,12 @@ void led_indicate_boot_error() {
 }
 
 void led_indicate_warning(int cycles) {
+#if LIBRARY_TYPE == LIBRARY_C
+  std::cerr << "Indicating warning" << std::endl;
+#endif
 	bool forever = (cycles == 0) ? true : false;
 	cycles = forever ? 1 : cycles;
-	digitalWrite(pin_led_tx, HIGH);
+	led_tx_on();
 	while(cycles > 0) {
         led_tx_off();
         delay(100);
@@ -123,7 +288,7 @@ void led_indicate_warning(int cycles) {
    led_tx_off();
 }
 
-#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560 || MCU_VARIANT == MCU_LINUX
 	void led_indicate_info(int cycles) {
 		bool forever = (cycles == 0) ? true : false;
 		cycles = forever ? 1 : cycles;
@@ -165,6 +330,9 @@ void led_indicate_warning(int cycles) {
 		}
 	#else
 		void led_indicate_info(int cycles) {
+      #if LIBRARY_TYPE == LIBRARY_C
+        std::cerr << "Indicating info" << std::endl;
+      #endif
 			bool forever = (cycles == 0) ? true : false;
 			cycles = forever ? 1 : cycles;
 			while(cycles > 0) {
@@ -179,8 +347,9 @@ void led_indicate_warning(int cycles) {
 	#endif
 #endif
 
-
-unsigned long led_standby_ticks = 0;
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560 || MCU_VARIANT == MCU_ESP32
+  unsigned long led_standby_ticks = 0;
+#endif
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
 	uint8_t led_standby_min = 1;
 	uint8_t led_standby_max = 40;
@@ -196,8 +365,10 @@ unsigned long led_standby_ticks = 0;
 	unsigned long led_standby_wait = 1768;
 	unsigned long led_notready_wait = 150;
 #endif
-uint8_t led_standby_value = led_standby_min;
-int8_t  led_standby_direction = 0;
+#if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560 || MCU_VARIANT == MCU_ESP32
+  uint8_t led_standby_value = led_standby_min;
+  int8_t  led_standby_direction = 0;
+#endif
 
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
 	void led_indicate_standby() {
@@ -243,6 +414,17 @@ int8_t  led_standby_direction = 0;
 			#endif
 		}
 	}
+#elif MCU_VARIANT == MCU_LINUX
+  // No LEDs available.
+  void led_indicate_standby() {
+    #if LIBRARY_TYPE == LIBRARY_C
+      static bool printed = false;
+      if (!printed) {
+        std::cerr << "Indicating standby" << std::endl;
+        printed = true;
+      }
+    #endif
+  }
 #endif
 
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
@@ -289,6 +471,17 @@ int8_t  led_standby_direction = 0;
 			#endif
 		}
 	}
+#elif MCU_VARIANT == MCU_LINUX
+  // No LEDs available.
+  void led_indicate_not_ready() {
+    #if LIBRARY_TYPE == LIBRARY_C
+      static bool printed = false;
+      if (!printed) {
+        std::cerr << "Indicating not ready" << std::endl;
+        printed = true;
+      }
+    #endif
+  }
 #endif
 
 void escapedSerialWrite(uint8_t byte) {
@@ -551,41 +744,73 @@ void promisc_disable() {
 	promisc = false;
 }
 
+#if MCU_VARIANT == MCU_LINUX
+  // On Linux we always use memory-mapped EEPROM
+  uint8_t* eeprom_mapping = NULL;
+#endif
+#if LIBRARY_TYPE == LIBRARY_C
+  // And when using the C library we set it up from a file descriptor.
+  int eeprom_fd = 0;
+#endif
+
+void eeprom_open(int size) {
+  #if MCU_VARIANT == MCU_ESP32
+    // This MCU needs EEPROIM to be begun
+    EEPROM.begin(size);
+  #elif MCU_VARIANT == MCU_LINUX
+    // We need to use file-backed EEPROM emulation
+    #if LIBRARY_TYPE == LIBRARY_C
+      const char* eeprom_filename = "eeprom.dat";
+      // We need to be reentrant for restarts
+      if (eeprom_fd <= 0) {
+        eeprom_fd = open(eeprom_filename, O_RDWR | O_CREAT, 0644);
+        if (eeprom_fd <= 0) {
+          perror("Could not open EEPROM file");
+          exit(1);
+        }
+        int status = ftruncate(eeprom_fd, size);
+        if (status != 0) {
+          perror("Could not set size of EEPROM file");
+          exit(1);
+        }
+        // Map EEPROM into RAM
+        eeprom_mapping = (uint8_t*) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, eeprom_fd, 0);
+        if (eeprom_mapping == NULL) {
+          perror("Could not map EEPROM file");
+          exit(1);
+        }
+        std::cerr << "Mapped " << eeprom_filename << " as FD " << eeprom_fd << " to address " << (void*)eeprom_mapping << " size " << size << std::endl;
+      } else {
+        std::cerr << "Skipping EEPROM reinitialization" << std::endl;
+      }
+    #endif
+  #endif
+}
+
+uint8_t eeprom_read(uint8_t addr) {
+  #if MCU_VARIANT == MCU_LINUX
+    if (!eeprom_mapping) {
+      throw std::runtime_error("Tried to read EEPROM before opening it!");
+    }
+    int mapped_address = eeprom_addr(addr);
+    return eeprom_mapping[mapped_address]; 
+  #else
+    return EEPROM.read(eeprom_addr(addr));
+  #endif
+}
+
 bool eeprom_info_locked() {
-	uint8_t lock_byte = EEPROM.read(eeprom_addr(ADDR_INFO_LOCK));
+  #if MCU_VARIANT == MCU_LINUX
+    if (!eeprom_mapping) {
+      return false;
+    }
+  #endif
+	uint8_t lock_byte = eeprom_read(ADDR_INFO_LOCK);
 	if (lock_byte == INFO_LOCK_BYTE) {
 		return true;
 	} else {
 		return false;
 	}
-}
-
-void eeprom_dump_info() {
-	for (int addr = ADDR_PRODUCT; addr <= ADDR_INFO_LOCK; addr++) {
-		uint8_t byte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(byte);
-	}
-}
-
-void eeprom_dump_config() {
-	for (int addr = ADDR_CONF_SF; addr <= ADDR_CONF_OK; addr++) {
-		uint8_t byte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(byte);
-	}
-}
-
-void eeprom_dump_all() {
-	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-		uint8_t byte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(byte);
-	}
-}
-
-void kiss_dump_eeprom() {
-	Serial.write(FEND);
-	Serial.write(CMD_ROM_READ);
-	eeprom_dump_all();
-	Serial.write(FEND);
 }
 
 void eeprom_update(int mapped_addr, uint8_t byte) {
@@ -596,8 +821,12 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
 			EEPROM.write(mapped_addr, byte);
 			EEPROM.commit();
 		}
+  #elif MCU_VARIANT == MCU_LINUX
+    if (!eeprom_mapping) {
+      throw std::runtime_error("Tried to write EEPROM before opening it!");
+    }
+    eeprom_mapping[mapped_addr] = byte;
 	#endif
-
 }
 
 void eeprom_write(uint8_t addr, uint8_t byte) {
@@ -615,32 +844,57 @@ void eeprom_erase() {
 	hard_reset();
 }
 
-bool eeprom_lock_set() {
-	if (EEPROM.read(eeprom_addr(ADDR_INFO_LOCK)) == INFO_LOCK_BYTE) {
-		return true;
-	} else {
-		return false;
+void eeprom_dump_info() {
+	for (int addr = ADDR_PRODUCT; addr <= ADDR_INFO_LOCK; addr++) {
+		uint8_t byte = eeprom_read(addr);
+		escapedSerialWrite(byte);
 	}
 }
 
+void eeprom_dump_config() {
+	for (int addr = ADDR_CONF_SF; addr <= ADDR_CONF_OK; addr++) {
+		uint8_t byte = eeprom_read(addr);
+		escapedSerialWrite(byte);
+	}
+}
+
+void eeprom_dump_all() {
+	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
+		uint8_t byte = eeprom_read(addr);
+		escapedSerialWrite(byte);
+	}
+}
+
+void kiss_dump_eeprom() {
+	Serial.write(FEND);
+	Serial.write(CMD_ROM_READ);
+	eeprom_dump_all();
+	Serial.write(FEND);
+}
+
 bool eeprom_product_valid() {
-	uint8_t rval = EEPROM.read(eeprom_addr(ADDR_PRODUCT));
+	uint8_t rval = eeprom_read(ADDR_PRODUCT);
 
 	#if PLATFORM == PLATFORM_AVR
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
 	#elif PLATFORM == PLATFORM_ESP32
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21) {
-	#else
+	#elif PLATFORM == PLATFORM_LINUX
+  if (rval == PRODUCT_HMBRW) {
+  #else
 	if (false) {
 	#endif
 		return true;
 	} else {
+    #if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Unacceptable platform: " << std::hex << "0x" << (int)rval << std::dec << std::endl;
+    #endif
 		return false;
 	}
 }
 
 bool eeprom_model_valid() {
-	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
+	model = eeprom_read(ADDR_MODEL);
 	#if BOARD_MODEL == BOARD_RNODE
 	if (model == MODEL_A4 || model == MODEL_A9) {
 	#elif BOARD_MODEL == BOARD_HMBRW
@@ -660,15 +914,21 @@ bool eeprom_model_valid() {
 	#endif
 		return true;
 	} else {
+    #if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Unacceptable model: " << std::hex << "0x" << (int)model << std::dec << std::endl;
+    #endif
 		return false;
 	}
 }
 
 bool eeprom_hwrev_valid() {
-	hwrev = EEPROM.read(eeprom_addr(ADDR_HW_REV));
+	hwrev = eeprom_read(ADDR_HW_REV);
 	if (hwrev != 0x00 && hwrev != 0xFF) {
 		return true;
 	} else {
+    #if LIBRARY_TYPE == LIBRARY_C
+      std::cerr << "Unacceptable revision: " << std::hex << "0x" << (int)hwrev << std::dec << std::endl;
+    #endif
 		return false;
 	}
 }
@@ -676,14 +936,14 @@ bool eeprom_hwrev_valid() {
 bool eeprom_checksum_valid() {
 	char *data = (char*)malloc(CHECKSUMMED_SIZE);
 	for (uint8_t  i = 0; i < CHECKSUMMED_SIZE; i++) {
-		char byte = EEPROM.read(eeprom_addr(i));
+		char byte = eeprom_read(i);
 		data[i] = byte;
 	}
 	
 	unsigned char *hash = MD5::make_hash(data, CHECKSUMMED_SIZE);
 	bool checksum_valid = true;
 	for (uint8_t i = 0; i < 16; i++) {
-		uint8_t stored_chk_byte = EEPROM.read(eeprom_addr(ADDR_CHKSUM+i));
+		uint8_t stored_chk_byte = eeprom_read(ADDR_CHKSUM+i);
 		uint8_t calced_chk_byte = (uint8_t)hash[i];
 		if (stored_chk_byte != calced_chk_byte) {
 			checksum_valid = false;
@@ -696,7 +956,7 @@ bool eeprom_checksum_valid() {
 }
 
 bool eeprom_have_conf() {
-	if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
+	if (eeprom_read(ADDR_CONF_OK) == CONF_OK_BYTE) {
 		return true;
 	} else {
 		return false;
@@ -705,11 +965,11 @@ bool eeprom_have_conf() {
 
 void eeprom_conf_load() {
 	if (eeprom_have_conf()) {
-		lora_sf = EEPROM.read(eeprom_addr(ADDR_CONF_SF));
-		lora_cr = EEPROM.read(eeprom_addr(ADDR_CONF_CR));
-		lora_txp = EEPROM.read(eeprom_addr(ADDR_CONF_TXP));
-		lora_freq = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x03);
-		lora_bw = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x03);
+		lora_sf = eeprom_read(ADDR_CONF_SF);
+		lora_cr = eeprom_read(ADDR_CONF_CR);
+		lora_txp = eeprom_read(ADDR_CONF_TXP);
+		lora_freq = (uint32_t)eeprom_read(ADDR_CONF_FREQ+0x00) << 24 | (uint32_t)eeprom_read(ADDR_CONF_FREQ+0x01) << 16 | (uint32_t)eeprom_read(ADDR_CONF_FREQ+0x02) << 8 | (uint32_t)eeprom_read(ADDR_CONF_FREQ+0x03);
+		lora_bw = (uint32_t)eeprom_read(ADDR_CONF_BW+0x00) << 24 | (uint32_t)eeprom_read(ADDR_CONF_BW+0x01) << 16 | (uint32_t)eeprom_read(ADDR_CONF_BW+0x02) << 8 | (uint32_t)eeprom_read(ADDR_CONF_BW+0x03);
 	}
 }
 
@@ -784,7 +1044,7 @@ inline void fifo_flush(FIFOBuffer *f) {
   f->head = f->tail;
 }
 
-#if MCU_VARIANT != MCU_ESP32
+#if SERIAL_EVENTS == SERIAL_INTERRUPT
 	static inline bool fifo_isempty_locked(const FIFOBuffer *f) {
 	  bool result;
 	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -866,7 +1126,7 @@ inline void fifo16_flush(FIFOBuffer16 *f) {
   f->head = f->tail;
 }
 
-#if MCU_VARIANT != MCU_ESP32
+#if SERIAL_EVENTS == SERIAL_INTERRUPT
 	static inline bool fifo16_isempty_locked(const FIFOBuffer16 *f) {
 	  bool result;
 	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {

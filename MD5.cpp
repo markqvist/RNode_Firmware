@@ -1,5 +1,11 @@
 #include "MD5.h"
 
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+    #include <Arduino.h>
+#elif LIBRARY_TYPE == LIBRARY_C
+    #include <cstdlib>
+#endif
+
 MD5::MD5()
 {
 	//nothing

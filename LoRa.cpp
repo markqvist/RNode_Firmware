@@ -6,23 +6,23 @@
 
 #include "LoRa.h"
 
-#define MCU_1284P 0x91
-#define MCU_2560  0x92
-#define MCU_ESP32 0x81
-#if defined(__AVR_ATmega1284P__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_1284P
-#elif defined(__AVR_ATmega2560__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_2560
-#elif defined(ESP32)
-  #define PLATFORM PLATFORM_ESP32
-  #define MCU_VARIANT MCU_ESP32
+#if LIBRARY_TYPE == LIBRARY_C
+  // We need sleep() to use instead of yield()  
+  #include <unistd.h>
+  // And we need to use the filesystem and IOCTLs instead of an SPI global
+  #include <fcntl.h>
+  #include <sys/ioctl.h>
+  #include <linux/spi/spidev.h>
+  // And to have memset
+  #include <cstring>
+  // And we need to be able to report errors
+  #include <stdio.h>
+  #include <errno.h>
+  // And we need IO formatting functions for the C++-stream dumpRegisters()
+  #include <iomanip>
 #endif
 
-#ifndef MCU_VARIANT
-  #error No MCU variant defined, cannot compile
-#endif
+
 
 #if MCU_VARIANT == MCU_ESP32
   #include "soc/rtc_wdt.h"
@@ -38,11 +38,14 @@
 #define REG_FRF_MID              0x07
 #define REG_FRF_LSB              0x08
 #define REG_PA_CONFIG            0x09
+#define REG_PA_RAMP              0x0a
+#define REG_OCP                  0x0b
 #define REG_LNA                  0x0c
 #define REG_FIFO_ADDR_PTR        0x0d
 #define REG_FIFO_TX_BASE_ADDR    0x0e
 #define REG_FIFO_RX_BASE_ADDR    0x0f
 #define REG_FIFO_RX_CURRENT_ADDR 0x10
+#define REG_IRQ_FLAGS_MASK       0x11
 #define REG_IRQ_FLAGS            0x12
 #define REG_RX_NB_BYTES          0x13
 #define REG_MODEM_STAT           0x18
@@ -50,19 +53,38 @@
 #define REG_PKT_RSSI_VALUE       0x1a
 #define REG_MODEM_CONFIG_1       0x1d
 #define REG_MODEM_CONFIG_2       0x1e
+#define REG_SYMB_TIMEOUT_LSB     0x1f
 #define REG_PREAMBLE_MSB         0x20
 #define REG_PREAMBLE_LSB         0x21
 #define REG_PAYLOAD_LENGTH       0x22
+#define REG_PAYLOAD_MAX_LENGTH   0x23
+#define REG_HOP_PERIOD           0x24
 #define REG_MODEM_CONFIG_3       0x26
+#define REG_PPM_CORRECTION       0x27
 #define REG_FREQ_ERROR_MSB       0x28
 #define REG_FREQ_ERROR_MID       0x29
 #define REG_FREQ_ERROR_LSB       0x2a
 #define REG_RSSI_WIDEBAND        0x2c
+#define REG_IF_FREQ_2            0x2f
+#define REG_IF_FREQ_1            0x30
 #define REG_DETECTION_OPTIMIZE   0x31
+#define REG_INVERT_IQ            0x33
+#define REG_HIGH_BW_OPTIMIZE_1   0x36
 #define REG_DETECTION_THRESHOLD  0x37
 #define REG_SYNC_WORD            0x39
+#define REG_HIGH_BW_OPTIMIZE_2   0x3a
+#define REG_INVERT_IQ_2          0x3b
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
+#define REG_TXCO                 0x4B
+#define REG_PA_DAC               0x4D
+// These registers have different values in high and low frequency modes (flag 0x08 in mode)
+// We always stay in high frequency mode (flag is 0)
+#define REG_AGC_REF              0x61
+#define REG_AGC_THRESHOLD_1      0x62
+#define REG_AGC_THRESHOLD_2      0x63
+#define REG_AGC_THRESHOLD_3      0x64
+#define REG_PLL                  0x70
 
 // Modes
 #define MODE_LONG_RANGE_MODE     0x80
@@ -88,40 +110,49 @@ LoRaClass::LoRaClass() :
   _frequency(0),
   _packetIndex(0),
   _implicitHeaderMode(0),
-  _onReceive(NULL)
+  _onReceive(NULL),
+  _spiBegun(false)
 {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   // overide Stream timeout value
   setTimeout(0);
+#elif LIBRARY_TYPE == LIBRARY_C
+  _fd = 0;
+#endif
 }
 
 int LoRaClass::begin(long frequency)
 {
-  // setup pins
-  pinMode(_ss, OUTPUT);
-  // set SS high
-  digitalWrite(_ss, HIGH);
 
-  if (_reset != -1) {
-    pinMode(_reset, OUTPUT);
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+    // setup pins
+    pinMode(_ss, OUTPUT);
+    // set SS high
+    digitalWrite(_ss, HIGH);
+#endif
 
-    // perform reset
-    digitalWrite(_reset, LOW);
-    delay(10);
-    digitalWrite(_reset, HIGH);
-    delay(10);
-  }
-
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   // start SPI
   SPI.begin();
-
-  // check version
-  uint8_t version = readRegister(REG_VERSION);
-  if (version != 0x12) {
+#elif LIBRARY_TYPE == LIBRARY_C
+  const char* spi_filename = "/dev/spidev0.0";
+  // We need to be re-entrant for restart
+  if (_fd <= 0) {
+    std::cerr << "Opening SPI device " << spi_filename << std::endl;
+    _fd = open(spi_filename, O_RDWR);
+    if (_fd <= 0) {
+      perror("could not open SPI device");
+      exit(1);
+    }
+  } else {
+    std::cerr << "Skipping LoRa SPI reinitialization" << std::endl;
+  }
+#endif
+  _spiBegun = true;
+  
+  if (!resetModem()) {
     return 0;
   }
-
-  // put in sleep mode
-  sleep();
 
   // set frequency
   setFrequency(frequency);
@@ -147,11 +178,21 @@ int LoRaClass::begin(long frequency)
 
 void LoRaClass::end()
 {
-  // put in sleep mode
-  sleep();
+  // We need to be safe to call when the main loop is shutting down because
+  // it's in a bad state, even if we ourselves haven't been begun yet. We can't
+  // safely talk to the modem if the SPI link isn't begun, though.
+  if (_spiBegun) {
+    // put in sleep mode
+    this->sleep();
+  }
 
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
   // stop SPI
   SPI.end();
+#elif LIBRARY_TYPE == LIBRARY_C
+  // Don't do anything. We need to keep things open for restart. 
+#endif
+  _spiBegun = false;
 }
 
 int LoRaClass::beginPacket(int implicitHeader)
@@ -179,7 +220,11 @@ int LoRaClass::endPacket()
 
   // wait for TX done
   while ((readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0) {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
     yield();
+#elif LIBRARY_TYPE == LIBRARY_C
+    ::sleep(0);
+#endif
   }
 
   // clear IRQ's
@@ -271,13 +316,13 @@ float ISR_VECT LoRaClass::packetSnr() {
 long LoRaClass::packetFrequencyError()
 {
   int32_t freqError = 0;
-  freqError = static_cast<int32_t>(readRegister(REG_FREQ_ERROR_MSB) & B111);
+  freqError = static_cast<int32_t>(readRegister(REG_FREQ_ERROR_MSB) & 0b111);
   freqError <<= 8L;
   freqError += static_cast<int32_t>(readRegister(REG_FREQ_ERROR_MID));
   freqError <<= 8L;
   freqError += static_cast<int32_t>(readRegister(REG_FREQ_ERROR_LSB));
 
-  if (readRegister(REG_FREQ_ERROR_MSB) & B1000) { // Sign bit is on
+  if (readRegister(REG_FREQ_ERROR_MSB) & 0b1000) { // Sign bit is on
      freqError -= 524288; // B1000'0000'0000'0000'0000
   }
 
@@ -350,22 +395,42 @@ void LoRaClass::flush()
 {
 }
 
+void LoRaClass::pollReceive()
+{
+  int irqFlags = readRegister(REG_IRQ_FLAGS);
+
+  // clear IRQ's
+  writeRegister(REG_IRQ_FLAGS, irqFlags);
+
+  if ((irqFlags & IRQ_RX_DONE_MASK) && !(irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK)) {
+    // received a packet
+    handleRx();
+  }
+}
+
 void LoRaClass::onReceive(void(*callback)(int))
 {
   _onReceive = callback;
 
   if (callback) {
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
     pinMode(_dio0, INPUT);
+#endif
 
     writeRegister(REG_DIO_MAPPING_1, 0x00);
+
+#if MCU_VARIANT != MCU_LINUX && LIBRARY_TYPE == LIBRARY_ARDUINO
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
+#endif
   } else {
+#if MCU_VARIANT != MCU_LINUX && LIBRARY_TYPE == LIBRARY_ARDUINO
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
+#endif
 #endif
   }
 }
@@ -572,6 +637,7 @@ void LoRaClass::setSPIFrequency(uint32_t frequency)
   _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0);
 }
 
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
 void LoRaClass::dumpRegisters(Stream& out)
 {
   for (int i = 0; i < 128; i++) {
@@ -580,6 +646,94 @@ void LoRaClass::dumpRegisters(Stream& out)
     out.print(": 0x");
     out.println(readRegister(i), HEX);
   }
+}
+#elif LIBRARY_TYPE == LIBRARY_C
+void LoRaClass::dumpRegisters(std::ostream& out)
+{
+  for (int i = 0; i < 128; i++) {
+    out << "0x" << std::hex << i << ": 0x" << std::hex << readRegister(i) << std::endl;
+  }
+  out << std::dec;
+}
+#endif
+
+bool LoRaClass::resetModem()
+{
+  // Reset the modem to a known good default state and put it into sleep mode.
+  // Returns false if the modem doesn't appear to be the right version.
+  #if LIBRARY_TYPE == LIBRARY_ARDUINO
+    if (_reset != -1) {
+      pinMode(_reset, OUTPUT);
+
+      // perform reset
+      digitalWrite(_reset, LOW);
+      delay(10);
+      digitalWrite(_reset, HIGH);
+      delay(10);
+    }
+  #endif
+  // check version
+  uint8_t version = readRegister(REG_VERSION);
+  if (version != 0x12) {
+    return false;
+  }
+
+  this->sleep();
+
+  #if LIBRARY_TYPE == LIBRARY_C
+    byte CLEAN_STATE[] = {
+      REG_PA_RAMP, 0x09,
+      REG_FRF_MSB, 0x6c,
+      REG_FRF_MID, 0x80,
+      REG_FRF_LSB, 0x00,
+      REG_PA_CONFIG, 0x4f,
+      REG_PA_RAMP, 0x09,
+      REG_OCP, 0x2b,
+      REG_LNA, 0x20,
+      REG_FIFO_ADDR_PTR, 0x00,
+      REG_FIFO_TX_BASE_ADDR, 0x80,
+      REG_FIFO_RX_BASE_ADDR, 0x00,
+      REG_FIFO_RX_CURRENT_ADDR, 0x00,
+      REG_IRQ_FLAGS_MASK, 0x00,
+      REG_MODEM_CONFIG_1, 0x72,
+      REG_MODEM_CONFIG_2, 0x70,
+      REG_SYMB_TIMEOUT_LSB, 0x64,
+      REG_PREAMBLE_MSB, 0x00,
+      REG_PREAMBLE_LSB, 0x08,
+      REG_PAYLOAD_LENGTH, 0x01,
+      REG_PAYLOAD_MAX_LENGTH, 0xff,
+      REG_HOP_PERIOD, 0x00,
+      REG_MODEM_CONFIG_3, 0x04,
+      REG_PPM_CORRECTION, 0x00,
+      REG_DETECTION_OPTIMIZE, 0xc3, // Errata says this needs to be set before REG_IF_FREQ_1 and REG_IF_FREQ_2
+      REG_IF_FREQ_2, 0x45, // Datasheet says this defaults to 0x20, but dumping says 0x45.
+      REG_IF_FREQ_1, 0x55, // Datasheet says this defaults to 0x00, but dumping says 0x55.
+      REG_INVERT_IQ, 0x27,
+      REG_HIGH_BW_OPTIMIZE_1, 0x03,
+      REG_DETECTION_THRESHOLD, 0x0a,
+      REG_SYNC_WORD, 0x12,
+      REG_HIGH_BW_OPTIMIZE_2, 0x52, // Datasheet says this defaults to 0x20, but dumping says 0x52.
+      REG_INVERT_IQ_2, 0x1d,
+      REG_TXCO, 0x09,
+      REG_PA_DAC, 0x84,
+      // These are the high frequency mode (mode flag 0x08 is 0) values
+      REG_AGC_REF, 0x1C,
+      REG_AGC_THRESHOLD_1, 0x0e,
+      REG_AGC_THRESHOLD_2, 0x5b,
+      REG_AGC_THRESHOLD_3, 0xcc,
+      REG_PLL, 0xd0,
+      0, 0
+    };
+
+
+    // Manually set important registers to default values because we can't
+    // reset.
+    for (int i = 0; CLEAN_STATE[i] != 0; i += 2) {
+      writeRegister(CLEAN_STATE[i], CLEAN_STATE[i + 1]);
+    }
+  #endif
+
+  return true;
 }
 
 void LoRaClass::explicitHeaderMode()
@@ -606,21 +760,27 @@ void ISR_VECT LoRaClass::handleDio0Rise()
 
   if ((irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0) {
     // received a packet
-    _packetIndex = 0;
-
-    // read packet length
-    int packetLength = _implicitHeaderMode ? readRegister(REG_PAYLOAD_LENGTH) : readRegister(REG_RX_NB_BYTES);
-
-    // set FIFO address to current RX address
-    writeRegister(REG_FIFO_ADDR_PTR, readRegister(REG_FIFO_RX_CURRENT_ADDR));
-
-    if (_onReceive) {
-      _onReceive(packetLength);
-    }
-
-    // reset FIFO address
-    writeRegister(REG_FIFO_ADDR_PTR, 0);
+    handleRx();
   }
+}
+
+void ISR_VECT LoRaClass::handleRx()
+{
+  // received a packet
+  _packetIndex = 0;
+
+  // read packet length
+  int packetLength = _implicitHeaderMode ? readRegister(REG_PAYLOAD_LENGTH) : readRegister(REG_RX_NB_BYTES);
+
+  // set FIFO address to current RX address
+  writeRegister(REG_FIFO_ADDR_PTR, readRegister(REG_FIFO_RX_CURRENT_ADDR));
+
+  if (_onReceive) {
+    _onReceive(packetLength);
+  }
+
+  // reset FIFO address
+  writeRegister(REG_FIFO_ADDR_PTR, 0);
 }
 
 uint8_t ISR_VECT LoRaClass::readRegister(uint8_t address)
@@ -636,7 +796,9 @@ void LoRaClass::writeRegister(uint8_t address, uint8_t value)
 uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
 {
   uint8_t response;
-
+  
+#if LIBRARY_TYPE == LIBRARY_ARDUINO
+  // Select chip, send address, and send/read data, the Arduino way
   digitalWrite(_ss, LOW);
 
   SPI.beginTransaction(_spiSettings);
@@ -645,6 +807,55 @@ uint8_t ISR_VECT LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   SPI.endTransaction();
 
   digitalWrite(_ss, HIGH);
+#elif LIBRARY_TYPE == LIBRARY_C
+  // Select chip, send address, and send/read data, the Linux way
+  
+  // In Linux, chip select is automatically turned off outside of transactions.
+  
+  int status;
+  
+  if (_fd <= 0) {
+    throw std::runtime_error("Accessing SPI device without begin()!");
+  }
+  
+  // Configure SPI speed and mode to match settings
+  status = ioctl(_fd, SPI_IOC_WR_MODE, &_spiSettings.mode);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_WR_MODE failed");
+    exit(1);
+  }
+  status = ioctl(_fd, SPI_IOC_WR_LSB_FIRST, &_spiSettings.bitness);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_WR_LSB_FIRST failed");
+    exit(1);
+  }
+  status = ioctl(_fd, SPI_IOC_WR_MAX_SPEED_HZ, &_spiSettings.frequency);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_WR_MAX_SPEED_HZ failed");
+    exit(1);
+  }
+  
+  // We have two transfers: one send-only to send the address, and one
+  // send/receive, to send the value and get the response. 
+  struct spi_ioc_transfer xfer[2];
+  memset(xfer, 0, sizeof xfer);
+  
+  xfer[0].tx_buf = (unsigned long) &address;
+  xfer[0].len = 1;
+  
+  xfer[1].tx_buf = (unsigned long) &value;
+  xfer[1].rx_buf = (unsigned long) &response;
+  xfer[1].len = 1;
+  
+  // Do the transaction
+  status = ioctl(_fd, SPI_IOC_MESSAGE(2), xfer);
+  if (status < 0) {
+    perror("ioctl SPI_IOC_MESSAGE failed");
+    exit(1);
+  }
+#else
+    #error "SPI transfer not implemented for library type"
+#endif
 
   return response;
 }

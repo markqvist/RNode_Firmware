@@ -1,17 +1,12 @@
 #include "ROM.h"
 
+#include "Platform.h"
+
 #ifndef CONFIG_H
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
 	#define MIN_VERS  0x1B
-
-	#define PLATFORM_AVR   0x90
-    #define PLATFORM_ESP32 0x80
-
-	#define MCU_1284P 0x91
-	#define MCU_2560  0x92
-	#define MCU_ESP32 0x81
 
 	#define BOARD_RNODE         0x31
 	#define BOARD_HMBRW         0x32
@@ -20,22 +15,12 @@
 	#define BOARD_GENERIC_ESP32 0x35
 	#define BOARD_LORA32_V2_0   0x36
 	#define BOARD_LORA32_V2_1   0x37
-
+    
+    #define SERIAL_INTERRUPT    0x1
+    #define SERIAL_POLLING      0x2
+    
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
-
-	#if defined(__AVR_ATmega1284P__)
-	    #define PLATFORM PLATFORM_AVR
-	    #define MCU_VARIANT MCU_1284P
-	#elif defined(__AVR_ATmega2560__)
-	    #define PLATFORM PLATFORM_AVR
-	    #define MCU_VARIANT MCU_2560
-	#elif defined(ESP32)
-	    #define PLATFORM PLATFORM_ESP32
-	    #define MCU_VARIANT MCU_ESP32
-	#else
-	    #error "The firmware cannot be compiled for the selected MCU variant"
-	#endif
 
 	#define MTU   	   500
 	#define SINGLE_MTU 255
@@ -54,6 +39,7 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_RNODE
+        #define SERIAL_EVENTS SERIAL_INTERRUPT
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
@@ -70,6 +56,7 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_HMBRW
+        #define SERIAL_EVENTS SERIAL_INTERRUPT
 
 		#define CONFIG_UART_BUFFER_SIZE 768
 		#define CONFIG_QUEUE_SIZE 5120
@@ -130,7 +117,9 @@
 		#else
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif
-
+        
+        #define SERIAL_EVENTS SERIAL_POLLING
+        
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
 		#define CONFIG_QUEUE_MAX_LENGTH 200
@@ -141,6 +130,22 @@
 		#define GPS_BAUD_RATE 9600
 		#define PIN_GPS_TX 12
 		#define PIN_GPS_RX 34
+    #elif MCU_VARIANT == MCU_LINUX
+        const int pin_cs = -1;
+		const int pin_reset = -1;
+		const int pin_dio = -1;
+		const int pin_led_rx = -1;
+		const int pin_led_tx = -1;
+
+		#define BOARD_MODEL BOARD_HMBRW
+        #define SERIAL_EVENTS SERIAL_POLLING
+
+		#define CONFIG_UART_BUFFER_SIZE 6144
+		#define CONFIG_QUEUE_SIZE 6144
+		#define CONFIG_QUEUE_MAX_LENGTH 200
+
+		#define EEPROM_SIZE 4096
+		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 	#endif
 
 	#if BOARD_MODEL == BOARD_TBEAM
@@ -148,7 +153,12 @@
 		#define I2C_SCL 22
 		#define PMU_IRQ 35
 	#endif
-
+    
+    #if LIBRARY_TYPE == LIBRARY_C
+        // We need standard int types before we go any further
+        #include <cstdint>
+    #endif
+    
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
 
 	// MCU independent configuration parameters
