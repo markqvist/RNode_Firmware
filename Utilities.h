@@ -642,7 +642,7 @@ bool eeprom_product_valid() {
 bool eeprom_model_valid() {
 	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
 	#if BOARD_MODEL == BOARD_RNODE
-	if (model == MODEL_A4 || model == MODEL_A9) {
+	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HMBRW
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_TBEAM
