@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x1B
+	#define MIN_VERS  0x1C
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -37,7 +37,7 @@
 	    #error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
 
-	#define MTU   	   500
+	#define MTU   	   508
 	#define SINGLE_MTU 255
 	#define HEADER_L   1
 	#define MIN_L	   1
