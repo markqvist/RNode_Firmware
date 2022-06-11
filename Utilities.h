@@ -122,6 +122,7 @@ void led_indicate_error(int cycles) {
 			delay(100);
 			npset(0xFF, 0x50, 0x00);
 			delay(100);
+			if (!forever) cycles--;
 		}
 		npset(0,0,0);
 	#else
@@ -169,6 +170,7 @@ void led_indicate_warning(int cycles) {
 			delay(100);
 			npset(0x00, 0x00, 0x00);
 			delay(100);
+			if (!forever) cycles--;
 		}
 		npset(0,0,0);
 	#else
@@ -176,11 +178,11 @@ void led_indicate_warning(int cycles) {
 		cycles = forever ? 1 : cycles;
 		digitalWrite(pin_led_tx, HIGH);
 		while(cycles > 0) {
-	        led_tx_off();
-	        delay(100);
-	        led_tx_on();
-	        delay(100);
-	        if (!forever) cycles--;
+      led_tx_off();
+      delay(100);
+      led_tx_on();
+      delay(100);
+      if (!forever) cycles--;
     }
     led_tx_off();
 	#endif
@@ -210,6 +212,7 @@ void led_indicate_warning(int cycles) {
   			delay(100);
   			npset(0x00, 0x00, 0x00);
   			delay(100);
+  			if (!forever) cycles--;
 		  }
 		  npset(0,0,0);
 		}
