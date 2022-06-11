@@ -24,6 +24,8 @@
 #include <SPI.h>
 #include "Utilities.h"
 
+
+
 FIFOBuffer serialFIFO;
 uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
 

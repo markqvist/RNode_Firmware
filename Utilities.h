@@ -30,6 +30,26 @@ uint8_t boot_vector = 0x00;
 	// TODO: Get ESP32 boot flags
 #endif
 
+#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#include <Adafruit_NeoPixel.h>
+	#define NP_PIN 4
+	#define NUMPIXELS 1
+	#define NP_M 0.15
+	Adafruit_NeoPixel pixels(NUMPIXELS, NP_PIN, NEO_GRB + NEO_KHZ800);
+
+	uint8_t npr = 0;
+  uint8_t npg = 0;
+  uint8_t npb = 0;
+  void npset(uint8_t r, uint8_t g, uint8_t b) {
+  	if (r != npr || g != npg || b != npb) {
+  		npr = r; npg = g; npb = b;
+  		pixels.setPixelColor(0, pixels.Color(npr*NP_M, npg*NP_M, npb*NP_M));
+  		// pixels.setPixelColor(0, pixels.Color(npr, npg, npb));
+  		pixels.show();
+  	}
+  }
+#endif
+
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
 	void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 	void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -58,6 +78,16 @@ uint8_t boot_vector = 0x00;
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+	#elif BOARD_MODEL == BOARD_RNODE_NG_20
+		void led_rx_on()  { npset(0, 0, 0xFF); }
+		void led_rx_off() {	npset(0, 0, 0); }
+		void led_tx_on()  { npset(0xFF, 0x50, 0x00); }
+		void led_tx_off() { npset(0, 0, 0); }
+	#elif BOARD_MODEL == BOARD_RNODE_NG_21
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -82,47 +112,81 @@ void hard_reset(void) {
 	#endif
 }
 
+// LED Indication: Error
 void led_indicate_error(int cycles) {
-	bool forever = (cycles == 0) ? true : false;
-	cycles = forever ? 1 : cycles;
-	while(cycles > 0) {
-        digitalWrite(pin_led_rx, HIGH);
-        digitalWrite(pin_led_tx, LOW);
-        delay(100);
-        digitalWrite(pin_led_rx, LOW);
-        digitalWrite(pin_led_tx, HIGH);
-        delay(100);
-        if (!forever) cycles--;
-    }
-    led_rx_off();
-    led_tx_off();
-}
-
-void led_indicate_boot_error() {
-	while (true) {
-	    led_tx_on();
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		bool forever = (cycles == 0) ? true : false;
+		cycles = forever ? 1 : cycles;
+		while(cycles > 0) {
+			npset(0xFF, 0x00, 0x00);
+			delay(100);
+			npset(0xFF, 0x50, 0x00);
+			delay(100);
+		}
+		npset(0,0,0);
+	#else
+		bool forever = (cycles == 0) ? true : false;
+		cycles = forever ? 1 : cycles;
+		while(cycles > 0) {
+	        digitalWrite(pin_led_rx, HIGH);
+	        digitalWrite(pin_led_tx, LOW);
+	        delay(100);
+	        digitalWrite(pin_led_rx, LOW);
+	        digitalWrite(pin_led_tx, HIGH);
+	        delay(100);
+	        if (!forever) cycles--;
+	    }
 	    led_rx_off();
-	    delay(10);
-	    led_rx_on();
 	    led_tx_off();
-	    delay(5);
-	}
+	#endif
 }
 
+// LED Indication: Boot Error
+void led_indicate_boot_error() {
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		while(true) {
+			npset(0xFF, 0xFF, 0xFF);
+		}
+	#else
+		while (true) {
+		    led_tx_on();
+		    led_rx_off();
+		    delay(10);
+		    led_rx_on();
+		    led_tx_off();
+		    delay(5);
+		}
+	#endif
+}
+
+// LED Indication: Warning
 void led_indicate_warning(int cycles) {
-	bool forever = (cycles == 0) ? true : false;
-	cycles = forever ? 1 : cycles;
-	digitalWrite(pin_led_tx, HIGH);
-	while(cycles > 0) {
-        led_tx_off();
-        delay(100);
-        led_tx_on();
-        delay(100);
-        if (!forever) cycles--;
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		bool forever = (cycles == 0) ? true : false;
+		cycles = forever ? 1 : cycles;
+		while(cycles > 0) {
+			npset(0xFF, 0x50, 0x00);
+			delay(100);
+			npset(0x00, 0x00, 0x00);
+			delay(100);
+		}
+		npset(0,0,0);
+	#else
+		bool forever = (cycles == 0) ? true : false;
+		cycles = forever ? 1 : cycles;
+		digitalWrite(pin_led_tx, HIGH);
+		while(cycles > 0) {
+	        led_tx_off();
+	        delay(100);
+	        led_tx_on();
+	        delay(100);
+	        if (!forever) cycles--;
     }
-   led_tx_off();
+    led_tx_off();
+	#endif
 }
 
+// LED Indication: Info
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
 	void led_indicate_info(int cycles) {
 		bool forever = (cycles == 0) ? true : false;
@@ -137,7 +201,19 @@ void led_indicate_warning(int cycles) {
 	  led_rx_off();
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	#if BOARD_MODEL == BOARD_LORA32_V2_1
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		void led_indicate_info(int cycles) {
+			bool forever = (cycles == 0) ? true : false;
+			cycles = forever ? 1 : cycles;
+			while(cycles > 0) {
+		    npset(0x00, 0x00, 0xFF);
+  			delay(100);
+  			npset(0x00, 0x00, 0x00);
+  			delay(100);
+		  }
+		  npset(0,0,0);
+		}
+	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 		void led_indicate_info(int cycles) {
 			bool forever = (cycles == 0) ? true : false;
 			cycles = forever ? 1 : cycles;
@@ -185,17 +261,33 @@ unsigned long led_standby_ticks = 0;
 	uint8_t led_standby_min = 1;
 	uint8_t led_standby_max = 40;
 	unsigned long led_standby_wait = 11000;
+
 #elif MCU_VARIANT == MCU_ESP32
-	uint8_t led_standby_min = 200;
-	uint8_t led_standby_max = 255;
-	uint8_t led_notready_min = 0;
-	uint8_t led_notready_max = 255;
-	uint8_t led_notready_value = led_notready_min;
-	int8_t  led_notready_direction = 0;
-	unsigned long led_notready_ticks = 0;
-	unsigned long led_standby_wait = 1768;
-	unsigned long led_notready_wait = 150;
+
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		uint8_t led_standby_min = 0;
+		uint8_t led_standby_max = 255;
+		uint8_t led_notready_min = 0;
+		uint8_t led_notready_max = led_standby_max;
+		uint8_t led_notready_value = led_notready_min;
+		int8_t  led_notready_direction = 0;
+		unsigned long led_notready_ticks = 0;
+		unsigned long led_standby_wait = 5000;
+		unsigned long led_notready_wait = 20000;
+	
+	#else
+		uint8_t led_standby_min = 200;
+		uint8_t led_standby_max = 255;
+		uint8_t led_notready_min = 0;
+		uint8_t led_notready_max = 255;
+		uint8_t led_notready_value = led_notready_min;
+		int8_t  led_notready_direction = 0;
+		unsigned long led_notready_ticks = 0;
+		unsigned long led_standby_wait = 1768;
+		unsigned long led_notready_wait = 150;
+	#endif
 #endif
+
 uint8_t led_standby_value = led_standby_min;
 int8_t  led_standby_direction = 0;
 
@@ -214,35 +306,56 @@ int8_t  led_standby_direction = 0;
 			led_tx_off();
 		}
 	}
+
 #elif MCU_VARIANT == MCU_ESP32
-	void led_indicate_standby() {
-		led_standby_ticks++;
-		if (led_standby_ticks > led_standby_wait) {
-			led_standby_ticks = 0;
-			if (led_standby_value <= led_standby_min) {
-				led_standby_direction = 1;
-			} else if (led_standby_value >= led_standby_max) {
-				led_standby_direction = -1;
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		void led_indicate_standby() {
+			led_standby_ticks++;
+
+			if (led_standby_ticks > led_standby_wait) {
+				led_standby_ticks = 0;
+				
+				if (led_standby_value <= led_standby_min) {
+					led_standby_direction = 1;
+				} else if (led_standby_value >= led_standby_max) {
+					led_standby_direction = -1;
+				}
+
+				led_standby_value += led_standby_direction;
+  			npset(0x00, 0x00, led_standby_value);
 			}
-			led_standby_value += led_standby_direction;
-			if (led_standby_value > 253) {
-				led_tx_on();
-			} else {
-				led_tx_off();
-			}
-			#if BOARD_MODEL == BOARD_LORA32_V2_1
-				#if defined(EXTERNAL_LEDS)
-					led_rx_off();
-				#endif
-			#elif BOARD_MODEL == BOARD_LORA32_V2_0
-				#if defined(EXTERNAL_LEDS)
-					led_rx_off();
-				#endif
-			#else
-				led_rx_off();
-			#endif
 		}
-	}
+
+	#else
+		void led_indicate_standby() {
+			led_standby_ticks++;
+			if (led_standby_ticks > led_standby_wait) {
+				led_standby_ticks = 0;
+				if (led_standby_value <= led_standby_min) {
+					led_standby_direction = 1;
+				} else if (led_standby_value >= led_standby_max) {
+					led_standby_direction = -1;
+				}
+				led_standby_value += led_standby_direction;
+				if (led_standby_value > 253) {
+					led_tx_on();
+				} else {
+					led_tx_off();
+				}
+				#if BOARD_MODEL == BOARD_LORA32_V2_1
+					#if defined(EXTERNAL_LEDS)
+						led_rx_off();
+					#endif
+				#elif BOARD_MODEL == BOARD_LORA32_V2_0
+					#if defined(EXTERNAL_LEDS)
+						led_rx_off();
+					#endif
+				#else
+					led_rx_off();
+				#endif
+			}
+		}
+  #endif
 #endif
 
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
@@ -261,34 +374,54 @@ int8_t  led_standby_direction = 0;
 		}
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	void led_indicate_not_ready() {
-		led_notready_ticks++;
-		if (led_notready_ticks > led_notready_wait) {
-			led_notready_ticks = 0;
-			if (led_notready_value <= led_notready_min) {
-				led_notready_direction = 1;
-			} else if (led_notready_value >= led_notready_max) {
-				led_notready_direction = -1;
+	#if BOARD_MODEL == BOARD_RNODE_NG_20
+    void led_indicate_not_ready() {
+			led_notready_ticks++;
+			if (led_notready_ticks > led_notready_wait) {
+				led_notready_ticks = 0;
+				if (led_notready_value <= led_notready_min) {
+					led_notready_direction = 1;
+				} else if (led_notready_value >= led_notready_max) {
+					led_notready_direction = -1;
+				}
+				led_notready_value += led_notready_direction;
+				if (led_notready_value > 252) {
+					npset(0xFF, 0x00, 0x00);
+				} else {
+					npset(0x00, 0x00, 0x00);
+				}
 			}
-			led_notready_value += led_notready_direction;
-			if (led_notready_value > 128) {
-				led_tx_on();
-			} else {
-				led_tx_off();
-			}
-			#if BOARD_MODEL == BOARD_LORA32_V2_1
-				#if defined(EXTERNAL_LEDS)
-					led_rx_off();
-				#endif
-			#elif BOARD_MODEL == BOARD_LORA32_V2_0
-				#if defined(EXTERNAL_LEDS)
-					led_rx_off();
-				#endif
-			#else
-				led_rx_off();
-			#endif
 		}
-	}
+	#else
+		void led_indicate_not_ready() {
+			led_notready_ticks++;
+			if (led_notready_ticks > led_notready_wait) {
+				led_notready_ticks = 0;
+				if (led_notready_value <= led_notready_min) {
+					led_notready_direction = 1;
+				} else if (led_notready_value >= led_notready_max) {
+					led_notready_direction = -1;
+				}
+				led_notready_value += led_notready_direction;
+				if (led_notready_value > 128) {
+					led_tx_on();
+				} else {
+					led_tx_off();
+				}
+				#if BOARD_MODEL == BOARD_LORA32_V2_1
+					#if defined(EXTERNAL_LEDS)
+						led_rx_off();
+					#endif
+				#elif BOARD_MODEL == BOARD_LORA32_V2_0
+					#if defined(EXTERNAL_LEDS)
+						led_rx_off();
+					#endif
+				#else
+					led_rx_off();
+				#endif
+			}
+		}
+	#endif
 #endif
 
 void escapedSerialWrite(uint8_t byte) {
@@ -651,6 +784,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_B3 || model == MODEL_B8) {
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 	if (model == MODEL_B4 || model == MODEL_B9) {
+	#elif BOARD_MODEL == BOARD_RNODE_NG_20
+	if (model == MODEL_B3 || model == MODEL_B8) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
