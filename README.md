@@ -28,6 +28,7 @@ The RNode Firmware supports the following boards:
 - LilyGO T-Beam v1.1 devices
 - LilyGO LoRa32 v2.0 devices
 - LilyGO LoRa32 v2.1 devices
+- Heltec LoRa32 v2 devices
 
 The original RNode from [unsigned.io](https://unsigned.io) is controlled by a powerful ATmega1284p MCU, and is fully Arduino compatible. You can use this firmware, or it can be programmed any way you like, either from the Arduino IDE, or using any of the available tools for AVR development. This firmware can also be edited and compiled directly from the Arduino IDE.
 
