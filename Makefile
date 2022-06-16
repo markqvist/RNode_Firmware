@@ -30,8 +30,17 @@ firmware-lora32_v20_extled:
 firmware-lora32_v21_extled:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
 
+firmware-heltec32_v2:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
+
+firmware-heltec32_v2_extled:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\" \"-DEXTERNAL_LEDS=true\""
+
 firmware-rnode_ng_20:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
+
+firmware-rnode_ng_21:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
 
 firmware-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
@@ -56,6 +65,9 @@ upload-lora32_v20:
 upload-lora32_v21:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:ttgo-lora32
 
+upload-heltec32_v2:
+	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:heltec_wifi_lora_32_V2
+
 upload-rnode_ng_20:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:ttgo-lora32
 
@@ -67,7 +79,7 @@ upload-mega2560:
 
 
 
-release-all: release-rnode release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32
+release-all: release-rnode release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled
 
 release-rnode:
 	arduino-cli compile --fqbn unsignedio:avr:rnode -e
@@ -118,6 +130,44 @@ release-lora32_v21_extled:
 	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_lora32v21.partitions
 	zip --junk-paths ./Release/rnode_firmware_latest_lora32v21_extled.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_lora32v21.boot_app0 build/rnode_firmware_latest_lora32v21.bin build/rnode_firmware_latest_lora32v21.bootloader build/rnode_firmware_latest_lora32v21.partitions
 	rm -r build
+
+##################################
+release-heltec32_v2:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_heltec32v2.boot_app0
+	cp build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.bin build/rnode_firmware_latest_heltec32v2.bin
+	cp build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_heltec32v2.bootloader
+	cp build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_heltec32v2.partitions
+	zip --junk-paths ./Release/rnode_firmware_latest_heltec32v2.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_heltec32v2.boot_app0 build/rnode_firmware_latest_heltec32v2.bin build/rnode_firmware_latest_heltec32v2.bootloader build/rnode_firmware_latest_heltec32v2.partitions
+	rm -r build
+
+release-heltec32_v2_extled:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\" \"-DEXTERNAL_LEDS=true\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_heltec32v2.boot_app0
+	cp build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.bin build/rnode_firmware_latest_heltec32v2.bin
+	cp build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_heltec32v2.bootloader
+	cp build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_heltec32v2.partitions
+	zip --junk-paths ./Release/rnode_firmware_latest_heltec32v2.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_heltec32v2.boot_app0 build/rnode_firmware_latest_heltec32v2.bin build/rnode_firmware_latest_heltec32v2.bootloader build/rnode_firmware_latest_heltec32v2.partitions
+	rm -r build
+
+release-rnode_ng_20:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_ng20.boot_app0
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin build/rnode_firmware_latest_ng20.bin
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_ng20.bootloader
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_ng20.partitions
+	zip --junk-paths ./Release/rnode_firmware_latest_ng20.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_ng20.boot_app0 build/rnode_firmware_latest_ng20.bin build/rnode_firmware_latest_ng20.bootloader build/rnode_firmware_latest_ng20.partitions
+	rm -r build
+
+release-rnode_ng_21:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_ng21.boot_app0
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin build/rnode_firmware_latest_ng21.bin
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_latest_ng21.bootloader
+	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_ng21.partitions
+	zip --junk-paths ./Release/rnode_firmware_latest_ng21.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_ng21.boot_app0 build/rnode_firmware_latest_ng21.bin build/rnode_firmware_latest_ng21.bootloader build/rnode_firmware_latest_ng21.partitions
+	rm -r build
+#################################
 
 release-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""

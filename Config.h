@@ -20,6 +20,7 @@
 	#define BOARD_GENERIC_ESP32 0x35
 	#define BOARD_LORA32_V2_0   0x36
 	#define BOARD_LORA32_V2_1   0x37
+	#define BOARD_HELTEC32_V2   0x38
 	#define BOARD_RNODE_NG_20   0x40
 	#define BOARD_RNODE_NG_21   0x41
 
@@ -125,6 +126,17 @@
 			#if defined(EXTERNAL_LEDS)
 				const int pin_led_rx = 15;
 				const int pin_led_tx = 4;
+			#else
+				const int pin_led_rx = 25;
+				const int pin_led_tx = 25;
+			#endif
+		#elif BOARD_MODEL == BOARD_HELTEC32_V2
+			const int pin_cs = 18;
+			const int pin_reset = 23;
+			const int pin_dio = 26;
+			#if defined(EXTERNAL_LEDS)
+				const int pin_led_rx = 36;
+				const int pin_led_tx = 37;
 			#else
 				const int pin_led_rx = 25;
 				const int pin_led_tx = 25;

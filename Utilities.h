@@ -73,6 +73,18 @@ uint8_t boot_vector = 0x00;
 			void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
 			void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
 		#endif
+	#elif BOARD_MODEL == BOARD_HELTEC32_V2
+		#if defined(EXTERNAL_LEDS)
+			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		#else
+			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		#endif
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -765,7 +777,7 @@ bool eeprom_product_valid() {
 	#if PLATFORM == PLATFORM_AVR
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
 	#elif PLATFORM == PLATFORM_ESP32
-	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21) {
+	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2) {
 	#else
 	if (false) {
 	#endif
@@ -779,6 +791,10 @@ bool eeprom_model_valid() {
 	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
 	#if BOARD_MODEL == BOARD_RNODE
 	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF) {
+	#elif BOARD_MODEL == BOARD_RNODE_NG_20
+	if (model == MODEL_A3 || model == MODEL_A8) {
+	#elif BOARD_MODEL == BOARD_RNODE_NG_21
+	if (model == MODEL_A2 || model == MODEL_A7) {
 	#elif BOARD_MODEL == BOARD_HMBRW
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_TBEAM
@@ -787,8 +803,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_B3 || model == MODEL_B8) {
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 	if (model == MODEL_B4 || model == MODEL_B9) {
-	#elif BOARD_MODEL == BOARD_RNODE_NG_20
-	if (model == MODEL_B3 || model == MODEL_B8) {
+	#elif BOARD_MODEL == BOARD_HELTEC32_V2
+	if (model == MODEL_C4 || model == MODEL_C9) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32

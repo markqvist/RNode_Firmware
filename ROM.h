@@ -8,12 +8,19 @@
 	#define PRODUCT_TBEAM  0xE0
 	#define PRODUCT_T32_20 0xB0
 	#define PRODUCT_T32_21 0xB1
+	#define PRODUCT_H32_V2 0xC0
 	#define MODEL_A4 0xA4
 	#define MODEL_A9 0xA9
+	#define MODEL_A3 0xA3
+	#define MODEL_A8 0xA8
+	#define MODEL_A2 0xA2
+	#define MODEL_A7 0xA7
 	#define MODEL_B3 0xB3
 	#define MODEL_B8 0xB8
 	#define MODEL_B4 0xB4
 	#define MODEL_B9 0xB9
+	#define MODEL_C4 0xC4
+	#define MODEL_C9 0xC9
 	#define MODEL_E4 0xE4
 	#define MODEL_E9 0xE9
 	#define MODEL_FF 0xFF
