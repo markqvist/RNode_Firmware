@@ -658,19 +658,19 @@ void setTXPower() {
 		if (model == MODEL_A8) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_A9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_B3) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-		if (model == MODEL_B4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_B3) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B4) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_B8) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_B9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_C4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_C4) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_C9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_E4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_E4) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_E9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
+		if (model == MODEL_FE) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_FF) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-
 	}
 }
 
@@ -814,7 +814,7 @@ bool eeprom_model_valid() {
 	#elif BOARD_MODEL == BOARD_RNODE_NG_21
 	if (model == MODEL_A2 || model == MODEL_A7) {
 	#elif BOARD_MODEL == BOARD_HMBRW
-	if (model == MODEL_FF) {
+	if (model == MODEL_FF || model == MODEL_FE) {
 	#elif BOARD_MODEL == BOARD_TBEAM
 	if (model == MODEL_E4 || model == MODEL_E9) {
 	#elif BOARD_MODEL == BOARD_LORA32_V2_0
@@ -826,7 +826,7 @@ bool eeprom_model_valid() {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
-	if (model == MODEL_FF) {
+	if (model == MODEL_FF || model == MODEL_FE) {
 	#else
 	if (false) {
 	#endif

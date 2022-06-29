@@ -38,6 +38,7 @@
 #define REG_FRF_MID              0x07
 #define REG_FRF_LSB              0x08
 #define REG_PA_CONFIG            0x09
+#define REG_OCP                  0x0b
 #define REG_LNA                  0x0c
 #define REG_FIFO_ADDR_PTR        0x0d
 #define REG_FIFO_TX_BASE_ADDR    0x0e
@@ -63,6 +64,7 @@
 #define REG_SYNC_WORD            0x39
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
+#define REG_PA_DAC               0x4d
 
 // Modes
 #define MODE_LONG_RANGE_MODE     0x80
@@ -402,6 +404,7 @@ void LoRaClass::setTxPower(int level, int outputPin) {
       level = 14;
     }
 
+    writeRegister(REG_PA_DAC, 0x84);
     writeRegister(REG_PA_CONFIG, 0x70 | level);
 
   } else {
@@ -412,6 +415,7 @@ void LoRaClass::setTxPower(int level, int outputPin) {
       level = 17;
     }
 
+    writeRegister(REG_PA_DAC, 0x84);
     writeRegister(REG_PA_CONFIG, PA_BOOST | (level - 2));
   }
 }
