@@ -808,7 +808,7 @@ bool eeprom_product_valid() {
 bool eeprom_model_valid() {
 	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
 	#if BOARD_MODEL == BOARD_RNODE
-	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF) {
+	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF || model == MODEL_FE) {
 	#elif BOARD_MODEL == BOARD_RNODE_NG_20
 	if (model == MODEL_A3 || model == MODEL_A8) {
 	#elif BOARD_MODEL == BOARD_RNODE_NG_21
