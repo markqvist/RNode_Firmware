@@ -79,7 +79,7 @@ upload-mega2560:
 
 
 
-release-all: release-rnode release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled
+release-all: release-rnode release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21
 
 release-rnode:
 	arduino-cli compile --fqbn unsignedio:avr:rnode -e
@@ -131,7 +131,6 @@ release-lora32_v21_extled:
 	zip --junk-paths ./Release/rnode_firmware_latest_lora32v21_extled.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_lora32v21.boot_app0 build/rnode_firmware_latest_lora32v21.bin build/rnode_firmware_latest_lora32v21.bootloader build/rnode_firmware_latest_lora32v21.partitions
 	rm -r build
 
-##################################
 release-heltec32_v2:
 	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
 	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.2/tools/partitions/boot_app0.bin build/rnode_firmware_latest_heltec32v2.boot_app0
@@ -167,7 +166,6 @@ release-rnode_ng_21:
 	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.partitions.bin build/rnode_firmware_latest_ng21.partitions
 	zip --junk-paths ./Release/rnode_firmware_latest_ng21.zip ./Release/esptool/esptool.py build/rnode_firmware_latest_ng21.boot_app0 build/rnode_firmware_latest_ng21.bin build/rnode_firmware_latest_ng21.bootloader build/rnode_firmware_latest_ng21.partitions
 	rm -r build
-#################################
 
 release-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
