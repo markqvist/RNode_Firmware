@@ -651,8 +651,26 @@ void set_implicit_length(uint8_t len) {
 
 void setTXPower() {
 	if (radio_online) {
+		if (model == MODEL_A2) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A3) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
 		if (model == MODEL_A4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A7) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A8) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_A9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+
+		if (model == MODEL_B3) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_B4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_B8) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+
+		if (model == MODEL_C4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_C9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+
+		if (model == MODEL_E4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_E9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+
+		if (model == MODEL_FF) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+
 	}
 }
 
