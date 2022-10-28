@@ -6,6 +6,7 @@ prep:
 prep-esp32:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install esp32:esp32
+	arduino-cli lib install "Adafruit SSD1306"
 
 prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
@@ -71,6 +72,9 @@ upload-heltec32_v2:
 
 upload-rnode_ng_20:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:ttgo-lora32
+
+upload-rnode_ng_21:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:ttgo-lora32
 
 upload-featheresp32:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:featheresp32
