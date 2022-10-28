@@ -31,7 +31,9 @@ public:
 
   int parsePacket(int size = 0);
   int packetRssi();
+  int currentRssi();
   uint8_t packetRssiRaw();
+  uint8_t currentRssiRaw();
   uint8_t packetSnrRaw();
   float packetSnr();
   long packetFrequencyError();

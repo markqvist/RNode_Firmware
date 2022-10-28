@@ -49,6 +49,7 @@
 #define REG_MODEM_STAT           0x18
 #define REG_PKT_SNR_VALUE        0x19
 #define REG_PKT_RSSI_VALUE       0x1a
+#define REG_RSSI_VALUE           0x1b
 #define REG_MODEM_CONFIG_1       0x1d
 #define REG_MODEM_CONFIG_2       0x1e
 #define REG_PREAMBLE_MSB         0x20
@@ -237,6 +238,18 @@ int LoRaClass::parsePacket(int size)
 
 uint8_t LoRaClass::modemStatus() {
   return readRegister(REG_MODEM_STAT);
+}
+
+
+uint8_t LoRaClass::currentRssiRaw() {
+  uint8_t rssi = readRegister(REG_RSSI_VALUE);
+  return rssi;
+}
+
+int ISR_VECT LoRaClass::currentRssi() {
+  int rssi = (int)readRegister(REG_RSSI_VALUE) - RSSI_OFFSET;
+  if (_frequency < 820E6) rssi -= 7;
+  return rssi;
 }
 
 uint8_t LoRaClass::packetRssiRaw() {
