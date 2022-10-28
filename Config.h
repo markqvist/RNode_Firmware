@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x1E
+	#define MIN_VERS  0x28
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -36,6 +36,17 @@
 	#elif defined(ESP32)
 	    #define PLATFORM PLATFORM_ESP32
 	    #define MCU_VARIANT MCU_ESP32
+
+        #define CABLE_STATE_DISCONNECTED 0x00
+        #define CABLE_STATE_CONNECTED    0x01
+        uint8_t cable_state = CABLE_STATE_DISCONNECTED;
+        
+        #define BT_STATE_NA        0xff
+        #define BT_STATE_OFF       0x00
+        #define BT_STATE_ON        0x01
+        #define BT_STATE_PAIRING   0x02
+        #define BT_STATE_CONNECTED 0x03
+        uint8_t bt_state = BT_STATE_NA;
 	#else
 	    #error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -48,6 +59,10 @@
 	#define CMD_L      4
 
 	// MCU dependent configuration parameters
+
+    #define HAS_DISPLAY false
+    #define HAS_BLUETOOTH false
+    #define HAS_PMU false
 
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
@@ -102,6 +117,7 @@
 			const int pin_dio = 26;
 			const int pin_led_rx = 2;
 			const int pin_led_tx = 4;
+            #define HAS_PMU true
 		#elif BOARD_MODEL == BOARD_HUZZAH32
 			const int pin_cs = 4;
 			const int pin_reset = 36;
@@ -119,6 +135,8 @@
 				const int pin_led_rx = 22;
 				const int pin_led_tx = 22;
 			#endif
+            #define HAS_DISPLAY true
+            #define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_1
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -130,6 +148,9 @@
 				const int pin_led_rx = 25;
 				const int pin_led_tx = 25;
 			#endif
+            #define HAS_DISPLAY true
+            #define HAS_BLUETOOTH true
+            #define HAS_PMU true
 		#elif BOARD_MODEL == BOARD_HELTEC32_V2
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -152,6 +173,8 @@
 				const int pin_led_rx = 22;
 				const int pin_led_tx = 22;
 			#endif
+            #define HAS_DISPLAY true
+            #define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_21
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -163,9 +186,14 @@
 				const int pin_led_rx = 25;
 				const int pin_led_tx = 25;
 			#endif
+            #define HAS_DISPLAY true
+            #define HAS_BLUETOOTH true
+            #define HAS_PMU true
 		#else
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif
+
+        bool mw_radio_online = false;
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
@@ -206,6 +234,8 @@
 	bool radio_locked  = true;
 	bool radio_online  = false;
 	bool hw_ready      = false;
+    bool disp_ready    = false;
+    bool pmu_ready     = false;
 	bool promisc       = false;
 	bool implicit      = false;
 	uint8_t implicit_l = 0;
@@ -214,9 +244,10 @@
 	uint8_t model     = 0x00;
 	uint8_t hwrev     = 0x00;
 
+    int     current_rssi    = -292;
 	int		last_rssi		= -292;
 	uint8_t last_rssi_raw   = 0x00;
-	uint8_t last_snr_raw	= 0x00;
+	uint8_t last_snr_raw	= 0x80;
 	uint8_t seq				= 0xFF;
 	uint16_t read_len		= 0;
 
@@ -248,6 +279,14 @@
 	const uint8_t SIG_DETECT = 0x01;
 	const uint8_t SIG_SYNCED = 0x02;
 	const uint8_t RX_ONGOING = 0x04;
+
+    // Power management
+    #define BATTERY_STATE_DISCHARGING 0x01
+    #define BATTERY_STATE_CHARGING 0x02
+    #define BATTERY_STATE_CHARGED 0x03
+    float battery_voltage = 0.0;
+    float battery_percent = 0.0;
+    uint8_t battery_state = 0x00;
 
 	// Boot flags
 	#define START_FROM_BOOTLOADER 0x01

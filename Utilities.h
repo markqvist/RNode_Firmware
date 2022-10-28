@@ -6,6 +6,18 @@
 #include "Framing.h"
 #include "MD5.h"
 
+#if HAS_DISPLAY == true
+  #include "Display.h"
+#endif
+
+#if HAS_BLUETOOTH == true
+  #include "Bluetooth.h"
+#endif
+
+#if HAS_PMU == true
+  #include "Power.h"
+#endif
+
 #if MCU_VARIANT == MCU_ESP32
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
@@ -568,6 +580,37 @@ void kiss_indicate_random(uint8_t byte) {
 	Serial.write(FEND);
 }
 
+void kiss_indicate_fbstate() {
+	Serial.write(FEND);
+	Serial.write(CMD_FB_EXT);
+	#if HAS_DISPLAY
+		if (disp_ext_fb) {
+			Serial.write(0x01);
+		} else {
+			Serial.write(0x00);
+		}
+	#else
+		Serial.write(0xFF)
+	#endif
+	Serial.write(FEND);
+}
+
+void kiss_indicate_fb() {
+	Serial.write(FEND);
+	Serial.write(CMD_FB_READ);
+	#if HAS_DISPLAY
+		for (int i = 0; i < 512; i++) {
+			uint8_t byte = fb[i];
+			if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
+			if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
+			Serial.write(byte);
+		}
+	#else
+		Serial.write(0xFF)
+	#endif
+	Serial.write(FEND);
+}
+
 void kiss_indicate_ready() {
 	Serial.write(FEND);
 	Serial.write(CMD_READY);
@@ -1087,82 +1130,3 @@ inline void fifo16_init(FIFOBuffer16 *f, uint16_t *buffer, uint16_t size) {
 inline uint16_t fifo16_len(FIFOBuffer16 *f) {
   return (f->end - f->begin);
 }
-
-#if BOARD_MODEL == BOARD_TBEAM
-	#include <axp20x.h>
-	AXP20X_Class PMU;
-
-	bool initPMU()
-	{
-	    if (PMU.begin(Wire, AXP192_SLAVE_ADDRESS) == AXP_FAIL) {
-	        return false;
-	    }
-	    /*
-	     * The charging indicator can be turned on or off
-	     * * * */
-	    PMU.setChgLEDMode(AXP20X_LED_OFF);
-
-	    /*
-	    * The default ESP32 power supply has been turned on,
-	    * no need to set, please do not set it, if it is turned off,
-	    * it will not be able to program
-	    *
-	    *   PMU.setDCDC3Voltage(3300);
-	    *   PMU.setPowerOutPut(AXP192_DCDC3, AXP202_ON);
-	    *
-	    * * * */
-
-	    /*
-	     *   Turn off unused power sources to save power
-	     * **/
-
-	    PMU.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);
-	    PMU.setPowerOutPut(AXP192_DCDC2, AXP202_OFF);
-	    PMU.setPowerOutPut(AXP192_LDO2, AXP202_OFF);
-	    PMU.setPowerOutPut(AXP192_LDO3, AXP202_OFF);
-	    PMU.setPowerOutPut(AXP192_EXTEN, AXP202_OFF);
-
-	    /*
-	     * Set the power of LoRa and GPS module to 3.3V
-	     **/
-	    PMU.setLDO2Voltage(3300);   //LoRa VDD
-	    PMU.setLDO3Voltage(3300);   //GPS  VDD
-	    PMU.setDCDC1Voltage(3300);  //3.3V Pin next to 21 and 22 is controlled by DCDC1
-
-	    PMU.setPowerOutPut(AXP192_DCDC1, AXP202_ON);
-
-	    // Turn on SX1276
-	    PMU.setPowerOutPut(AXP192_LDO2, AXP202_ON);
-
-	    // Turn off GPS
-	    PMU.setPowerOutPut(AXP192_LDO3, AXP202_OFF);
-
-	    pinMode(PMU_IRQ, INPUT_PULLUP);
-	    attachInterrupt(PMU_IRQ, [] {
-	        // pmu_irq = true;
-	    }, FALLING);
-
-	    PMU.adc1Enable(AXP202_VBUS_VOL_ADC1 |
-	                   AXP202_VBUS_CUR_ADC1 |
-	                   AXP202_BATT_CUR_ADC1 |
-	                   AXP202_BATT_VOL_ADC1,
-	                   AXP202_ON);
-
-	    PMU.enableIRQ(AXP202_VBUS_REMOVED_IRQ |
-	                  AXP202_VBUS_CONNECT_IRQ |
-	                  AXP202_BATT_REMOVED_IRQ |
-	                  AXP202_BATT_CONNECT_IRQ,
-	                  AXP202_ON);
-	    PMU.clearIRQ();
-
-	    return true;
-	}
-
-	void disablePeripherals()
-	{
-	    PMU.setPowerOutPut(AXP192_DCDC1, AXP202_OFF);
-	    PMU.setPowerOutPut(AXP192_LDO2, AXP202_OFF);
-	    PMU.setPowerOutPut(AXP192_LDO3, AXP202_OFF);
-	}
-
-#endif

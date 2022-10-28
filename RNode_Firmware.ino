@@ -24,8 +24,6 @@
 #include <SPI.h>
 #include "Utilities.h"
 
-
-
 FIFOBuffer serialFIFO;
 uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
 
@@ -89,9 +87,8 @@ void setup() {
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
 
   #if MCU_VARIANT == MCU_ESP32
-    #if BOARD_MODEL == BOARD_TBEAM
-      Wire.begin(I2C_SDA, I2C_SCL);
-      initPMU();
+    #if HAS_PMU == true
+      pmu_ready = init_pmu();
     #endif
 
     kiss_indicate_reset();
@@ -99,6 +96,14 @@ void setup() {
 
   // Validate board health, EEPROM and config
   validateStatus();
+
+  #if HAS_DISPLAY
+    disp_ready = display_init();
+  #endif
+
+  #if HAS_BLUETOOTH
+    bt_ready = bt_init();
+  #endif
 }
 
 void lora_receive() {
@@ -448,6 +453,7 @@ void serialCallback(uint8_t sbyte) {
     if (frame_len == 0 && command == CMD_UNKNOWN) {
         command = sbyte;
     } else if (command == CMD_DATA) {
+        cable_state = CABLE_STATE_CONNECTED;
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -547,6 +553,7 @@ void serialCallback(uint8_t sbyte) {
       set_implicit_length(sbyte);
       kiss_indicate_implicit_length();
     } else if (command == CMD_RADIO_STATE) {
+      cable_state = CABLE_STATE_CONNECTED;
       if (sbyte == 0xFF) {
         kiss_indicate_radiostate();
       } else if (sbyte == 0x00) {
@@ -571,6 +578,7 @@ void serialCallback(uint8_t sbyte) {
       kiss_indicate_random(getRandom());
     } else if (command == CMD_DETECT) {
       if (sbyte == DETECT_REQ) {
+        cable_state = CABLE_STATE_CONNECTED;
         kiss_indicate_detect();
       }
     } else if (command == CMD_PROMISC) {
@@ -623,6 +631,40 @@ void serialCallback(uint8_t sbyte) {
       eeprom_conf_save();
     } else if (command == CMD_CONF_DELETE) {
       eeprom_conf_delete();
+    } else if (command == CMD_FB_EXT) {
+      #if HAS_DISPLAY == true
+        if (sbyte == 0xFF) {
+          kiss_indicate_fbstate();
+        } else if (sbyte == 0x00) {
+          ext_fb_disable();
+          kiss_indicate_fbstate();
+        } else if (sbyte == 0x01) {
+          ext_fb_enable();
+          kiss_indicate_fbstate();
+        }
+      #endif
+    } else if (command == CMD_FB_WRITE) {
+      if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            cbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 9) {
+          uint8_t line = cbuf[0];
+          if (line > 63) line = 63;
+          int fb_o = line*8; 
+          memcpy(fb+fb_o, cbuf+1, 8);
+        }
+    } else if (command == CMD_FB_READ) {
+      if (sbyte != 0x00) {
+        kiss_indicate_fb();
+      }
     }
   }
 }
@@ -637,6 +679,7 @@ void updateModemStatus() {
   #endif
 
   uint8_t status = LoRa.modemStatus();
+  current_rssi = LoRa.currentRssi();
   last_status_update = millis();
 
   #if MCU_VARIANT == MCU_ESP32
@@ -782,6 +825,18 @@ void loop() {
     if (!fifo_isempty(&serialFIFO)) serial_poll();
   #else
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
+  #endif
+
+  #if HAS_DISPLAY
+    if (disp_ready) {
+      update_display();
+    }
+  #endif
+
+  #if HAS_PMU
+    if (pmu_ready) {
+      update_pmu();
+    }
   #endif
 }
 
