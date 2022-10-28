@@ -40,11 +40,16 @@ uint8_t boot_vector = 0x00;
 	uint8_t npr = 0;
   uint8_t npg = 0;
   uint8_t npb = 0;
+  bool pixels_started = false;
   void npset(uint8_t r, uint8_t g, uint8_t b) {
+  	if (pixels_started != true) {
+  		pixels.begin();
+  		pixels_started = true;
+  	}
+
   	if (r != npr || g != npg || b != npb) {
   		npr = r; npg = g; npb = b;
   		pixels.setPixelColor(0, pixels.Color(npr*NP_M, npg*NP_M, npb*NP_M));
-  		// pixels.setPixelColor(0, pixels.Color(npr, npg, npb));
   		pixels.show();
   	}
   }
