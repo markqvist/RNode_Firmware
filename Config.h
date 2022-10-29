@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x28
+	#define MIN_VERS  0x32
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -233,7 +233,9 @@
 	// Operational variables
 	bool radio_locked  = true;
 	bool radio_online  = false;
+    bool community_fw  = true;
 	bool hw_ready      = false;
+    bool radio_error   = false;
     bool disp_ready    = false;
     bool pmu_ready     = false;
 	bool promisc       = false;
