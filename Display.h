@@ -17,6 +17,8 @@ unsigned char fb[512];
 uint32_t last_disp_update = 0;
 uint8_t disp_target_fps = 7;
 int disp_update_interval = 1000/disp_target_fps;
+uint32_t last_page_flip = 0;
+int page_interval = 5000;
 
 #define WATERFALL_SIZE 46
 int waterfall[WATERFALL_SIZE];
@@ -72,6 +74,8 @@ bool display_init() {
       for (int i = 0; i < WATERFALL_SIZE; i++) {
         waterfall[i] = 0;
       }
+
+      last_page_flip = millis();
 
       return true;
     }
@@ -227,9 +231,31 @@ void update_stat_area() {
   display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
 }
 
+#define START_PAGE 1
+const uint8_t pages = 2;
+uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
   if (!disp_ext_fb) {
-    disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+    disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);
+    if (!hw_ready || radio_error) {
+      disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+    } else {
+      if (millis()-last_page_flip >= page_interval) {
+        disp_page = (++disp_page%pages);
+        last_page_flip = millis();
+        if (not community_fw and disp_page == 0) disp_page = 1;
+      }
+
+      if (disp_page == 0) {
+        disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+      } else if (disp_page == 1) {
+        if (radio_online) {
+          disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        } else{
+          disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        }
+      }
+    }
   } else {
     disp_area.drawBitmap(0, 0, fb, disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   }
