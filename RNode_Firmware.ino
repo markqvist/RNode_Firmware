@@ -555,7 +555,11 @@ void serialCallback(uint8_t sbyte) {
       kiss_indicate_implicit_length();
     } else if (command == CMD_LEAVE) {
       if (sbyte == 0xFF) {
-        cable_state = CABLE_STATE_DISCONNECTED;
+        cable_state   = CABLE_STATE_DISCONNECTED;
+        current_rssi  = -292;
+        last_rssi     = -292;
+        last_rssi_raw = 0x00;
+        last_snr_raw  = 0x80;
       }
     } else if (command == CMD_RADIO_STATE) {
       cable_state = CABLE_STATE_CONNECTED;
