@@ -94,12 +94,12 @@ void setup() {
     kiss_indicate_reset();
   #endif
 
-  // Validate board health, EEPROM and config
-  validateStatus();
-
   #if HAS_DISPLAY
     disp_ready = display_init();
   #endif
+
+  // Validate board health, EEPROM and config
+  validateStatus();
 
   #if HAS_BLUETOOTH
     bt_ready = bt_init();
@@ -259,6 +259,7 @@ bool startRadio() {
         // The radio could not be started.
         // Indicate this failure over both the
         // serial port and with the onboard LEDs
+        radio_error = true;
         kiss_indicate_error(ERROR_INITRADIO);
         led_indicate_error(0);
         return false;
@@ -552,6 +553,10 @@ void serialCallback(uint8_t sbyte) {
     } else if (command == CMD_IMPLICIT) {
       set_implicit_length(sbyte);
       kiss_indicate_implicit_length();
+    } else if (command == CMD_LEAVE) {
+      if (sbyte == 0xFF) {
+        cable_state = CABLE_STATE_DISCONNECTED;
+      }
     } else if (command == CMD_RADIO_STATE) {
       cable_state = CABLE_STATE_CONNECTED;
       if (sbyte == 0xFF) {
@@ -748,6 +753,9 @@ void validateStatus() {
     boot_vector = START_FROM_BOOTLOADER;
   } else {
       Serial.write("Error, indeterminate boot vector\r\n");
+      #if HAS_DISPLAY
+        if (disp_ready) update_display();
+      #endif
       led_indicate_boot_error();
   }
 
@@ -772,6 +780,9 @@ void validateStatus() {
   } else {
     hw_ready = false;
     Serial.write("Error, incorrect boot vector\r\n");
+    #if HAS_DISPLAY
+      if (disp_ready) update_display();
+    #endif
     led_indicate_boot_error();
   }
 }
@@ -828,15 +839,11 @@ void loop() {
   #endif
 
   #if HAS_DISPLAY
-    if (disp_ready) {
-      update_display();
-    }
+    if (disp_ready) update_display();
   #endif
 
   #if HAS_PMU
-    if (pmu_ready) {
-      update_pmu();
-    }
+    if (pmu_ready) update_pmu();
   #endif
 }
 
