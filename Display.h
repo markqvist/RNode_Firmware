@@ -64,6 +64,9 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_RNODE_NG_21
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
+      #elif BOARD_MODEL == BOARD_LORA32_V2_1
+        disp_mode = DISP_MODE_LANDSCAPE;
+        display.setRotation(0);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
@@ -228,7 +231,12 @@ void draw_stat_area() {
 
 void update_stat_area() {
   draw_stat_area();
-  display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+  if (disp_mode == DISP_MODE_PORTRAIT) {
+    display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+  } else if (disp_mode == DISP_MODE_LANDSCAPE) {
+    display.drawBitmap(p_as_x+2, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+    display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
+  }
 }
 
 #define START_PAGE 1
