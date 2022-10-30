@@ -291,6 +291,7 @@ void draw_disp_area() {
 void update_disp_area() {
   draw_disp_area();
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+  if (disp_mode == DISP_MODE_LANDSCAPE) display.drawLine(0, 0, 0, 64, SSD1306_WHITE);
 }
 
 void update_display() {
