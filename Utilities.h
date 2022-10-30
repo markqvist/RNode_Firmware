@@ -297,14 +297,16 @@ unsigned long led_standby_ticks = 0;
 #elif MCU_VARIANT == MCU_ESP32
 
 	#if BOARD_MODEL == BOARD_RNODE_NG_20
+		uint8_t led_standby_lng = 32;
+		uint8_t led_standby_cut = 16;
 		uint8_t led_standby_min = 0;
-		uint8_t led_standby_max = 255;
+		uint8_t led_standby_max = 200+led_standby_lng;
 		uint8_t led_notready_min = 0;
 		uint8_t led_notready_max = led_standby_max;
 		uint8_t led_notready_value = led_notready_min;
 		int8_t  led_notready_direction = 0;
 		unsigned long led_notready_ticks = 0;
-		unsigned long led_standby_wait = 5000;
+		unsigned long led_standby_wait = 1000;
 		unsigned long led_notready_wait = 20000;
 	
 	#else
@@ -354,7 +356,15 @@ int8_t  led_standby_direction = 0;
 				}
 
 				led_standby_value += led_standby_direction;
-  			npset(0x00, 0x00, led_standby_value);
+				int offset = led_standby_value - led_standby_lng;
+				uint8_t led_standby_intensity;
+				if (offset < 0) {
+			  	led_standby_intensity = 0;
+				} else {
+			  	led_standby_intensity = offset;
+				}
+				if (offset > led_standby_cut) offset = led_standby_cut;
+  			npset(0x00, 0x00, led_standby_intensity);
 			}
 		}
 
