@@ -461,7 +461,6 @@ void serial_write(uint8_t byte) {
 		if (bt_state != BT_STATE_CONNECTED) {
 			Serial.write(byte);
 		} else {
-			Serial.printf("BT Echo: %02X\n", byte);
 			SerialBT.write(byte);
 		}
 	#else

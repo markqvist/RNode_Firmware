@@ -4,8 +4,22 @@
 #include <Adafruit_SSD1306.h>
 #define DISP_W 128
 #define DISP_H 64
-#define DISP_RST -1
-#define DISP_ADDR 0x3c
+#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3C
+#elif BOARD_MODEL == BOARD_TBEAM
+  #define DISP_RST 23
+  #define DISP_ADDR 0x3D
+#elif BOARD_MODEL == BOARD_HELTEC32_V2
+  #define DISP_RST 16
+  #define DISP_ADDR 0x3C
+  #define SCL_OLED 15
+  #define SDA_OLED 4
+#else
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3C
+#endif
+
 Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 
 #define DISP_MODE_UNKNOWN   0x00
@@ -54,6 +68,8 @@ bool display_init() {
       digitalWrite(pin_display_en, LOW);
       delay(50);
       digitalWrite(pin_display_en, HIGH);
+    #elif BOARD_MODEL == BOARD_HELTEC32_V2
+      Wire.begin(SDA_OLED, SCL_OLED);
     #endif
 
     if(!display.begin(SSD1306_SWITCHCAPVCC, DISP_ADDR)) {
@@ -65,9 +81,18 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_RNODE_NG_21
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
+      #elif BOARD_MODEL == BOARD_LORA32_V2_0
+        disp_mode = DISP_MODE_PORTRAIT;
+        display.setRotation(3);
       #elif BOARD_MODEL == BOARD_LORA32_V2_1
         disp_mode = DISP_MODE_LANDSCAPE;
         display.setRotation(0);
+      #elif BOARD_MODEL == BOARD_TBEAM
+        disp_mode = DISP_MODE_LANDSCAPE;
+        display.setRotation(0);
+      #elif BOARD_MODEL == BOARD_HELTEC32_V2
+        disp_mode = DISP_MODE_PORTRAIT;
+        display.setRotation(1);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);

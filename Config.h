@@ -170,7 +170,7 @@
 				const int pin_led_rx = 25;
 				const int pin_led_tx = 25;
 			#endif
-			#define HAS_DISPLAY true
+            #define HAS_DISPLAY true
 			#define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_20
 			const int pin_cs = 18;
