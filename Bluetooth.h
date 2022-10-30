@@ -12,27 +12,14 @@ char bt_da[BT_DEV_ADDR_LEN];
 char bt_dh[BT_DEV_HASH_LEN];
 char bt_devname[11];
 
-bool bt_ready = false;
-bool bt_enabled = false;
-bool bt_allow_pairing = false;
-
 #if MCU_VARIANT == MCU_ESP32
 
   void bt_confirm_pairing(uint32_t numVal) {
+    bt_ssp_pin = numVal;
     if (bt_allow_pairing) {
-      bt_state = BT_STATE_ON;
       SerialBT.confirmReply(true);
     } else {
-      bt_state = BT_STATE_ON;
       SerialBT.confirmReply(false);
-    }
-  }
-
-  void bt_pairing_complete(boolean success) {
-    if (success) {
-      // Pass
-    } else {
-      // Pass
     }
   }
 
@@ -60,7 +47,26 @@ bool bt_allow_pairing = false;
 
   void bt_disable_pairing() {
     bt_allow_pairing = false;
+    bt_ssp_pin = 0;
     bt_state = BT_STATE_ON;
+  }
+
+  void bt_pairing_complete(boolean success) {
+    if (success) {
+      bt_disable_pairing();
+    } else {
+      bt_ssp_pin = 0;
+    }
+  }
+
+  void bt_connection_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
+    if(event == ESP_SPP_SRV_OPEN_EVT) {
+      bt_state = BT_STATE_CONNECTED;
+    }
+     
+    if(event == ESP_SPP_CLOSE_EVT ){
+      bt_state = BT_STATE_ON;
+    }
   }
 
   bool bt_setup_hw() {
@@ -83,6 +89,7 @@ bool bt_allow_pairing = false;
             SerialBT.enableSSP();
             SerialBT.onConfirmRequest(bt_confirm_pairing);
             SerialBT.onAuthComplete(bt_pairing_complete);
+            SerialBT.register_callback(bt_connection_callback);
             
             bt_ready = true;
             return true;

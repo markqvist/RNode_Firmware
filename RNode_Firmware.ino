@@ -248,8 +248,6 @@ void ISR_VECT receive_callback(int packet_size) {
   }
 }
 
-
-
 bool startRadio() {
   update_radio_lock();
   if (!radio_online) {

@@ -11,6 +11,7 @@ Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 #define DISP_MODE_UNKNOWN   0x00
 #define DISP_MODE_LANDSCAPE 0x01
 #define DISP_MODE_PORTRAIT  0x02
+#define DISP_PIN_SIZE   6
 uint8_t disp_mode = DISP_MODE_UNKNOWN;
 uint8_t disp_ext_fb = false;
 unsigned char fb[512];
@@ -79,6 +80,10 @@ bool display_init() {
       }
 
       last_page_flip = millis();
+
+      stat_area.cp437(true);
+      disp_area.cp437(true);
+      display.cp437(true);
 
       return true;
     }
@@ -245,10 +250,22 @@ void update_stat_area() {
 const uint8_t pages = 2;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
-  if (!disp_ext_fb) {
+  if (!disp_ext_fb or bt_ssp_pin != 0) {
     disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);
+    
     if (!hw_ready || radio_error) {
       disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+    } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {      
+      char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
+      sprintf(pin_str, "%06d", bt_ssp_pin);
+
+      disp_area.drawBitmap(0, 37, bm_pairing, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+      for (int i = 0; i < DISP_PIN_SIZE; i++) {
+        uint8_t numeric = pin_str[i]-48;
+        uint8_t offset = numeric*5;
+        disp_area.drawBitmap(7+9*i, 37+16, bm_n_uh+offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
+      }
+
     } else {
       if (millis()-last_page_flip >= page_interval) {
         disp_page = (++disp_page%pages);

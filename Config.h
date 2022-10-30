@@ -47,6 +47,10 @@
         #define BT_STATE_PAIRING   0x02
         #define BT_STATE_CONNECTED 0x03
         uint8_t bt_state = BT_STATE_NA;
+        uint32_t bt_ssp_pin = 0;
+        bool bt_ready = false;
+        bool bt_enabled = false;
+        bool bt_allow_pairing = false;
 	#else
 	    #error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
