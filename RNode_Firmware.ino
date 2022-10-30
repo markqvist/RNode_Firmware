@@ -102,7 +102,7 @@ void setup() {
   validateStatus();
 
   #if HAS_BLUETOOTH
-    bt_ready = bt_init();
+    bt_init();
   #endif
 }
 
@@ -674,6 +674,16 @@ void serialCallback(uint8_t sbyte) {
       if (sbyte != 0x00) {
         kiss_indicate_fb();
       }
+    } else if (command == CMD_BT_CTRL) {
+      #if HAS_BLUETOOTH
+        if (sbyte == 0x00) {
+          bt_disable();
+        } else if (sbyte == 0x01) {
+          bt_enable();
+        } else if (sbyte == 0x02) {
+          bt_enable_pairing();
+        }
+      #endif
     }
   }
 }
@@ -848,6 +858,10 @@ void loop() {
 
   #if HAS_PMU
     if (pmu_ready) update_pmu();
+  #endif
+
+  #if HAS_BLUETOOTH
+    if (bt_ready) update_bt();
   #endif
 }
 

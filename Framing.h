@@ -31,6 +31,8 @@
 	#define CMD_FB_EXT      0x41
 	#define CMD_FB_READ     0x42
 	#define CMD_FB_WRITE    0x43
+	#define CMD_FB_READL    0x44
+	#define CMD_BT_CTRL     0x45
 
 	#define CMD_BOARD		0x47
 	#define CMD_PLATFORM    0x48
