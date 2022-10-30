@@ -27,6 +27,21 @@
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
 
+	#define CABLE_STATE_DISCONNECTED 0x00
+	#define CABLE_STATE_CONNECTED    0x01
+	uint8_t cable_state = CABLE_STATE_DISCONNECTED;
+	
+	#define BT_STATE_NA        0xff
+	#define BT_STATE_OFF       0x00
+	#define BT_STATE_ON        0x01
+	#define BT_STATE_PAIRING   0x02
+	#define BT_STATE_CONNECTED 0x03
+	uint8_t bt_state = BT_STATE_NA;
+	uint32_t bt_ssp_pin = 0;
+	bool bt_ready = false;
+	bool bt_enabled = false;
+	bool bt_allow_pairing = false;
+
 	#if defined(__AVR_ATmega1284P__)
 	    #define PLATFORM PLATFORM_AVR
 	    #define MCU_VARIANT MCU_1284P
@@ -36,21 +51,6 @@
 	#elif defined(ESP32)
 	    #define PLATFORM PLATFORM_ESP32
 	    #define MCU_VARIANT MCU_ESP32
-
-        #define CABLE_STATE_DISCONNECTED 0x00
-        #define CABLE_STATE_CONNECTED    0x01
-        uint8_t cable_state = CABLE_STATE_DISCONNECTED;
-        
-        #define BT_STATE_NA        0xff
-        #define BT_STATE_OFF       0x00
-        #define BT_STATE_ON        0x01
-        #define BT_STATE_PAIRING   0x02
-        #define BT_STATE_CONNECTED 0x03
-        uint8_t bt_state = BT_STATE_NA;
-        uint32_t bt_ssp_pin = 0;
-        bool bt_ready = false;
-        bool bt_enabled = false;
-        bool bt_allow_pairing = false;
 	#else
 	    #error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -60,7 +60,7 @@
 	#define HEADER_L   1
 	#define MIN_L	   1
 
-	#define CMD_L      4
+	#define CMD_L      10
 
 	// MCU dependent configuration parameters
 
@@ -115,19 +115,23 @@
 			const int pin_dio = 39;
 			const int pin_led_rx = 14;
 			const int pin_led_tx = 32;
+            #define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_TBEAM
 			const int pin_cs = 18;
 			const int pin_reset = 23;
 			const int pin_dio = 26;
 			const int pin_led_rx = 2;
 			const int pin_led_tx = 4;
+            #define HAS_DISPLAY true
             #define HAS_PMU true
+            #define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_HUZZAH32
 			const int pin_cs = 4;
 			const int pin_reset = 36;
 			const int pin_dio = 39;
 			const int pin_led_rx = 14;
 			const int pin_led_tx = 32;
+			#define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_0
 			const int pin_cs = 18;
 			const int pin_reset = 12;
@@ -166,6 +170,8 @@
 				const int pin_led_rx = 25;
 				const int pin_led_tx = 25;
 			#endif
+			#define HAS_DISPLAY true
+			#define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_20
 			const int pin_cs = 18;
 			const int pin_reset = 12;

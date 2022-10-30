@@ -660,13 +660,14 @@ void serialCallback(uint8_t sbyte) {
             }
             cbuf[frame_len++] = sbyte;
         }
-
-        if (frame_len == 9) {
-          uint8_t line = cbuf[0];
-          if (line > 63) line = 63;
-          int fb_o = line*8; 
-          memcpy(fb+fb_o, cbuf+1, 8);
-        }
+        #if HAS_DISPLAY
+          if (frame_len == 9) {
+            uint8_t line = cbuf[0];
+            if (line > 63) line = 63;
+            int fb_o = line*8; 
+            memcpy(fb+fb_o, cbuf+1, 8);
+          }
+        #endif
     } else if (command == CMD_FB_READ) {
       if (sbyte != 0x00) {
         kiss_indicate_fb();

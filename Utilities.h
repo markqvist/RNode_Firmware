@@ -603,7 +603,7 @@ void kiss_indicate_fbstate() {
 			serial_write(0x00);
 		}
 	#else
-		serial_write(0xFF)
+		serial_write(0xFF);
 	#endif
 	serial_write(FEND);
 }
@@ -619,7 +619,7 @@ void kiss_indicate_fb() {
 			serial_write(byte);
 		}
 	#else
-		serial_write(0xFF)
+		serial_write(0xFF);
 	#endif
 	serial_write(FEND);
 }
