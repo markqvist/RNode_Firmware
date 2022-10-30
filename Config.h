@@ -296,8 +296,11 @@
     #define BATTERY_STATE_DISCHARGING 0x01
     #define BATTERY_STATE_CHARGING 0x02
     #define BATTERY_STATE_CHARGED 0x03
+    bool battery_installed = false;
+    bool external_power = false;
     float battery_voltage = 0.0;
     float battery_percent = 0.0;
+    // float auxillary_temperature = 0.0;
     uint8_t battery_state = 0x00;
 
 	// Boot flags

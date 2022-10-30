@@ -8,10 +8,11 @@
     PMU.setPowerOutPut(AXP192_LDO3, AXP202_OFF);
   }
 #elif BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1
-  #define BAT_V_MIN  3.4
-  #define BAT_V_MAX  4.2
-  #define BAT_V_CHG  4.345
-  #define BAT_V_CHGD 4.31
+  #define BAT_V_INSTALLED 3.0
+  #define BAT_V_MIN       3.4
+  #define BAT_V_MAX       4.2
+  #define BAT_V_CHG       4.345
+  #define BAT_V_CHGD      4.31
   const uint8_t pin_vbat = 35;
 #endif
 
@@ -23,7 +24,8 @@ void measure_battery() {
   #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1
     battery_voltage = (float)(analogRead(pin_vbat)) / 4095*2*3.3*1.1;
     battery_percent = ((battery_voltage-BAT_V_MIN) / (BAT_V_MAX-BAT_V_MIN))*100.0;
-    
+
+    if (battery_voltage > BAT_V_INSTALLED) { battery_installed = true; } else { battery_installed = false; }
     if (battery_percent > 100.0) battery_percent = 100.0;
 
     if (battery_voltage > BAT_V_CHG) {
@@ -38,8 +40,59 @@ void measure_battery() {
     }
 
   #elif BOARD_MODEL == BOARD_TBEAM
-    battery_voltage = 0.0;
-    battery_percent = 0.0;
+    float discharge_current = PMU.getBattDischargeCurrent();
+    float charge_current    = PMU.getBattChargeCurrent();
+    battery_voltage         = PMU.getBattVoltage()/1000.0;
+    battery_percent         = PMU.getBattPercentage()*1.0;
+    battery_installed       = PMU.isBatteryConnect();
+    // auxillary_temperature   = PMU.getTemp();
+    external_power          = PMU.isVBUSPlug();
+    float ext_voltage       = PMU.getVbusVoltage()/1000.0;
+    float ext_current       = PMU.getVbusCurrent();
+
+    if (battery_installed) {
+      if (PMU.isChargeing()) {
+        battery_state = BATTERY_STATE_CHARGING;
+      } else {
+        if (discharge_current > 0.0) {
+          battery_state = BATTERY_STATE_DISCHARGING;
+        } else {
+          battery_state = BATTERY_STATE_CHARGED;
+        }
+      }
+    } else {
+      battery_state = BATTERY_STATE_DISCHARGING;
+      battery_percent = 0.0;
+      battery_voltage = 0.0;
+    }
+
+    float charge_watts    = battery_voltage*(charge_current/1000.0);
+    float discharge_watts = battery_voltage*(discharge_current/1000.0);
+    float ext_watts       = ext_voltage*(ext_current/1000.0);
+
+    // if (bt_state == BT_STATE_CONNECTED) {
+    //   if (battery_installed) {
+    //     if (external_power) {
+    //       SerialBT.printf("External power connected, drawing %.2fw, %.1fmA at %.1fV\n", ext_watts, ext_current, ext_voltage);
+    //     } else {
+    //       SerialBT.println("Running on battery");
+    //     }
+    //     SerialBT.printf("Battery percentage %.1f%\n", battery_percent);
+    //     SerialBT.printf("Battery voltage %.1f%\n", battery_voltage);
+    //     // SerialBT.printf("Temperature %.1f%\n", auxillary_temperature);
+
+    //     if (battery_state == BATTERY_STATE_CHARGING) {
+    //       SerialBT.printf("Charging with %.2fw, %.1fmA at %.1fV\n", charge_watts, charge_current, battery_voltage);
+    //     } else if (battery_state == BATTERY_STATE_DISCHARGING) {
+    //       SerialBT.printf("Discharging at %.2fw, %.1fmA at %.1fV\n", discharge_watts, discharge_current, battery_voltage);
+    //     } else if (battery_state == BATTERY_STATE_CHARGED) {
+    //       SerialBT.printf("Battely charged\n");
+    //     }
+    //   } else {
+    //     SerialBT.println("No battery installed");
+    //   }
+    //   SerialBT.println("");
+    // }
   #endif
 }
 
