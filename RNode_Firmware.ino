@@ -40,6 +40,9 @@ volatile uint16_t queued_bytes = 0;
 volatile uint16_t queue_cursor = 0;
 volatile uint16_t current_packet_start = 0;
 volatile bool serial_buffering = false;
+#if HAS_BLUETOOTH
+  bool bt_init_ran = false;
+#endif
 
 char sbuf[128];
 
@@ -100,10 +103,6 @@ void setup() {
 
   // Validate board health, EEPROM and config
   validateStatus();
-
-  #if HAS_BLUETOOTH
-    bt_init();
-  #endif
 }
 
 void lora_receive() {
@@ -677,9 +676,11 @@ void serialCallback(uint8_t sbyte) {
     } else if (command == CMD_BT_CTRL) {
       #if HAS_BLUETOOTH
         if (sbyte == 0x00) {
-          bt_disable();
+          bt_stop();
+          bt_conf_save(false);
         } else if (sbyte == 0x01) {
-          bt_enable();
+          bt_start();
+          bt_conf_save(true);
         } else if (sbyte == 0x02) {
           bt_enable_pairing();
         }
@@ -861,6 +862,11 @@ void loop() {
   #endif
 
   #if HAS_BLUETOOTH
+    if (!bt_init_ran && millis() > 1000) {
+      bt_init();
+      bt_init_ran = true;
+    }
+
     if (bt_ready) update_bt();
   #endif
 }

@@ -915,6 +915,14 @@ bool eeprom_checksum_valid() {
 	return checksum_valid;
 }
 
+void bt_conf_save(bool is_enabled) {
+	if (is_enabled) {
+		eeprom_update(eeprom_addr(ADDR_CONF_BT), BT_ENABLE_BYTE);
+	} else {
+		eeprom_update(eeprom_addr(ADDR_CONF_BT), 0x00);
+	}
+}
+
 bool eeprom_have_conf() {
 	if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
 		return true;

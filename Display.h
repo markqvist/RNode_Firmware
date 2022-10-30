@@ -104,6 +104,8 @@ void draw_bt_icon(int px, int py) {
     stat_area.drawBitmap(px, py, bm_bt+2*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
   } else if (bt_state == BT_STATE_CONNECTED) {
     stat_area.drawBitmap(px, py, bm_bt+3*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
+  } else {
+    stat_area.drawBitmap(px, py, bm_bt+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
   }
 }
 

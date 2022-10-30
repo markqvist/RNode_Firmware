@@ -41,9 +41,12 @@
 	#define ADDR_CONF_BW   0x9F
 	#define ADDR_CONF_FREQ 0xA3
 	#define ADDR_CONF_OK   0xA7
+	
+	#define ADDR_CONF_BT   0xB0
 
 	#define INFO_LOCK_BYTE 0x73
 	#define CONF_OK_BYTE   0x73
+	#define BT_ENABLE_BYTE 0x73
 
 	#define EEPROM_RESERVED 200
 #endif
