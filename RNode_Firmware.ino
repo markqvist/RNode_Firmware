@@ -114,15 +114,15 @@ void lora_receive() {
 }
 
 inline void kiss_write_packet() {
-  Serial.write(FEND);
-  Serial.write(CMD_DATA);
+  serial_write(FEND);
+  serial_write(CMD_DATA);
   for (uint16_t i = 0; i < read_len; i++) {
     uint8_t byte = pbuf[i];
-    if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
-    if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
-    Serial.write(byte);
+    if (byte == FEND) { serial_write(FESC); byte = TFEND; }
+    if (byte == FESC) { serial_write(FESC); byte = TFESC; }
+    serial_write(byte);
   }
-  Serial.write(FEND);
+  serial_write(FEND);
   read_len = 0;
   #if MCU_VARIANT == MCU_ESP32
     packet_ready = false;
@@ -451,7 +451,7 @@ void serialCallback(uint8_t sbyte) {
     if (frame_len == 0 && command == CMD_UNKNOWN) {
         command = sbyte;
     } else if (command == CMD_DATA) {
-        cable_state = CABLE_STATE_CONNECTED;
+        if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -559,7 +559,7 @@ void serialCallback(uint8_t sbyte) {
         last_snr_raw  = 0x80;
       }
     } else if (command == CMD_RADIO_STATE) {
-      cable_state = CABLE_STATE_CONNECTED;
+      if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
       if (sbyte == 0xFF) {
         kiss_indicate_radiostate();
       } else if (sbyte == 0x00) {
@@ -584,7 +584,7 @@ void serialCallback(uint8_t sbyte) {
       kiss_indicate_random(getRandom());
     } else if (command == CMD_DETECT) {
       if (sbyte == DETECT_REQ) {
-        cable_state = CABLE_STATE_CONNECTED;
+        if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
         kiss_indicate_detect();
       }
     } else if (command == CMD_PROMISC) {
@@ -895,7 +895,16 @@ void buffer_serial() {
     serial_buffering = true;
 
     uint8_t c = 0;
-    while (c < MAX_CYCLES && Serial.available()) {
+
+    #if HAS_BLUETOOTH
+    while (
+      c < MAX_CYCLES &&
+      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) )
+      )
+    #else
+    while (c < MAX_CYCLES && Serial.available())
+    #endif
+    {
       c++;
 
       #if MCU_VARIANT != MCU_ESP32
@@ -903,8 +912,14 @@ void buffer_serial() {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
       #else
-        if (!fifo_isfull(&serialFIFO)) {
-          fifo_push(&serialFIFO, Serial.read());
+        if (HAS_BLUETOOTH && bt_state == BT_STATE_CONNECTED) {
+          if (!fifo_isfull(&serialFIFO)) {
+            fifo_push(&serialFIFO, SerialBT.read());
+          }
+        } else {
+          if (!fifo_isfull(&serialFIFO)) {
+            fifo_push(&serialFIFO, Serial.read());
+          }
         }
       #endif
     }

@@ -456,220 +456,233 @@ int8_t  led_standby_direction = 0;
 	#endif
 #endif
 
+void serial_write(uint8_t byte) {
+	#if HAS_BLUETOOTH
+		if (bt_state != BT_STATE_CONNECTED) {
+			Serial.write(byte);
+		} else {
+			Serial.printf("BT Echo: %02X\n", byte);
+			SerialBT.write(byte);
+		}
+	#else
+		Serial.write(byte);
+	#endif
+}
+
 void escapedSerialWrite(uint8_t byte) {
-	if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
-    if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
-    Serial.write(byte);
+	if (byte == FEND) { serial_write(FESC); byte = TFEND; }
+    if (byte == FESC) { serial_write(FESC); byte = TFESC; }
+    serial_write(byte);
 }
 
 void kiss_indicate_reset() {
-	Serial.write(FEND);
-	Serial.write(CMD_RESET);
-	Serial.write(CMD_RESET_BYTE);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_RESET);
+	serial_write(CMD_RESET_BYTE);
+	serial_write(FEND);
 }
 
 void kiss_indicate_error(uint8_t error_code) {
-	Serial.write(FEND);
-	Serial.write(CMD_ERROR);
-	Serial.write(error_code);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_ERROR);
+	serial_write(error_code);
+	serial_write(FEND);
 }
 
 void kiss_indicate_radiostate() {
-	Serial.write(FEND);
-	Serial.write(CMD_RADIO_STATE);
-	Serial.write(radio_online);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_RADIO_STATE);
+	serial_write(radio_online);
+	serial_write(FEND);
 }
 
 void kiss_indicate_stat_rx() {
-	Serial.write(FEND);
-	Serial.write(CMD_STAT_RX);
+	serial_write(FEND);
+	serial_write(CMD_STAT_RX);
 	escapedSerialWrite(stat_rx>>24);
 	escapedSerialWrite(stat_rx>>16);
 	escapedSerialWrite(stat_rx>>8);
 	escapedSerialWrite(stat_rx);
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_stat_tx() {
-	Serial.write(FEND);
-	Serial.write(CMD_STAT_TX);
+	serial_write(FEND);
+	serial_write(CMD_STAT_TX);
 	escapedSerialWrite(stat_tx>>24);
 	escapedSerialWrite(stat_tx>>16);
 	escapedSerialWrite(stat_tx>>8);
 	escapedSerialWrite(stat_tx);
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_stat_rssi() {
 	uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
-	Serial.write(FEND);
-	Serial.write(CMD_STAT_RSSI);
+	serial_write(FEND);
+	serial_write(CMD_STAT_RSSI);
 	escapedSerialWrite(packet_rssi_val);
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_stat_snr() {
-	Serial.write(FEND);
-	Serial.write(CMD_STAT_SNR);
+	serial_write(FEND);
+	serial_write(CMD_STAT_SNR);
 	escapedSerialWrite(last_snr_raw);
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_radio_lock() {
-	Serial.write(FEND);
-	Serial.write(CMD_RADIO_LOCK);
-	Serial.write(radio_locked);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_RADIO_LOCK);
+	serial_write(radio_locked);
+	serial_write(FEND);
 }
 
 void kiss_indicate_spreadingfactor() {
-	Serial.write(FEND);
-	Serial.write(CMD_SF);
-	Serial.write((uint8_t)lora_sf);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_SF);
+	serial_write((uint8_t)lora_sf);
+	serial_write(FEND);
 }
 
 void kiss_indicate_codingrate() {
-	Serial.write(FEND);
-	Serial.write(CMD_CR);
-	Serial.write((uint8_t)lora_cr);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_CR);
+	serial_write((uint8_t)lora_cr);
+	serial_write(FEND);
 }
 
 void kiss_indicate_implicit_length() {
-	Serial.write(FEND);
-	Serial.write(CMD_IMPLICIT);
-	Serial.write(implicit_l);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_IMPLICIT);
+	serial_write(implicit_l);
+	serial_write(FEND);
 }
 
 void kiss_indicate_txpower() {
-	Serial.write(FEND);
-	Serial.write(CMD_TXPOWER);
-	Serial.write((uint8_t)lora_txp);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_TXPOWER);
+	serial_write((uint8_t)lora_txp);
+	serial_write(FEND);
 }
 
 void kiss_indicate_bandwidth() {
-	Serial.write(FEND);
-	Serial.write(CMD_BANDWIDTH);
+	serial_write(FEND);
+	serial_write(CMD_BANDWIDTH);
 	escapedSerialWrite(lora_bw>>24);
 	escapedSerialWrite(lora_bw>>16);
 	escapedSerialWrite(lora_bw>>8);
 	escapedSerialWrite(lora_bw);
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_frequency() {
-	Serial.write(FEND);
-	Serial.write(CMD_FREQUENCY);
+	serial_write(FEND);
+	serial_write(CMD_FREQUENCY);
 	escapedSerialWrite(lora_freq>>24);
 	escapedSerialWrite(lora_freq>>16);
 	escapedSerialWrite(lora_freq>>8);
 	escapedSerialWrite(lora_freq);
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_random(uint8_t byte) {
-	Serial.write(FEND);
-	Serial.write(CMD_RANDOM);
-	Serial.write(byte);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_RANDOM);
+	serial_write(byte);
+	serial_write(FEND);
 }
 
 void kiss_indicate_fbstate() {
-	Serial.write(FEND);
-	Serial.write(CMD_FB_EXT);
+	serial_write(FEND);
+	serial_write(CMD_FB_EXT);
 	#if HAS_DISPLAY
 		if (disp_ext_fb) {
-			Serial.write(0x01);
+			serial_write(0x01);
 		} else {
-			Serial.write(0x00);
+			serial_write(0x00);
 		}
 	#else
-		Serial.write(0xFF)
+		serial_write(0xFF)
 	#endif
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_fb() {
-	Serial.write(FEND);
-	Serial.write(CMD_FB_READ);
+	serial_write(FEND);
+	serial_write(CMD_FB_READ);
 	#if HAS_DISPLAY
 		for (int i = 0; i < 512; i++) {
 			uint8_t byte = fb[i];
-			if (byte == FEND) { Serial.write(FESC); byte = TFEND; }
-			if (byte == FESC) { Serial.write(FESC); byte = TFESC; }
-			Serial.write(byte);
+			if (byte == FEND) { serial_write(FESC); byte = TFEND; }
+			if (byte == FESC) { serial_write(FESC); byte = TFESC; }
+			serial_write(byte);
 		}
 	#else
-		Serial.write(0xFF)
+		serial_write(0xFF)
 	#endif
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_ready() {
-	Serial.write(FEND);
-	Serial.write(CMD_READY);
-	Serial.write(0x01);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_READY);
+	serial_write(0x01);
+	serial_write(FEND);
 }
 
 void kiss_indicate_not_ready() {
-	Serial.write(FEND);
-	Serial.write(CMD_READY);
-	Serial.write(0x00);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_READY);
+	serial_write(0x00);
+	serial_write(FEND);
 }
 
 void kiss_indicate_promisc() {
-	Serial.write(FEND);
-	Serial.write(CMD_PROMISC);
+	serial_write(FEND);
+	serial_write(CMD_PROMISC);
 	if (promisc) {
-		Serial.write(0x01);
+		serial_write(0x01);
 	} else {
-		Serial.write(0x00);
+		serial_write(0x00);
 	}
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void kiss_indicate_detect() {
-	Serial.write(FEND);
-	Serial.write(CMD_DETECT);
-	Serial.write(DETECT_RESP);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_DETECT);
+	serial_write(DETECT_RESP);
+	serial_write(FEND);
 }
 
 void kiss_indicate_version() {
-	Serial.write(FEND);
-	Serial.write(CMD_FW_VERSION);
-	Serial.write(MAJ_VERS);
-	Serial.write(MIN_VERS);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_FW_VERSION);
+	serial_write(MAJ_VERS);
+	serial_write(MIN_VERS);
+	serial_write(FEND);
 }
 
 void kiss_indicate_platform() {
-	Serial.write(FEND);
-	Serial.write(CMD_PLATFORM);
-	Serial.write(PLATFORM);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_PLATFORM);
+	serial_write(PLATFORM);
+	serial_write(FEND);
 }
 
 void kiss_indicate_board() {
-	Serial.write(FEND);
-	Serial.write(CMD_BOARD);
-	Serial.write(BOARD_MODEL);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_BOARD);
+	serial_write(BOARD_MODEL);
+	serial_write(FEND);
 }
 
 void kiss_indicate_mcu() {
-	Serial.write(FEND);
-	Serial.write(CMD_MCU);
-	Serial.write(MCU_VARIANT);
-	Serial.write(FEND);
+	serial_write(FEND);
+	serial_write(CMD_MCU);
+	serial_write(MCU_VARIANT);
+	serial_write(FEND);
 }
 
 inline bool isSplitPacket(uint8_t header) {
@@ -796,10 +809,10 @@ void eeprom_dump_all() {
 }
 
 void kiss_dump_eeprom() {
-	Serial.write(FEND);
-	Serial.write(CMD_ROM_READ);
+	serial_write(FEND);
+	serial_write(CMD_ROM_READ);
 	eeprom_dump_all();
-	Serial.write(FEND);
+	serial_write(FEND);
 }
 
 void eeprom_update(int mapped_addr, uint8_t byte) {

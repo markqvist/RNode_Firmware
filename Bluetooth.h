@@ -62,6 +62,7 @@ char bt_devname[11];
   void bt_connection_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
     if(event == ESP_SPP_SRV_OPEN_EVT) {
       bt_state = BT_STATE_CONNECTED;
+      cable_state = CABLE_STATE_DISCONNECTED;
     }
      
     if(event == ESP_SPP_CLOSE_EVT ){
