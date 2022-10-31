@@ -2,4 +2,5 @@
 *.hex
 *.pyc
 TODO
-
+Release/*.hex
+Release/*.zip
