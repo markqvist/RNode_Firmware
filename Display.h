@@ -285,7 +285,11 @@ const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
   if (!disp_ext_fb or bt_ssp_pin != 0) {
-    disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);
+    if (device_signatures_ok()) {
+      disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+    } else {
+      disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+    }
     
     if (!hw_ready || radio_error || !device_firmware_ok()) {
       if (!device_firmware_ok()) {
@@ -313,7 +317,11 @@ void draw_disp_area() {
 
       if (disp_page == 0) {
         if (device_signatures_ok()) {
-          disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          if (radio_online) {
+            disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          } else {
+            disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          }
         } else {
           disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
         }
