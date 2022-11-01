@@ -116,8 +116,18 @@ RNode can be put into LoRa promiscuous mode, which will dump raw LoRa frames to 
 ## Support RNode Development
 You can help support the continued development of open, free and private communications systems by donating via one of the following channels:
 
-- Ethereum: 0x81F7B979fEa6134bA9FD5c701b3501A2e61E897a
-- Bitcoin: 3CPmacGm34qYvR6XWLVEJmi2aNe3PZqUuq
+- Monero:
+  ```
+  84FpY1QbxHcgdseePYNmhTHcrgMX4nFfBYtz2GKYToqHVVhJp8Eaw1Z1EedRnKD19b3B8NiLCGVxzKV17UMmmeEsCrPyA5w
+  ```
+- Ethereum
+  ```
+  0x81F7B979fEa6134bA9FD5c701b3501A2e61E897a
+  ```
+- Bitcoin
+  ```
+  3CPmacGm34qYvR6XWLVEJmi2aNe3PZqUuq
+  ```
 - Ko-Fi: https://ko-fi.com/markqvist
 
 ## License
@@ -129,7 +139,7 @@ Prior versions of this work, until and including commit [fe5e6aab9c2ab8fe69ede7f
 
 If you want to use the RNode Firmware in commercial products, or build and sell RNode, it is easy to do so by licensing the firmware commercially. I provide a range of convenient tools and resources for anyone who wants to build and sell RNodes, so just get in contact with me to get started.
 
-[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+<img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" align="right">
 
 [cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
