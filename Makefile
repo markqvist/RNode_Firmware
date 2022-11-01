@@ -2,6 +2,7 @@ all: release
 
 clean:
 	-rm -r ./build
+	-rm ./Release/rnode_firmware*
 
 prep: prep-avr prep-esp32 prep-samd
 
@@ -92,7 +93,7 @@ upload-rnode_ng_20:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn esp32:esp32:ttgo-lora32
 	@sleep 1
 	rnodeconf /dev/ttyUSB1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin)
-	
+
 upload-rnode_ng_21:
 	arduino-cli upload -p /dev/ttyACM1 --fqbn esp32:esp32:ttgo-lora32
 	@sleep 1
