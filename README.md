@@ -129,7 +129,7 @@ Prior versions of this work, until and including commit [fe5e6aab9c2ab8fe69ede7f
 
 If you want to use the RNode Firmware in commercial products, or build and sell RNode, it is easy to do so by licensing the firmware commercially. I provide a range of convenient tools and resources for anyone who wants to build and sell RNodes, so just get in contact with me to get started.
 
-[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+<img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" align="right">
 
 [cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
