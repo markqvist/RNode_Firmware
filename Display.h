@@ -33,7 +33,9 @@ uint32_t last_disp_update = 0;
 uint8_t disp_target_fps = 7;
 int disp_update_interval = 1000/disp_target_fps;
 uint32_t last_page_flip = 0;
-int page_interval = 5000;
+int page_interval = 4000;
+bool device_signatures_ok();
+bool device_firmware_ok();
 
 #define WATERFALL_SIZE 46
 int waterfall[WATERFALL_SIZE];
@@ -61,6 +63,12 @@ void update_area_positions() {
   }
 }
 
+uint8_t display_contrast = 0x00;
+void set_contrast(Adafruit_SSD1306 *display, uint8_t contrast) {
+    display->ssd1306_command(SSD1306_SETCONTRAST);
+    display->ssd1306_command(contrast);
+}
+
 bool display_init() {
   #if HAS_DISPLAY
     #if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0
@@ -75,6 +83,7 @@ bool display_init() {
     if(!display.begin(SSD1306_SWITCHCAPVCC, DISP_ADDR)) {
       return false;
     } else {
+      set_contrast(&display, display_contrast);
       #if BOARD_MODEL == BOARD_RNODE_NG_20
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
@@ -271,15 +280,19 @@ void update_stat_area() {
   }
 }
 
-#define START_PAGE 1
-const uint8_t pages = 2;
+#define START_PAGE 0
+const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
   if (!disp_ext_fb or bt_ssp_pin != 0) {
     disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);
     
-    if (!hw_ready || radio_error) {
-      disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+    if (!hw_ready || radio_error || !device_firmware_ok()) {
+      if (!device_firmware_ok()) {
+        disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+      } else {
+        disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+      }
     } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {      
       char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
       sprintf(pin_str, "%06d", bt_ssp_pin);
@@ -299,12 +312,33 @@ void draw_disp_area() {
       }
 
       if (disp_page == 0) {
-        disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        if (device_signatures_ok()) {
+          disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        } else {
+          disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        }
       } else if (disp_page == 1) {
         if (radio_online) {
           disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
         } else{
           disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        }
+      } else if (disp_page == 2) {
+        if (radio_online) {
+          disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        } else{
+          disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          char *v_str = (char*)malloc(3+1);
+          sprintf(v_str, "%01d%02d", MAJ_VERS, MIN_VERS);
+          for (int i = 0; i < 3; i++) {
+            uint8_t numeric = v_str[i]-48; uint8_t bm_offset = numeric*5;
+            uint8_t dxp = 20;
+            if (i == 1) dxp += 9*1+4;
+            if (i == 2) dxp += 9*2+4;
+            disp_area.drawBitmap(dxp, 37+16, bm_n_uh+bm_offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
+          }
+          disp_area.drawLine(27, 37+19, 28, 37+19, SSD1306_BLACK);
+          disp_area.drawLine(27, 37+20, 28, 37+20, SSD1306_BLACK);
         }
       }
     }
@@ -321,6 +355,10 @@ void update_disp_area() {
 
 void update_display() {
   if (millis()-last_disp_update >= disp_update_interval) {
+    if (display_contrast != display_intensity) {
+      display_contrast = display_intensity;
+      set_contrast(&display, display_contrast);
+    }
     display.clearDisplay();
     update_stat_area();
     update_disp_area();
