@@ -43,7 +43,7 @@ uint8_t boot_vector = 0x00;
 	// TODO: Get ESP32 boot flags
 #endif
 
-#if BOARD_MODEL == BOARD_RNODE_NG_20
+#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_RNODE_NG_21
 	#include <Adafruit_NeoPixel.h>
 	#define NP_PIN 4
 	#define NUMPIXELS 1
@@ -631,6 +631,46 @@ void kiss_indicate_fbstate() {
 	  serial_write(CMD_DEV_HASH);
 	  for (int i = 0; i < DEV_HASH_LEN; i++) {
 	    uint8_t byte = dev_hash[i];
+	 		escaped_serial_write(byte);
+	  }
+	  serial_write(FEND);
+	}
+
+	void kiss_indicate_target_fw_hash() {
+	  serial_write(FEND);
+	  serial_write(CMD_DEV_HASH);
+	  for (int i = 0; i < DEV_HASH_LEN; i++) {
+	    uint8_t byte = dev_firmware_hash_target[i];
+	 		escaped_serial_write(byte);
+	  }
+	  serial_write(FEND);
+	}
+
+	void kiss_indicate_fw_hash() {
+	  serial_write(FEND);
+	  serial_write(CMD_DEV_HASH);
+	  for (int i = 0; i < DEV_HASH_LEN; i++) {
+	    uint8_t byte = dev_firmware_hash[i];
+	 		escaped_serial_write(byte);
+	  }
+	  serial_write(FEND);
+	}
+
+	void kiss_indicate_bootloader_hash() {
+	  serial_write(FEND);
+	  serial_write(CMD_DEV_HASH);
+	  for (int i = 0; i < DEV_HASH_LEN; i++) {
+	    uint8_t byte = dev_bootloader_hash[i];
+	 		escaped_serial_write(byte);
+	  }
+	  serial_write(FEND);
+	}
+
+	void kiss_indicate_partition_table_hash() {
+	  serial_write(FEND);
+	  serial_write(CMD_DEV_HASH);
+	  for (int i = 0; i < DEV_HASH_LEN; i++) {
+	    uint8_t byte = dev_partition_table_hash[i];
 	 		escaped_serial_write(byte);
 	  }
 	  serial_write(FEND);

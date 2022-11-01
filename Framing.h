@@ -46,6 +46,7 @@
 	#define CMD_DEV_HASH    0x56
 	#define CMD_DEV_SIG     0x57
 	#define CMD_FW_HASH     0x58
+	#define CMD_HASHES      0x60
 	#define CMD_UNLOCK_ROM	0x59
 	#define ROM_UNLOCK_BYTE 0xF8
 	#define CMD_RESET       0x55

@@ -45,7 +45,6 @@ void measure_battery() {
     battery_voltage         = PMU.getBattVoltage()/1000.0;
     battery_percent         = PMU.getBattPercentage()*1.0;
     battery_installed       = PMU.isBatteryConnect();
-    // auxillary_temperature   = PMU.getTemp();
     external_power          = PMU.isVBUSPlug();
     float ext_voltage       = PMU.getVbusVoltage()/1000.0;
     float ext_current       = PMU.getVbusCurrent();

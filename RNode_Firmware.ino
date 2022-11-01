@@ -697,6 +697,18 @@ void serialCallback(uint8_t sbyte) {
             device_save_signature();
           }
       #endif
+    } else if (command == CMD_HASHES) {
+      #if MCU_VARIANT == MCU_ESP32
+        if (sbyte == 0x01) {
+          kiss_indicate_target_fw_hash();
+        } else if (sbyte == 0x02) {
+          kiss_indicate_fw_hash();
+        } else if (sbyte == 0x03) {
+          kiss_indicate_bootloader_hash();
+        } else if (sbyte == 0x04) {
+          kiss_indicate_partition_table_hash();
+        }
+      #endif
     } else if (command == CMD_FW_HASH) {
       #if MCU_VARIANT == MCU_ESP32
         if (sbyte == FESC) {

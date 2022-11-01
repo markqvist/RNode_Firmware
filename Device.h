@@ -76,7 +76,6 @@ void device_load_signature() {
 }
 
 void device_load_firmware_hash() {
-  Serial.println("Loading hash from EEPROM");
   for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
     dev_firmware_hash_target[i] = EEPROM.read(dev_fwhash_addr(i));
   }
