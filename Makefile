@@ -1,3 +1,8 @@
+all: release
+
+clean:
+	-rm -r ./build
+
 prep: prep-avr prep-esp32 prep-samd
 
 prep-avr:
@@ -17,74 +22,86 @@ prep-samd:
 	arduino-cli core install adafruit:samd
 
 
-
 firmware:
 	arduino-cli compile --fqbn unsignedio:avr:rnode
-
-firmware-tbeam:
-	arduino-cli compile --fqbn esp32:esp32:t-beam --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\""
-
-firmware-lora32_v20:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\""
-
-firmware-lora32_v21:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\""
-
-firmware-lora32_v20_extled:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\" \"-DEXTERNAL_LEDS=true\""
-
-firmware-lora32_v21_extled:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
-
-firmware-heltec32_v2:
-	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
-
-firmware-heltec32_v2_extled:
-	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\" \"-DEXTERNAL_LEDS=true\""
-
-firmware-rnode_ng_20:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
-
-firmware-rnode_ng_21:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
-
-firmware-featheresp32:
-	arduino-cli compile --fqbn esp32:esp32:featheresp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
-
-firmware-genericesp32:
-	arduino-cli compile --fqbn esp32:esp32:esp32 --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\""
 
 firmware-mega2560:
 	arduino-cli compile --fqbn arduino:avr:mega
 
+firmware-tbeam:
+	arduino-cli compile --fqbn esp32:esp32:t-beam -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\""
+
+firmware-lora32_v20:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\""
+
+firmware-lora32_v21:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\""
+
+firmware-lora32_v20_extled:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x36\" \"-DEXTERNAL_LEDS=true\""
+
+firmware-lora32_v21_extled:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x37\" \"-DEXTERNAL_LEDS=true\""
+
+firmware-heltec32_v2:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\""
+
+firmware-heltec32_v2_extled:
+	arduino-cli compile --fqbn esp32:esp32:heltec_wifi_lora_32_V2 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x38\" \"-DEXTERNAL_LEDS=true\""
+
+firmware-rnode_ng_20:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
+
+firmware-rnode_ng_21:
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
+
+firmware-featheresp32:
+	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
+
+firmware-genericesp32:
+	arduino-cli compile --fqbn esp32:esp32:esp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\""
 
 
 upload:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn unsignedio:avr:rnode
 
+upload-mega2560:
+	arduino-cli upload -p /dev/ttyACM1 --fqbn arduino:avr:mega
+
 upload-tbeam:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn esp32:esp32:t-beam
+	@sleep 1
+	rnodeconf /dev/ttyUSB1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.t-beam/RNode_Firmware.ino.bin)
 
 upload-lora32_v20:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn esp32:esp32:ttgo-lora32
+	@sleep 1
+	rnodeconf /dev/ttyUSB1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin)
 
 upload-lora32_v21:
 	arduino-cli upload -p /dev/ttyACM1 --fqbn esp32:esp32:ttgo-lora32
+	@sleep 1
+	rnodeconf /dev/ttyACM1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin)
 
 upload-heltec32_v2:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn esp32:esp32:heltec_wifi_lora_32_V2
+	@sleep 1
+	rnodeconf /dev/ttyUSB1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.heltec_wifi_lora_32_V2/RNode_Firmware.ino.bin)
 
 upload-rnode_ng_20:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn esp32:esp32:ttgo-lora32
-
+	@sleep 1
+	rnodeconf /dev/ttyUSB1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin)
+	
 upload-rnode_ng_21:
 	arduino-cli upload -p /dev/ttyACM1 --fqbn esp32:esp32:ttgo-lora32
+	@sleep 1
+	rnodeconf /dev/ttyACM1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin)
 
 upload-featheresp32:
 	arduino-cli upload -p /dev/ttyUSB1 --fqbn esp32:esp32:featheresp32
-
-upload-mega2560:
-	arduino-cli upload -p /dev/ttyACM1 --fqbn arduino:avr:mega
+	@sleep 1
+	rnodeconf /dev/ttyUSB1 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.featheresp32/RNode_Firmware.ino.bin)
 
 
 release: release-all
@@ -202,5 +219,3 @@ release-mega2560:
 	arduino-cli compile --fqbn arduino:avr:mega -e
 	cp build/arduino.avr.mega/RNode_Firmware.ino.hex Release/rnode_firmware_m2560.hex
 	rm -r build
-
-all: release
