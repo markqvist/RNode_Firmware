@@ -1,4 +1,6 @@
-prep:
+prep: prep-avr prep-esp32 prep-samd
+
+prep-avr:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install arduino:avr
 	arduino-cli core install unsignedio:avr
@@ -8,6 +10,7 @@ prep-esp32:
 	arduino-cli core install esp32:esp32
 	arduino-cli lib install "Adafruit SSD1306"
 	arduino-cli lib install "AXP202X_Library"
+	arduino-cli lib install "Crypto"
 
 prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
@@ -86,7 +89,10 @@ upload-mega2560:
 
 release: release-all
 
-release-all: release-rnode release-mega2560 release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21
+release-all: release-rnode release-mega2560 release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21 release-hashes
+
+release-hashes:
+	python ./release_hashes.py > ./Release/release.json
 
 release-rnode:
 	arduino-cli compile --fqbn unsignedio:avr:rnode -e
