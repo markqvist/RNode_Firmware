@@ -1,4 +1,4 @@
-# RNode Firmware
+# RNode Firmware <img align="right" src="https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg"/>
 
 This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based communication device. RNode can functions as a:
 
@@ -107,3 +107,18 @@ You can help support the continued development of open, free and private communi
 - Ethereum: 0x81F7B979fEa6134bA9FD5c701b3501A2e61E897a
 - Bitcoin: 3CPmacGm34qYvR6XWLVEJmi2aNe3PZqUuq
 - Ko-Fi: https://ko-fi.com/markqvist
+
+## License
+Permission is hereby granted to use the RNode firmware in binary form, for any and all purposes, and to freely distribute binary copies of the firmware, so long as no payment or compensation is charged or received for such distribution or use. If you want to charge money or receive compensation for providing this work to others, you must buy a license for doing so, which is cheap and easy.
+
+Unless otherwise noted, this work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
+
+Prior versions of this work, until and including commit [fe5e6aab9c2ab8fe69ede7f1da04bcffff7d1ed7](https://github.com/markqvist/RNode_Firmware/commit/fe5e6aab9c2ab8fe69ede7f1da04bcffff7d1ed7) was licensed purely under MIT License.
+
+If you want to use the RNode Firmware in commercial products, or build and sell RNode, it is easy to do so by licensing the firmware commercially. I provide a range of convenient tools and resources for anyone who wants to build and sell RNodes, so just get in contact with me to get started.
+
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+
+[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
+[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
+[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
