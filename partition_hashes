@@ -1,0 +1,19 @@
+#!/bin/python
+import os
+import sys
+import RNS
+import json
+import hashlib
+
+major_version = None
+minor_version = None
+target_version = None
+
+target_file = os.path.join(sys.argv[1])
+
+firmware_data = open(target_file, "rb").read()
+calc_hash = hashlib.sha256(firmware_data[0:-32]).digest()
+part_hash = firmware_data[-32:]
+
+if calc_hash == part_hash:
+    print(RNS.hexrep(part_hash, delimit=False))
