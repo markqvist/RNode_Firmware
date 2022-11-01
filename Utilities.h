@@ -19,6 +19,7 @@
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
+	#include "Device.h"
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
 #else
@@ -296,7 +297,7 @@ unsigned long led_standby_ticks = 0;
 
 #elif MCU_VARIANT == MCU_ESP32
 
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_RNODE_NG_21
 		uint8_t led_standby_lng = 32;
 		uint8_t led_standby_cut = 16;
 		uint8_t led_standby_min = 0;
@@ -307,7 +308,7 @@ unsigned long led_standby_ticks = 0;
 		int8_t  led_notready_direction = 0;
 		unsigned long led_notready_ticks = 0;
 		unsigned long led_standby_wait = 1000;
-		unsigned long led_notready_wait = 20000;
+		unsigned long led_notready_wait = 200;
 	
 	#else
 		uint8_t led_standby_min = 200;
@@ -416,22 +417,29 @@ int8_t  led_standby_direction = 0;
 		}
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_RNODE_NG_21
     void led_indicate_not_ready() {
-			led_notready_ticks++;
-			if (led_notready_ticks > led_notready_wait) {
-				led_notready_ticks = 0;
-				if (led_notready_value <= led_notready_min) {
-					led_notready_direction = 1;
-				} else if (led_notready_value >= led_notready_max) {
-					led_notready_direction = -1;
+    	led_standby_ticks++;
+
+			if (led_standby_ticks > led_notready_wait) {
+				led_standby_ticks = 0;
+				
+				if (led_standby_value <= led_standby_min) {
+					led_standby_direction = 1;
+				} else if (led_standby_value >= led_standby_max) {
+					led_standby_direction = -1;
 				}
-				led_notready_value += led_notready_direction;
-				if (led_notready_value > 252) {
-					npset(0xFF, 0x00, 0x00);
+
+				led_standby_value += led_standby_direction;
+				int offset = led_standby_value - led_standby_lng;
+				uint8_t led_standby_intensity;
+				if (offset < 0) {
+			  	led_standby_intensity = 0;
 				} else {
-					npset(0x00, 0x00, 0x00);
+			  	led_standby_intensity = offset;
 				}
+				if (offset > led_standby_cut) offset = led_standby_cut;
+  			npset(led_standby_intensity, 0x00, 0x00);
 			}
 		}
 	#else
@@ -478,7 +486,7 @@ void serial_write(uint8_t byte) {
 	#endif
 }
 
-void escapedSerialWrite(uint8_t byte) {
+void escaped_serial_write(uint8_t byte) {
 	if (byte == FEND) { serial_write(FESC); byte = TFEND; }
     if (byte == FESC) { serial_write(FESC); byte = TFESC; }
     serial_write(byte);
@@ -508,20 +516,20 @@ void kiss_indicate_radiostate() {
 void kiss_indicate_stat_rx() {
 	serial_write(FEND);
 	serial_write(CMD_STAT_RX);
-	escapedSerialWrite(stat_rx>>24);
-	escapedSerialWrite(stat_rx>>16);
-	escapedSerialWrite(stat_rx>>8);
-	escapedSerialWrite(stat_rx);
+	escaped_serial_write(stat_rx>>24);
+	escaped_serial_write(stat_rx>>16);
+	escaped_serial_write(stat_rx>>8);
+	escaped_serial_write(stat_rx);
 	serial_write(FEND);
 }
 
 void kiss_indicate_stat_tx() {
 	serial_write(FEND);
 	serial_write(CMD_STAT_TX);
-	escapedSerialWrite(stat_tx>>24);
-	escapedSerialWrite(stat_tx>>16);
-	escapedSerialWrite(stat_tx>>8);
-	escapedSerialWrite(stat_tx);
+	escaped_serial_write(stat_tx>>24);
+	escaped_serial_write(stat_tx>>16);
+	escaped_serial_write(stat_tx>>8);
+	escaped_serial_write(stat_tx);
 	serial_write(FEND);
 }
 
@@ -529,14 +537,14 @@ void kiss_indicate_stat_rssi() {
 	uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
 	serial_write(FEND);
 	serial_write(CMD_STAT_RSSI);
-	escapedSerialWrite(packet_rssi_val);
+	escaped_serial_write(packet_rssi_val);
 	serial_write(FEND);
 }
 
 void kiss_indicate_stat_snr() {
 	serial_write(FEND);
 	serial_write(CMD_STAT_SNR);
-	escapedSerialWrite(last_snr_raw);
+	escaped_serial_write(last_snr_raw);
 	serial_write(FEND);
 }
 
@@ -578,20 +586,20 @@ void kiss_indicate_txpower() {
 void kiss_indicate_bandwidth() {
 	serial_write(FEND);
 	serial_write(CMD_BANDWIDTH);
-	escapedSerialWrite(lora_bw>>24);
-	escapedSerialWrite(lora_bw>>16);
-	escapedSerialWrite(lora_bw>>8);
-	escapedSerialWrite(lora_bw);
+	escaped_serial_write(lora_bw>>24);
+	escaped_serial_write(lora_bw>>16);
+	escaped_serial_write(lora_bw>>8);
+	escaped_serial_write(lora_bw);
 	serial_write(FEND);
 }
 
 void kiss_indicate_frequency() {
 	serial_write(FEND);
 	serial_write(CMD_FREQUENCY);
-	escapedSerialWrite(lora_freq>>24);
-	escapedSerialWrite(lora_freq>>16);
-	escapedSerialWrite(lora_freq>>8);
-	escapedSerialWrite(lora_freq);
+	escaped_serial_write(lora_freq>>24);
+	escaped_serial_write(lora_freq>>16);
+	escaped_serial_write(lora_freq>>8);
+	escaped_serial_write(lora_freq);
 	serial_write(FEND);
 }
 
@@ -617,15 +625,25 @@ void kiss_indicate_fbstate() {
 	serial_write(FEND);
 }
 
+#if MCU_VARIANT == MCU_ESP32
+	void kiss_indicate_device_hash() {
+	  serial_write(FEND);
+	  serial_write(CMD_DEV_HASH);
+	  for (int i = 0; i < DEV_HASH_LEN; i++) {
+	    uint8_t byte = dev_hash[i];
+	 		escaped_serial_write(byte);
+	  }
+	  serial_write(FEND);
+	}
+#endif
+
 void kiss_indicate_fb() {
 	serial_write(FEND);
 	serial_write(CMD_FB_READ);
 	#if HAS_DISPLAY
 		for (int i = 0; i < 512; i++) {
 			uint8_t byte = fb[i];
-			if (byte == FEND) { serial_write(FESC); byte = TFEND; }
-			if (byte == FESC) { serial_write(FESC); byte = TFESC; }
-			serial_write(byte);
+			escaped_serial_write(byte);
 		}
 	#else
 		serial_write(0xFF);
@@ -799,21 +817,21 @@ bool eeprom_info_locked() {
 void eeprom_dump_info() {
 	for (int addr = ADDR_PRODUCT; addr <= ADDR_INFO_LOCK; addr++) {
 		uint8_t byte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(byte);
+		escaped_serial_write(byte);
 	}
 }
 
 void eeprom_dump_config() {
 	for (int addr = ADDR_CONF_SF; addr <= ADDR_CONF_OK; addr++) {
 		uint8_t byte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(byte);
+		escaped_serial_write(byte);
 	}
 }
 
 void eeprom_dump_all() {
 	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
 		uint8_t byte = EEPROM.read(eeprom_addr(addr));
-		escapedSerialWrite(byte);
+		escaped_serial_write(byte);
 	}
 }
 

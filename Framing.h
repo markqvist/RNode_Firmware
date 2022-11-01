@@ -32,6 +32,7 @@
 	#define CMD_FB_READ     0x42
 	#define CMD_FB_WRITE    0x43
 	#define CMD_FB_READL    0x44
+	#define CMD_DISP_INT    0x45
 	#define CMD_BT_CTRL     0x46
 
 	#define CMD_BOARD		0x47
@@ -42,6 +43,9 @@
 	#define CMD_ROM_WRITE	0x52
 	#define CMD_CONF_SAVE   0x53
 	#define CMD_CONF_DELETE 0x54
+	#define CMD_DEV_HASH    0x56
+	#define CMD_DEV_SIG     0x57
+	#define CMD_FW_HASH     0x58
 	#define CMD_UNLOCK_ROM	0x59
 	#define ROM_UNLOCK_BYTE 0xF8
 	#define CMD_RESET       0x55

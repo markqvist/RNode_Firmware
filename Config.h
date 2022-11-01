@@ -60,7 +60,7 @@
 	#define HEADER_L   1
 	#define MIN_L	   1
 
-	#define CMD_L      10
+	#define CMD_L      64
 
 	// MCU dependent configuration parameters
 
@@ -267,7 +267,7 @@
 	uint8_t pbuf[MTU];
 
 	// KISS command buffer
-	uint8_t cbuf[CMD_L];
+	uint8_t cmdbuf[CMD_L];
 
 	// LoRa transmit buffer
 	uint8_t tbuf[MTU];
@@ -300,8 +300,9 @@
     bool external_power = false;
     float battery_voltage = 0.0;
     float battery_percent = 0.0;
-    // float auxillary_temperature = 0.0;
     uint8_t battery_state = 0x00;
+    uint8_t display_intensity = 0xFF;
+    bool device_init_done = false;
 
 	// Boot flags
 	#define START_FROM_BOOTLOADER 0x01

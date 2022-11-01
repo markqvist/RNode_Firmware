@@ -52,7 +52,8 @@ char sbuf[128];
 
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
-    delay(500);
+    // TODO: Reset?
+    // delay(500);
     EEPROM.begin(EEPROM_SIZE);
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
@@ -75,7 +76,7 @@ void setup() {
 
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
-  memset(cbuf, 0, sizeof(cbuf));
+  memset(cmdbuf, 0, sizeof(cmdbuf));
   
   memset(packet_queue, 0, sizeof(packet_queue));
 
@@ -102,7 +103,7 @@ void setup() {
   #endif
 
   // Validate board health, EEPROM and config
-  validateStatus();
+  validate_status();
 }
 
 void lora_receive() {
@@ -475,11 +476,11 @@ void serialCallback(uint8_t sbyte) {
                 if (sbyte == TFESC) sbyte = FESC;
                 ESCAPE = false;
             }
-            cbuf[frame_len++] = sbyte;
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
 
         if (frame_len == 4) {
-          uint32_t freq = (uint32_t)cbuf[0] << 24 | (uint32_t)cbuf[1] << 16 | (uint32_t)cbuf[2] << 8 | (uint32_t)cbuf[3];
+          uint32_t freq = (uint32_t)cmdbuf[0] << 24 | (uint32_t)cmdbuf[1] << 16 | (uint32_t)cmdbuf[2] << 8 | (uint32_t)cmdbuf[3];
 
           if (freq == 0) {
             kiss_indicate_frequency();
@@ -498,11 +499,11 @@ void serialCallback(uint8_t sbyte) {
                 if (sbyte == TFESC) sbyte = FESC;
                 ESCAPE = false;
             }
-            cbuf[frame_len++] = sbyte;
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
 
         if (frame_len == 4) {
-          uint32_t bw = (uint32_t)cbuf[0] << 24 | (uint32_t)cbuf[1] << 16 | (uint32_t)cbuf[2] << 8 | (uint32_t)cbuf[3];
+          uint32_t bw = (uint32_t)cmdbuf[0] << 24 | (uint32_t)cmdbuf[1] << 16 | (uint32_t)cmdbuf[2] << 8 | (uint32_t)cmdbuf[3];
 
           if (bw == 0) {
             kiss_indicate_bandwidth();
@@ -619,11 +620,11 @@ void serialCallback(uint8_t sbyte) {
                 if (sbyte == TFESC) sbyte = FESC;
                 ESCAPE = false;
             }
-            cbuf[frame_len++] = sbyte;
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
 
         if (frame_len == 2) {
-          eeprom_write(cbuf[0], cbuf[1]);
+          eeprom_write(cmdbuf[0], cmdbuf[1]);
         }
     } else if (command == CMD_FW_VERSION) {
       kiss_indicate_version();
@@ -658,20 +659,62 @@ void serialCallback(uint8_t sbyte) {
                 if (sbyte == TFESC) sbyte = FESC;
                 ESCAPE = false;
             }
-            cbuf[frame_len++] = sbyte;
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
         }
         #if HAS_DISPLAY
           if (frame_len == 9) {
-            uint8_t line = cbuf[0];
+            uint8_t line = cmdbuf[0];
             if (line > 63) line = 63;
             int fb_o = line*8; 
-            memcpy(fb+fb_o, cbuf+1, 8);
+            memcpy(fb+fb_o, cmdbuf+1, 8);
           }
         #endif
     } else if (command == CMD_FB_READ) {
       if (sbyte != 0x00) {
         kiss_indicate_fb();
       }
+    } else if (command == CMD_DEV_HASH) {
+      #if MCU_VARIANT == MCU_ESP32
+        if (sbyte != 0x00) {
+          kiss_indicate_device_hash();
+        }
+      #endif
+    } else if (command == CMD_DEV_SIG) {
+      #if MCU_VARIANT == MCU_ESP32
+        if (sbyte == FESC) {
+              ESCAPE = true;
+          } else {
+              if (ESCAPE) {
+                  if (sbyte == TFEND) sbyte = FEND;
+                  if (sbyte == TFESC) sbyte = FESC;
+                  ESCAPE = false;
+              }
+              if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+          }
+
+          if (frame_len == DEV_SIG_LEN) {
+            memcpy(dev_sig, cmdbuf, DEV_SIG_LEN);
+            device_save_signature();
+          }
+      #endif
+    } else if (command == CMD_FW_HASH) {
+      #if MCU_VARIANT == MCU_ESP32
+        if (sbyte == FESC) {
+              ESCAPE = true;
+          } else {
+              if (ESCAPE) {
+                  if (sbyte == TFEND) sbyte = FEND;
+                  if (sbyte == TFESC) sbyte = FESC;
+                  ESCAPE = false;
+              }
+              if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+          }
+
+          if (frame_len == DEV_HASH_LEN) {
+            memcpy(dev_firmware_hash_target, cmdbuf, DEV_SIG_LEN);
+            device_save_firmware_hash();
+          }
+      #endif
     } else if (command == CMD_BT_CTRL) {
       #if HAS_BLUETOOTH
         if (sbyte == 0x00) {
@@ -683,6 +726,20 @@ void serialCallback(uint8_t sbyte) {
         } else if (sbyte == 0x02) {
           bt_enable_pairing();
         }
+      #endif
+    } else if (command == CMD_DISP_INT) {
+      #if HAS_DISPLAY
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            display_intensity = sbyte;
+        }
+
       #endif
     }
   }
@@ -739,7 +796,7 @@ void checkModemStatus() {
   }
 }
 
-void validateStatus() {
+void validate_status() {
   #if MCU_VARIANT == MCU_1284P
       uint8_t boot_flags = OPTIBOOT_MCUSR;
       uint8_t F_POR = PORF;
@@ -759,6 +816,15 @@ void validateStatus() {
       uint8_t F_WDR = 0x01;
   #endif
 
+  if (hw_ready || device_init_done) {
+    hw_ready = false;
+    Serial.write("Error, invalid hardware check state\r\n");
+    #if HAS_DISPLAY
+      if (disp_ready) update_display();
+    #endif
+    led_indicate_boot_error();
+  }
+
   if (boot_flags & (1<<F_POR)) {
     boot_vector = START_FROM_POWERON;
   } else if (boot_flags & (1<<F_BOR)) {
@@ -777,9 +843,17 @@ void validateStatus() {
     if (eeprom_lock_set()) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
-          hw_ready = true;
+          #if PLATFORM == PLATFORM_ESP32
+            if (device_init()) {
+              hw_ready = true;
+            } else {
+              hw_ready = false;
+            }
+          #else
+            hw_ready = true;
+          #endif
 
-          if (eeprom_have_conf()) {
+          if (hw_ready && eeprom_have_conf()) {
             eeprom_conf_load();
             op_mode = MODE_TNC;
             startRadio();
