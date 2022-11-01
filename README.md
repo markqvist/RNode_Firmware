@@ -13,6 +13,18 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 
 To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
 
+## Get Started
+
+You can download and flash the firmware to all the supported boards using the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). All firmware releases are now handled and installed directly through the `rnodeconf` utility, which is inclueded in the `rns` package. It can be installed via `pip`:
+
+```
+# Install rnodeconf via rns package
+pip install rns --upgrade
+
+# Install the firmware on a board with the install guide
+rnodeconf --autoinstall
+```
+
 ## Current Status
 The RNode firmware can be considered stable at this point. If you do find a bug or discover unintended behaviour, please report it as an issue here, so I can fix it!
 
