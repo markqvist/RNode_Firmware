@@ -113,7 +113,7 @@ bool device_firmware_ok() {
 }
 
 bool device_init() {
-  if (bt_early_init()) {
+  if (bt_ready) {
     for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=EEPROM.read(eeprom_addr(ADDR_SIGNATURE+i));}
     mbedtls_md_context_t ctx;
     mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;     

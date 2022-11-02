@@ -71,52 +71,37 @@ char bt_devname[11];
     }
   }
 
-  bool bt_early_init_done = false;
-  bool bt_early_init() {
-    if (!bt_early_init_done) {
+  bool bt_setup_hw() {
+    if (!bt_ready) {
+      if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+        bt_enabled = true;
+      } else {
+        bt_enabled = false;
+      }
       if (btStart()) {
         if (esp_bluedroid_init() == ESP_OK) {
           if (esp_bluedroid_enable() == ESP_OK) {
             const uint8_t* bda_ptr = esp_bt_dev_get_address();
-            memcpy(dev_bt_mac, bda_ptr, BT_DEV_HASH_LEN);
+            char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
+            for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
+                data[i] = bda_ptr[i];
+            }
+            data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
+            unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
+            memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
+            sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+            free(data);
+
+            SerialBT.enableSSP();
+            SerialBT.onConfirmRequest(bt_confirm_pairing);
+            SerialBT.onAuthComplete(bt_pairing_complete);
+            SerialBT.register_callback(bt_connection_callback);
+            
+            bt_ready = true;
             return true;
-          } else {
-            return false;
-          }
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    } else {
-      return true;
-    }
-  }
 
-  bool bt_setup_hw() {
-    if (!bt_ready) {
-      if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) { bt_enabled = true; } else { bt_enabled = false; }
-      if (bt_early_init()) {
-        const uint8_t* bda_ptr = esp_bt_dev_get_address();
-        char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
-        for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
-          data[i] = bda_ptr[i];
-        }
-        data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
-        unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
-        memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
-        sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
-        free(data);
-
-        SerialBT.enableSSP();
-        SerialBT.onConfirmRequest(bt_confirm_pairing);
-        SerialBT.onAuthComplete(bt_pairing_complete);
-        SerialBT.register_callback(bt_connection_callback);
-        
-        bt_ready = true;
-        return true;
-
+          } else { return false; }
+        } else { return false; }
       } else { return false; }
     }
   }

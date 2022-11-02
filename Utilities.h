@@ -66,6 +66,20 @@ uint8_t boot_vector = 0x00;
   		pixels.show();
   	}
   }
+
+  void boot_seq() {
+  	uint8_t rs[] = { 0x00, 0x00, 0x00 };
+  	uint8_t gs[] = { 0x10, 0x08, 0x00 };
+  	uint8_t bs[] = { 0x00, 0x08, 0x10 };
+  	for (int i = 0; i < 1*sizeof(rs); i++) {
+	  	npset(rs[i%sizeof(rs)], gs[i%sizeof(gs)], bs[i%sizeof(bs)]);
+	  	delay(33);
+	  	npset(0x00, 0x00, 0x00);
+	  	delay(66);
+  	}
+  }
+#else
+  void boot_seq() { }
 #endif
 
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560

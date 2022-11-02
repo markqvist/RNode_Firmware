@@ -52,8 +52,7 @@ char sbuf[128];
 
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
-    // TODO: Reset?
-    // delay(500);
+    boot_seq();
     EEPROM.begin(EEPROM_SIZE);
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
@@ -90,16 +89,22 @@ void setup() {
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
 
+  #if HAS_DISPLAY
+    disp_ready = display_init();
+    update_display();
+  #endif
+
   #if MCU_VARIANT == MCU_ESP32
     #if HAS_PMU == true
       pmu_ready = init_pmu();
     #endif
 
-    kiss_indicate_reset();
-  #endif
+    #if HAS_BLUETOOTH
+      bt_init();
+      bt_init_ran = true;
+    #endif
 
-  #if HAS_DISPLAY
-    disp_ready = display_init();
+    kiss_indicate_reset();
   #endif
 
   // Validate board health, EEPROM and config
@@ -832,7 +837,10 @@ void validate_status() {
     hw_ready = false;
     Serial.write("Error, invalid hardware check state\r\n");
     #if HAS_DISPLAY
-      if (disp_ready) update_display();
+      if (disp_ready) {
+        device_init_done = true;
+        update_display();
+      }
     #endif
     led_indicate_boot_error();
   }
@@ -846,7 +854,10 @@ void validate_status() {
   } else {
       Serial.write("Error, indeterminate boot vector\r\n");
       #if HAS_DISPLAY
-        if (disp_ready) update_display();
+        if (disp_ready) {
+          device_init_done = true;
+          update_display();
+        }
       #endif
       led_indicate_boot_error();
   }
@@ -881,7 +892,10 @@ void validate_status() {
     hw_ready = false;
     Serial.write("Error, incorrect boot vector\r\n");
     #if HAS_DISPLAY
-      if (disp_ready) update_display();
+      if (disp_ready) {
+        device_init_done = true;
+        update_display();
+      }
     #endif
     led_indicate_boot_error();
   }
@@ -947,11 +961,6 @@ void loop() {
   #endif
 
   #if HAS_BLUETOOTH
-    if (!bt_init_ran && millis() > 1000) {
-      bt_init();
-      bt_init_ran = true;
-    }
-
     if (bt_ready) update_bt();
   #endif
 }

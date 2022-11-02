@@ -253,20 +253,22 @@ void draw_waterfall(int px, int py) {
 
 bool stat_area_intialised = false;
 void draw_stat_area() {
-  if (!stat_area_intialised) {
-    stat_area.drawBitmap(0, 0, bm_frame, 64, 64, SSD1306_WHITE, SSD1306_BLACK);
-    stat_area_intialised = true;
-  }
+  if (device_init_done) {
+    if (!stat_area_intialised) {
+      stat_area.drawBitmap(0, 0, bm_frame, 64, 64, SSD1306_WHITE, SSD1306_BLACK);
+      stat_area_intialised = true;
+    }
 
-  draw_cable_icon(3, 8);
-  draw_bt_icon(3, 30);
-  draw_lora_icon(45, 8);
-  draw_mw_icon(45, 30);
-  draw_battery_bars(4, 58);
-  if (radio_online) {
-    draw_quality_bars(28, 56);
-    draw_signal_bars(44, 56);
-    draw_waterfall(27, 4);
+    draw_cable_icon(3, 8);
+    draw_bt_icon(3, 30);
+    draw_lora_icon(45, 8);
+    draw_mw_icon(45, 30);
+    draw_battery_bars(4, 58);
+    if (radio_online) {
+      draw_quality_bars(28, 56);
+      draw_signal_bars(44, 56);
+      draw_waterfall(27, 4);
+    }
   }
 }
 
@@ -284,74 +286,78 @@ void update_stat_area() {
 const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
-  if (!disp_ext_fb or bt_ssp_pin != 0) {
-    if (device_signatures_ok()) {
-      disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
-    } else {
-      disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
-    }
-    
-    if (!hw_ready || radio_error || !device_firmware_ok()) {
-      if (!device_firmware_ok()) {
-        disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+  if (!device_init_done) {
+    disp_area.drawBitmap(0, 37, bm_boot, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+  } else {
+    if (!disp_ext_fb or bt_ssp_pin != 0) {
+      if (device_signatures_ok()) {
+        disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
       } else {
-        disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
       }
-    } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {      
-      char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
-      sprintf(pin_str, "%06d", bt_ssp_pin);
+      
+      if (!hw_ready || radio_error || !device_firmware_ok()) {
+        if (!device_firmware_ok()) {
+          disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        } else {
+          disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        }
+      } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {      
+        char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
+        sprintf(pin_str, "%06d", bt_ssp_pin);
 
-      disp_area.drawBitmap(0, 37, bm_pairing, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-      for (int i = 0; i < DISP_PIN_SIZE; i++) {
-        uint8_t numeric = pin_str[i]-48;
-        uint8_t offset = numeric*5;
-        disp_area.drawBitmap(7+9*i, 37+16, bm_n_uh+offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
-      }
+        disp_area.drawBitmap(0, 37, bm_pairing, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        for (int i = 0; i < DISP_PIN_SIZE; i++) {
+          uint8_t numeric = pin_str[i]-48;
+          uint8_t offset = numeric*5;
+          disp_area.drawBitmap(7+9*i, 37+16, bm_n_uh+offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
+        }
 
-    } else {
-      if (millis()-last_page_flip >= page_interval) {
-        disp_page = (++disp_page%pages);
-        last_page_flip = millis();
-        if (not community_fw and disp_page == 0) disp_page = 1;
-      }
+      } else {
+        if (millis()-last_page_flip >= page_interval) {
+          disp_page = (++disp_page%pages);
+          last_page_flip = millis();
+          if (not community_fw and disp_page == 0) disp_page = 1;
+        }
 
-      if (disp_page == 0) {
-        if (device_signatures_ok()) {
+        if (disp_page == 0) {
+          if (device_signatures_ok()) {
+            if (radio_online) {
+              disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            } else {
+              disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            }
+          } else {
+            disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          }
+        } else if (disp_page == 1) {
           if (radio_online) {
             disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          } else {
-            disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          } else{
+            disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           }
-        } else {
-          disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-        }
-      } else if (disp_page == 1) {
-        if (radio_online) {
-          disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-        } else{
-          disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-        }
-      } else if (disp_page == 2) {
-        if (radio_online) {
-          disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-        } else{
-          disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          char *v_str = (char*)malloc(3+1);
-          sprintf(v_str, "%01d%02d", MAJ_VERS, MIN_VERS);
-          for (int i = 0; i < 3; i++) {
-            uint8_t numeric = v_str[i]-48; uint8_t bm_offset = numeric*5;
-            uint8_t dxp = 20;
-            if (i == 1) dxp += 9*1+4;
-            if (i == 2) dxp += 9*2+4;
-            disp_area.drawBitmap(dxp, 37+16, bm_n_uh+bm_offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
+        } else if (disp_page == 2) {
+          if (radio_online) {
+            disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          } else{
+            disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            char *v_str = (char*)malloc(3+1);
+            sprintf(v_str, "%01d%02d", MAJ_VERS, MIN_VERS);
+            for (int i = 0; i < 3; i++) {
+              uint8_t numeric = v_str[i]-48; uint8_t bm_offset = numeric*5;
+              uint8_t dxp = 20;
+              if (i == 1) dxp += 9*1+4;
+              if (i == 2) dxp += 9*2+4;
+              disp_area.drawBitmap(dxp, 37+16, bm_n_uh+bm_offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
+            }
+            disp_area.drawLine(27, 37+19, 28, 37+19, SSD1306_BLACK);
+            disp_area.drawLine(27, 37+20, 28, 37+20, SSD1306_BLACK);
           }
-          disp_area.drawLine(27, 37+19, 28, 37+19, SSD1306_BLACK);
-          disp_area.drawLine(27, 37+20, 28, 37+20, SSD1306_BLACK);
         }
       }
+    } else {
+      disp_area.drawBitmap(0, 0, fb, disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
     }
-  } else {
-    disp_area.drawBitmap(0, 0, fb, disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   }
 }
 
