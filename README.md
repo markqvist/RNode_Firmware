@@ -2,8 +2,8 @@
 
 This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based communication device. RNode can functions as a:
 
-- A general purpose long-range data radio
 - Network adapter for [Reticulum](https://github.com/markqvist/Reticulum)
+- A general purpose long-range data radio
 - LoRa interface for your computer (or any device with a USB or serial port)
 - Generic [LoRa-based network adapter](https://unsigned.io/15-kilometre-ssh-link-with-rnode/) for your Linux devices
 - [Packet sniffer](https://github.com/markqvist/LoRaMon) for LoRa networks
