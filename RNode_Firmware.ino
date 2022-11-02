@@ -702,6 +702,12 @@ void serialCallback(uint8_t sbyte) {
             device_save_signature();
           }
       #endif
+    } else if (command == CMD_FW_UPD) {
+      if (sbyte == 0x01) {
+        firmware_update_mode = true;
+      } else {
+        firmware_update_mode = false;
+      }
     } else if (command == CMD_HASHES) {
       #if MCU_VARIANT == MCU_ESP32
         if (sbyte == 0x01) {
@@ -866,6 +872,7 @@ void validate_status() {
     if (eeprom_lock_set()) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
+          eeprom_ok = true;
           #if PLATFORM == PLATFORM_ESP32
             if (device_init()) {
               hw_ready = true;
@@ -881,12 +888,32 @@ void validate_status() {
             op_mode = MODE_TNC;
             startRadio();
           }
+        } else {
+          hw_ready = false;
+          #if HAS_DISPLAY
+            if (disp_ready) {
+              device_init_done = true;
+              update_display();
+            }
+          #endif
         }
       } else {
         hw_ready = false;
+        #if HAS_DISPLAY
+          if (disp_ready) {
+            device_init_done = true;
+            update_display();
+          }
+        #endif
       }
     } else {
       hw_ready = false;
+      #if HAS_DISPLAY
+        if (disp_ready) {
+          device_init_done = true;
+          update_display();
+        }
+      #endif
     }
   } else {
     hw_ready = false;
@@ -940,6 +967,7 @@ void loop() {
     if (hw_ready) {
       led_indicate_standby();
     } else {
+
       led_indicate_not_ready();
       stopRadio();
     }

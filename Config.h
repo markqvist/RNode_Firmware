@@ -303,6 +303,8 @@
     uint8_t battery_state = 0x00;
     uint8_t display_intensity = 0xFF;
     bool device_init_done = false;
+    bool eeprom_ok = false;
+    bool firmware_update_mode = false;
 
 	// Boot flags
 	#define START_FROM_BOOTLOADER 0x01

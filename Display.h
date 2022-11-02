@@ -273,12 +273,18 @@ void draw_stat_area() {
 }
 
 void update_stat_area() {
-  draw_stat_area();
-  if (disp_mode == DISP_MODE_PORTRAIT) {
-    display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
-  } else if (disp_mode == DISP_MODE_LANDSCAPE) {
-    display.drawBitmap(p_as_x+2, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
-    display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
+  if (eeprom_ok && !firmware_update_mode) {
+    draw_stat_area();
+    if (disp_mode == DISP_MODE_PORTRAIT) {
+      display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+    } else if (disp_mode == DISP_MODE_LANDSCAPE) {
+      display.drawBitmap(p_as_x+2, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+      if (device_init_done) display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
+    }
+  } else {
+    if (firmware_update_mode) {
+      // Indicate firmware update spinner
+    }
   }
 }
 
@@ -286,8 +292,9 @@ void update_stat_area() {
 const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
-  if (!device_init_done) {
-    disp_area.drawBitmap(0, 37, bm_boot, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+  if (!device_init_done || firmware_update_mode) {
+    if (!device_init_done) disp_area.drawBitmap(0, 37, bm_boot, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+    if (firmware_update_mode) disp_area.drawBitmap(0, 37, bm_fw_update, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
   } else {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
       if (device_signatures_ok()) {

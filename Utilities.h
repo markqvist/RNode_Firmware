@@ -652,7 +652,8 @@ void kiss_indicate_fbstate() {
 
 	void kiss_indicate_target_fw_hash() {
 	  serial_write(FEND);
-	  serial_write(CMD_DEV_HASH);
+	  serial_write(CMD_HASHES);
+	  serial_write(0x01);
 	  for (int i = 0; i < DEV_HASH_LEN; i++) {
 	    uint8_t byte = dev_firmware_hash_target[i];
 	 		escaped_serial_write(byte);
@@ -662,7 +663,8 @@ void kiss_indicate_fbstate() {
 
 	void kiss_indicate_fw_hash() {
 	  serial_write(FEND);
-	  serial_write(CMD_DEV_HASH);
+	  serial_write(CMD_HASHES);
+	  serial_write(0x02);
 	  for (int i = 0; i < DEV_HASH_LEN; i++) {
 	    uint8_t byte = dev_firmware_hash[i];
 	 		escaped_serial_write(byte);
@@ -672,7 +674,8 @@ void kiss_indicate_fbstate() {
 
 	void kiss_indicate_bootloader_hash() {
 	  serial_write(FEND);
-	  serial_write(CMD_DEV_HASH);
+	  serial_write(CMD_HASHES);
+	  serial_write(0x03);
 	  for (int i = 0; i < DEV_HASH_LEN; i++) {
 	    uint8_t byte = dev_bootloader_hash[i];
 	 		escaped_serial_write(byte);
@@ -682,7 +685,8 @@ void kiss_indicate_fbstate() {
 
 	void kiss_indicate_partition_table_hash() {
 	  serial_write(FEND);
-	  serial_write(CMD_DEV_HASH);
+	  serial_write(CMD_HASHES);
+	  serial_write(0x04);
 	  for (int i = 0; i < DEV_HASH_LEN; i++) {
 	    uint8_t byte = dev_partition_table_hash[i];
 	 		escaped_serial_write(byte);
