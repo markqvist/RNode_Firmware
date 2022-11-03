@@ -274,6 +274,7 @@ void draw_stat_area() {
 
 void update_stat_area() {
   if (eeprom_ok && !firmware_update_mode) {
+    
     draw_stat_area();
     if (disp_mode == DISP_MODE_PORTRAIT) {
       display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
@@ -281,9 +282,10 @@ void update_stat_area() {
       display.drawBitmap(p_as_x+2, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
       if (device_init_done) display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
     }
+
   } else {
     if (firmware_update_mode) {
-      // Indicate firmware update spinner
+      display.drawBitmap(p_as_x, p_as_y, bm_updating, stat_area.width(), stat_area.height(), SSD1306_BLACK, SSD1306_WHITE);
     }
   }
 }
@@ -293,8 +295,13 @@ const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 void draw_disp_area() {
   if (!device_init_done || firmware_update_mode) {
-    if (!device_init_done) disp_area.drawBitmap(0, 37, bm_boot, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-    if (firmware_update_mode) disp_area.drawBitmap(0, 37, bm_fw_update, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+    uint8_t p_by = 37;
+    if (disp_mode == DISP_MODE_LANDSCAPE || firmware_update_mode) {
+      p_by = 18;
+      disp_area.fillRect(0, 0, disp_area.width(), disp_area.height(), SSD1306_BLACK);
+    }
+    if (!device_init_done) disp_area.drawBitmap(0, p_by, bm_boot, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+    if (firmware_update_mode) disp_area.drawBitmap(0, p_by, bm_fw_update, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
   } else {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
       if (device_signatures_ok()) {
@@ -371,7 +378,11 @@ void draw_disp_area() {
 void update_disp_area() {
   draw_disp_area();
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
-  if (disp_mode == DISP_MODE_LANDSCAPE) display.drawLine(0, 0, 0, 64, SSD1306_WHITE);
+  if (disp_mode == DISP_MODE_LANDSCAPE) {
+    if (device_init_done && !firmware_update_mode) {
+      display.drawLine(0, 0, 0, 63, SSD1306_WHITE);
+    }
+  }
 }
 
 void update_display() {
