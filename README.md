@@ -2,8 +2,8 @@
 
 This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based communication device. RNode can functions as a:
 
-- A general purpose long-range data radio
 - Network adapter for [Reticulum](https://github.com/markqvist/Reticulum)
+- A general purpose long-range data radio
 - LoRa interface for your computer (or any device with a USB or serial port)
 - Generic [LoRa-based network adapter](https://unsigned.io/15-kilometre-ssh-link-with-rnode/) for your Linux devices
 - [Packet sniffer](https://github.com/markqvist/LoRaMon) for LoRa networks
@@ -12,6 +12,8 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 - A flexible platform for experiementing with LoRa technology
 
 To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
+
+![Devices Running RNode Firmware](https://github.com/markqvist/RNode_Firmware/raw/master/Documentation/rnfw_1.jpg)
 
 ## Get Started
 
@@ -131,13 +133,15 @@ You can help support the continued development of open, free and private communi
 - Ko-Fi: https://ko-fi.com/markqvist
 
 ## License
-Permission is hereby granted to use the RNode firmware in binary form, for any and all purposes, and to freely distribute binary copies of the firmware, so long as no payment or compensation is charged or received for such distribution or use. If you want to charge money or receive compensation for providing this work to others, you must buy a license for doing so, which is cheap and easy.
+Permission is hereby granted to use the RNode firmware in binary form, for any and all purposes, and to freely distribute binary copies of the firmware, so long as no payment or compensation is charged or received for such distribution or use.
+
+If you want to charge money or receive compensation for providing this work to others, in any way or form, you must buy a license for doing so, which is cheap and easy.
 
 Unless otherwise noted, this work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
 
 Prior versions of this work, until and including commit [fe5e6aab9c2ab8fe69ede7f1da04bcffff7d1ed7](https://github.com/markqvist/RNode_Firmware/commit/fe5e6aab9c2ab8fe69ede7f1da04bcffff7d1ed7) was licensed purely under MIT License.
 
-If you want to use the RNode Firmware in commercial products, or build and sell RNode, it is easy to do so by licensing the firmware commercially. I provide a range of convenient tools and resources for anyone who wants to build and sell RNodes, so just get in contact with me to get started.
+If you want to use the RNode Firmware in commercial products, or build and sell RNodes, it is easy to do so by licensing the firmware commercially. I provide a range of convenient tools and resources for anyone who wants to build and sell RNodes, so just get in contact with me to get started.
 
 <img src="https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png" align="right">
 
