@@ -1,6 +1,8 @@
 # RNode Firmware
 
-This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based Open Communications Device. An RNode can functions as a:
+This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoRa-based Open Communications Device.
+
+An RNode can function as a:
 
 - General purpose long-range data radio module
 - Network adapter for [Reticulum](https://github.com/markqvist/Reticulum)
