@@ -10,9 +10,23 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 - A LoRa-based KISS-compatible TNC for amateur radio and AX.25 applications
 - A flexible platform for experiementing with LoRa technology
 
-To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
+To install this firmware on homebrew RNodes and other supported boards, use `rnodeconf`, the *RNode Config Utility*. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
 
-## Installation & Supported Hardware
+![Devices Running RNode Firmware](https://github.com/markqvist/RNode_Firmware/raw/master/Documentation/rnfw_1.jpg)
+
+## Get Started
+
+You can download and flash the firmware to all the supported boards using the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). All firmware releases are now handled and installed directly through the `rnodeconf` utility, which is inclueded in the `rns` package. It can be installed via `pip`:
+
+```
+# Install rnodeconf via rns package
+pip install rns --upgrade
+
+# Install the firmware on a board with the install guide
+rnodeconf --autoinstall
+```
+
+## Supported Hardware
 
 The RNode Firmware supports the following boards:
 
@@ -25,16 +39,6 @@ The RNode Firmware supports the following boards:
 - LilyGO LoRa32 v2.0 devices
 - LilyGO LoRa32 v2.1 devices
 - Heltec LoRa32 v2 devices
-
-You can download and flash the firmware to supported boards using `rnodeconf`, the *RNode Config Utility*. All firmware releases are handled and installed directly through `rnodeconf`, which is inclueded in the `rns` package. It can be installed via `pip`:
-
-```
-# Install rnodeconf via rns package
-pip install rns --upgrade
-
-# Install the firmware on a board with the install guide
-rnodeconf --autoinstall
-```
 
 ## Operating Modes
 RNode can operate in two modes, host-controlled (default) and TNC mode:
