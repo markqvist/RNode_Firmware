@@ -9,8 +9,8 @@ An RNode can function as a:
 - LoRa interface for your computer (or any device with a USB or serial port)
 - Generic [LoRa-based network adapter](https://unsigned.io/15-kilometre-ssh-link-with-rnode/)
 - [Packet sniffer](https://github.com/markqvist/LoRaMon) for LoRa networks
-- A LoRa-based KISS-compatible TNC for amateur radio and AX.25 applications
-- A flexible platform for experiementing with LoRa technology
+- LoRa-based KISS-compatible TNC for amateur radio and AX.25 applications
+- Flexible platform for experiementing with LoRa technology
 
 To install this firmware on homebrew RNodes and other supported boards, use `rnodeconf`, the *RNode Config Utility*. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
 
