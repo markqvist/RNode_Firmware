@@ -83,7 +83,7 @@ The RNode Firmware is Copyright © 2022 Mark Qvist / unsigned.io, and is made av
 
 Unless otherwise noted, the source code and binaries in this repository and related release sections is licensed under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
 
-Permission is hereby granted to use the RNode firmware in *binary form from this repository* for any and all purposes, ***so long as no payment or compensation is charged or received for such distribution or use***. Binary copies of the firmware obtained from this repository (or via the `rnodeconf` utility) are explicitly licensed under these conditions.
+Permission is hereby granted to use the RNode Firmware in *binary form from this repository* for any and all purposes, ***so long as no payment or compensation is charged or received for such distribution or use***. Binary copies of the firmware obtained from this repository (or via the `rnodeconf` utility) are explicitly licensed under these conditions.
 
 If you distribute or modify this work, you **must** adhere to the terms of the GPLv3, including, but not limited to, providing up-to-date source code upon distribution, displaying appropriate copyright and license notices in prominent positions of all conveyed works, and making users aware of their rights to the software under the GPLv3.
 
