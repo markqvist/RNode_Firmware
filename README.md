@@ -12,7 +12,7 @@ This is the firmware for [RNode](https://unsigned.io/rnode), a very flexible LoR
 
 To install this firmware on homebrew RNodes and other supported boards, please use the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). It contains an auto-installer that allows you to install the RNode firmware on a variety of boards. For guides and tutorials on how to get started with making your own RNodes, visit [unsigned.io](https://unsigned.io).
 
-## Supported Hardware
+## Installation & Supported Hardware
 
 The RNode Firmware supports the following boards:
 
@@ -26,7 +26,15 @@ The RNode Firmware supports the following boards:
 - LilyGO LoRa32 v2.1 devices
 - Heltec LoRa32 v2 devices
 
-For configuring an RNode with this firmware, please have a look at the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil).
+You can download and flash the firmware to supported boards using `rnodeconf`, the *RNode Config Utility*. All firmware releases are handled and installed directly through `rnodeconf`, which is inclueded in the `rns` package. It can be installed via `pip`:
+
+```
+# Install rnodeconf via rns package
+pip install rns --upgrade
+
+# Install the firmware on a board with the install guide
+rnodeconf --autoinstall
+```
 
 ## Operating Modes
 RNode can operate in two modes, host-controlled (default) and TNC mode:
