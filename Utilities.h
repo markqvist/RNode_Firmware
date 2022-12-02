@@ -312,8 +312,8 @@ unsigned long led_standby_ticks = 0;
 #elif MCU_VARIANT == MCU_ESP32
 
 	#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_RNODE_NG_21
-		uint8_t led_standby_lng = 32;
-		uint8_t led_standby_cut = 16;
+		uint8_t led_standby_lng = 55;
+		uint8_t led_standby_cut = 100;
 		uint8_t led_standby_min = 0;
 		uint8_t led_standby_max = 200+led_standby_lng;
 		uint8_t led_notready_min = 0;
@@ -321,7 +321,7 @@ unsigned long led_standby_ticks = 0;
 		uint8_t led_notready_value = led_notready_min;
 		int8_t  led_notready_direction = 0;
 		unsigned long led_notready_ticks = 0;
-		unsigned long led_standby_wait = 1000;
+		unsigned long led_standby_wait = 350;
 		unsigned long led_notready_wait = 200;
 	
 	#else
