@@ -10,6 +10,7 @@
 #elif BOARD_MODEL == BOARD_TBEAM
   #define DISP_RST 0
   #define DISP_ADDR 0x3D
+  // #define DISP_ADDR 0x3C
 #elif BOARD_MODEL == BOARD_HELTEC32_V2
   #define DISP_RST 16
   #define DISP_ADDR 0x3C
