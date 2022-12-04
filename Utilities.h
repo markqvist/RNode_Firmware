@@ -43,12 +43,11 @@ uint8_t boot_vector = 0x00;
 	// TODO: Get ESP32 boot flags
 #endif
 
-#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_RNODE_NG_21
+#if HAS_NP == true
 	#include <Adafruit_NeoPixel.h>
-	#define NP_PIN 4
 	#define NUMPIXELS 1
 	#define NP_M 0.15
-	Adafruit_NeoPixel pixels(NUMPIXELS, NP_PIN, NEO_GRB + NEO_KHZ800);
+	Adafruit_NeoPixel pixels(NUMPIXELS, pin_np, NEO_GRB + NEO_KHZ800);
 
 	uint8_t npr = 0;
   uint8_t npg = 0;
@@ -88,7 +87,22 @@ uint8_t boot_vector = 0x00;
 	void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 	void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 #elif MCU_VARIANT == MCU_ESP32
-	#if BOARD_MODEL == BOARD_TBEAM
+	#if HAS_NP == true
+		void led_rx_on()  { npset(0, 0, 0xFF); }
+		void led_rx_off() {	npset(0, 0, 0); }
+		void led_tx_on()  { npset(0xFF, 0x50, 0x00); }
+		void led_tx_off() { npset(0, 0, 0); }
+	#elif BOARD_MODEL == BOARD_RNODE_NG_20
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+	#elif BOARD_MODEL == BOARD_RNODE_NG_21
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+	#elif BOARD_MODEL == BOARD_TBEAM
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
@@ -122,16 +136,6 @@ uint8_t boot_vector = 0x00;
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
-	#elif BOARD_MODEL == BOARD_RNODE_NG_20
-		void led_rx_on()  { npset(0, 0, 0xFF); }
-		void led_rx_off() {	npset(0, 0, 0); }
-		void led_tx_on()  { npset(0xFF, 0x50, 0x00); }
-		void led_tx_off() { npset(0, 0, 0); }
-	#elif BOARD_MODEL == BOARD_RNODE_NG_21
-		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
-		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
-		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
-		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
@@ -158,7 +162,7 @@ void hard_reset(void) {
 
 // LED Indication: Error
 void led_indicate_error(int cycles) {
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if HAS_NP == true
 		bool forever = (cycles == 0) ? true : false;
 		cycles = forever ? 1 : cycles;
 		while(cycles > 0) {
@@ -188,7 +192,7 @@ void led_indicate_error(int cycles) {
 
 // LED Indication: Boot Error
 void led_indicate_boot_error() {
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if HAS_NP == true
 		while(true) {
 			npset(0xFF, 0xFF, 0xFF);
 		}
@@ -206,7 +210,7 @@ void led_indicate_boot_error() {
 
 // LED Indication: Warning
 void led_indicate_warning(int cycles) {
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if HAS_NP == true
 		bool forever = (cycles == 0) ? true : false;
 		cycles = forever ? 1 : cycles;
 		while(cycles > 0) {
@@ -247,7 +251,7 @@ void led_indicate_warning(int cycles) {
 	  led_rx_off();
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if HAS_NP == true
 		void led_indicate_info(int cycles) {
 			bool forever = (cycles == 0) ? true : false;
 			cycles = forever ? 1 : cycles;
@@ -357,7 +361,7 @@ int8_t  led_standby_direction = 0;
 	}
 
 #elif MCU_VARIANT == MCU_ESP32
-	#if BOARD_MODEL == BOARD_RNODE_NG_20
+	#if HAS_NP == true
 		void led_indicate_standby() {
 			led_standby_ticks++;
 
@@ -431,7 +435,7 @@ int8_t  led_standby_direction = 0;
 		}
 	}
 #elif MCU_VARIANT == MCU_ESP32
-	#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_RNODE_NG_21
+	#if HAS_NP == true
     void led_indicate_not_ready() {
     	led_standby_ticks++;
 
@@ -797,7 +801,7 @@ void set_implicit_length(uint8_t len) {
 
 void setTXPower() {
 	if (radio_online) {
-		if (model == MODEL_A2) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A2) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_A3) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
 		if (model == MODEL_A4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
 		if (model == MODEL_A7) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
