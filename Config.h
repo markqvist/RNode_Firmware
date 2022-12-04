@@ -4,7 +4,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x34
+	#define MIN_VERS  0x35
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
@@ -67,6 +67,7 @@
     #define HAS_DISPLAY false
     #define HAS_BLUETOOTH false
     #define HAS_PMU false
+    #define HAS_NP false
 
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
@@ -173,32 +174,40 @@
             #define HAS_DISPLAY true
 			#define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_20
+            #define HAS_DISPLAY true
+            #define HAS_BLUETOOTH true
+			#define HAS_NP true
 			const int pin_cs = 18;
 			const int pin_reset = 12;
 			const int pin_dio = 26;
-			#if defined(EXTERNAL_LEDS)
-				const int pin_led_rx = 2;
-				const int pin_led_tx = 0;
-			#else
-				const int pin_led_rx = 22;
-				const int pin_led_tx = 22;
+			const int pin_np = 4;
+			#if HAS_NP == false
+				#if defined(EXTERNAL_LEDS)
+					const int pin_led_rx = 2;
+					const int pin_led_tx = 0;
+				#else
+					const int pin_led_rx = 22;
+					const int pin_led_tx = 22;
+				#endif
 			#endif
-            #define HAS_DISPLAY true
-            #define HAS_BLUETOOTH true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_21
-			const int pin_cs = 18;
-			const int pin_reset = 23;
-			const int pin_dio = 26;
-			#if defined(EXTERNAL_LEDS)
-				const int pin_led_rx = 15;
-				const int pin_led_tx = 4;
-			#else
-				const int pin_led_rx = 25;
-				const int pin_led_tx = 25;
-			#endif
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
             #define HAS_PMU true
+			#define HAS_NP true
+			const int pin_cs = 18;
+			const int pin_reset = 23;
+			const int pin_dio = 26;
+			const int pin_np = 15;
+			#if HAS_NP == false
+				#if defined(EXTERNAL_LEDS)
+					const int pin_led_rx = 15;
+					const int pin_led_tx = 4;
+				#else
+					const int pin_led_rx = 25;
+					const int pin_led_tx = 25;
+				#endif
+			#endif
 		#else
 			#error An unsupported board was selected. Cannot compile RNode firmware.
 		#endif

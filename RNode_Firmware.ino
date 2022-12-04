@@ -48,8 +48,10 @@ void setup() {
   serial_interrupt_init();
 
   // Configure input and output pins
-  pinMode(pin_led_rx, OUTPUT);
-  pinMode(pin_led_tx, OUTPUT);
+  #if HAS_NP == false
+    pinMode(pin_led_rx, OUTPUT);
+    pinMode(pin_led_tx, OUTPUT);
+  #endif
 
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
