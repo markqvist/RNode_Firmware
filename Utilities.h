@@ -315,14 +315,14 @@ unsigned long led_standby_ticks = 0;
 
 #elif MCU_VARIANT == MCU_ESP32
 
-	#if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_RNODE_NG_21
-		uint8_t led_standby_lng = 55;
-		uint8_t led_standby_cut = 100;
-		uint8_t led_standby_min = 0;
-		uint8_t led_standby_max = 200+led_standby_lng;
-		uint8_t led_notready_min = 0;
-		uint8_t led_notready_max = led_standby_max;
-		uint8_t led_notready_value = led_notready_min;
+	#if HAS_NP == true
+		int led_standby_lng = 100;
+		int led_standby_cut = 200;
+		int led_standby_min = 0;
+		int led_standby_max = 375+led_standby_lng;
+		int led_notready_min = 0;
+		int led_notready_max = led_standby_max;
+		int led_notready_value = led_notready_min;
 		int8_t  led_notready_direction = 0;
 		unsigned long led_notready_ticks = 0;
 		unsigned long led_standby_wait = 350;
@@ -341,7 +341,7 @@ unsigned long led_standby_ticks = 0;
 	#endif
 #endif
 
-uint8_t led_standby_value = led_standby_min;
+unsigned long led_standby_value = led_standby_min;
 int8_t  led_standby_direction = 0;
 
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
@@ -374,15 +374,17 @@ int8_t  led_standby_direction = 0;
 					led_standby_direction = -1;
 				}
 
-				led_standby_value += led_standby_direction;
-				int offset = led_standby_value - led_standby_lng;
 				uint8_t led_standby_intensity;
-				if (offset < 0) {
-			  	led_standby_intensity = 0;
+				led_standby_value += led_standby_direction;
+				int led_standby_ti = led_standby_value - led_standby_lng;
+
+				if (led_standby_ti < 0) {
+					led_standby_intensity = 0;
+				} else if (led_standby_ti > led_standby_cut) {
+					led_standby_intensity = led_standby_cut;
 				} else {
-			  	led_standby_intensity = offset;
+					led_standby_intensity = led_standby_ti;
 				}
-				if (offset > led_standby_cut) offset = led_standby_cut;
   			npset(0x00, 0x00, led_standby_intensity);
 			}
 		}
@@ -448,15 +450,18 @@ int8_t  led_standby_direction = 0;
 					led_standby_direction = -1;
 				}
 
-				led_standby_value += led_standby_direction;
-				int offset = led_standby_value - led_standby_lng;
 				uint8_t led_standby_intensity;
-				if (offset < 0) {
-			  	led_standby_intensity = 0;
+				led_standby_value += led_standby_direction;
+				int led_standby_ti = led_standby_value - led_standby_lng;
+
+				if (led_standby_ti < 0) {
+					led_standby_intensity = 0;
+				} else if (led_standby_ti > led_standby_cut) {
+					led_standby_intensity = led_standby_cut;
 				} else {
-			  	led_standby_intensity = offset;
+					led_standby_intensity = led_standby_ti;
 				}
-				if (offset > led_standby_cut) offset = led_standby_cut;
+
   			npset(led_standby_intensity, 0x00, 0x00);
 			}
 		}
