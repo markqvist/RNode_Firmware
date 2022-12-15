@@ -33,6 +33,7 @@ rnodeconf --autoinstall
 The RNode Firmware supports the following boards:
 
 - The original RNode from [unsigned.io](https://unsigned.io/)
+- RNode v2.x variants from [unsigned.io](https://unsigned.io/)
 - Homebrew RNodes based on ATmega1284p boards
 - Homebrew RNodes based on ATmega2560 boards
 - Homebrew RNodes based on Adafruit Feather ESP32 boards
