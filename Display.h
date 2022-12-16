@@ -166,23 +166,47 @@ void draw_mw_icon(int px, int py) {
 }
 
 uint8_t charge_tick = 0;
-void draw_battery_bars(int px, int py) {  
+void draw_battery_bars(int px, int py) {
   if (pmu_ready) {
-    float battery_value = battery_percent;
-    if (battery_state == BATTERY_STATE_CHARGING) {
-      battery_value = charge_tick;
-      charge_tick += 3;
-      if (charge_tick > 100) charge_tick = 0;
-    }
+    if (battery_ready) {
+      if (battery_installed) {
+      float battery_value = battery_percent;
+        
+        if (battery_state == BATTERY_STATE_CHARGING) {
+          battery_value = charge_tick;
+          charge_tick += 3;
+          if (charge_tick > 100) charge_tick = 0;
+        }
 
-    stat_area.fillRect(px, py, 14, 3, SSD1306_BLACK);
-    if (battery_value > 7) stat_area.drawLine(px, py, px, py+2, SSD1306_WHITE);
-    if (battery_value > 20) stat_area.drawLine(px+1*2, py, px+1*2, py+2, SSD1306_WHITE);
-    if (battery_value > 33) stat_area.drawLine(px+2*2, py, px+2*2, py+2, SSD1306_WHITE);
-    if (battery_value > 46) stat_area.drawLine(px+3*2, py, px+3*2, py+2, SSD1306_WHITE);
-    if (battery_value > 59) stat_area.drawLine(px+4*2, py, px+4*2, py+2, SSD1306_WHITE);
-    if (battery_value > 72) stat_area.drawLine(px+5*2, py, px+5*2, py+2, SSD1306_WHITE);
-    if (battery_value > 85) stat_area.drawLine(px+6*2, py, px+6*2, py+2, SSD1306_WHITE);
+        if (battery_indeterminate && battery_state == BATTERY_STATE_CHARGING) {
+          stat_area.fillRect(px-2, py-2, 18, 7, SSD1306_BLACK);
+          stat_area.drawBitmap(px-2, py-2, bm_plug, 17, 7, SSD1306_WHITE, SSD1306_BLACK);
+        } else {
+          if (battery_state == BATTERY_STATE_CHARGED) {
+            stat_area.fillRect(px-2, py-2, 18, 7, SSD1306_BLACK);
+            stat_area.drawBitmap(px-2, py-2, bm_plug, 17, 7, SSD1306_WHITE, SSD1306_BLACK);
+          } else {
+            // stat_area.fillRect(px, py, 14, 3, SSD1306_BLACK);
+            stat_area.fillRect(px-2, py-2, 18, 7, SSD1306_BLACK);
+            stat_area.drawRect(px-2, py-2, 17, 7, SSD1306_WHITE);
+            stat_area.drawLine(px+15, py, px+15, py+3, SSD1306_WHITE);
+            if (battery_value > 7) stat_area.drawLine(px, py, px, py+2, SSD1306_WHITE);
+            if (battery_value > 20) stat_area.drawLine(px+1*2, py, px+1*2, py+2, SSD1306_WHITE);
+            if (battery_value > 33) stat_area.drawLine(px+2*2, py, px+2*2, py+2, SSD1306_WHITE);
+            if (battery_value > 46) stat_area.drawLine(px+3*2, py, px+3*2, py+2, SSD1306_WHITE);
+            if (battery_value > 59) stat_area.drawLine(px+4*2, py, px+4*2, py+2, SSD1306_WHITE);
+            if (battery_value > 72) stat_area.drawLine(px+5*2, py, px+5*2, py+2, SSD1306_WHITE);
+            if (battery_value > 85) stat_area.drawLine(px+6*2, py, px+6*2, py+2, SSD1306_WHITE);
+          }
+        }
+      } else {
+        stat_area.fillRect(px-2, py-2, 18, 7, SSD1306_BLACK);
+        stat_area.drawBitmap(px-2, py-2, bm_plug, 17, 7, SSD1306_WHITE, SSD1306_BLACK);
+      }
+    }
+  } else {
+    stat_area.fillRect(px-2, py-2, 18, 7, SSD1306_BLACK);
+    stat_area.drawBitmap(px-2, py-2, bm_plug, 17, 7, SSD1306_WHITE, SSD1306_BLACK);
   }
 }
 
