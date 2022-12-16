@@ -108,7 +108,6 @@ bool display_init() {
         display.setRotation(3);
       #endif
 
-      // display.dim(true);
       update_area_positions();
       for (int i = 0; i < WATERFALL_SIZE; i++) {
         waterfall[i] = 0;
@@ -305,7 +304,7 @@ void update_stat_area() {
       display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
     } else if (disp_mode == DISP_MODE_LANDSCAPE) {
       display.drawBitmap(p_as_x+2, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
-      if (device_init_done) display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
+      if (device_init_done && !disp_ext_fb) display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
     }
 
   } else {
@@ -404,7 +403,7 @@ void update_disp_area() {
   draw_disp_area();
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   if (disp_mode == DISP_MODE_LANDSCAPE) {
-    if (device_init_done && !firmware_update_mode) {
+    if (device_init_done && !firmware_update_mode && !disp_ext_fb) {
       display.drawLine(0, 0, 0, 63, SSD1306_WHITE);
     }
   }
