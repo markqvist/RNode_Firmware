@@ -43,6 +43,14 @@ The RNode Firmware supports the following boards:
 - LilyGO LoRa32 v2.1 devices
 - Heltec LoRa32 v2 devices
 
+## Latest Release
+
+The latest release, installable through `rnodeconf`, is version `1.54`. This release brings the following changes:
+
+- An updated power management driver for v2 RNodes and T-Beam devices.
+- Updated RGB LED animations and indications
+- Tweaked and updated various display graphics
+
 ## Operating Modes
 RNode can operate in two modes, host-controlled (default) and TNC mode:
 
