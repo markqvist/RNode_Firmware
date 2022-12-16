@@ -8,7 +8,7 @@
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
 #elif BOARD_MODEL == BOARD_TBEAM
-  #define DISP_RST 0
+  #define DISP_RST 13
   #define DISP_ADDR 0x3D
   // #define DISP_ADDR 0x3C
 #elif BOARD_MODEL == BOARD_HELTEC32_V2
