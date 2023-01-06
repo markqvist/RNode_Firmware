@@ -22,6 +22,12 @@ prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:samd
 
+spiffs-image:
+	python Release/esptool/spiffsgen.py 2031616 ./Console Release/spiffs.bin
+
+spiffs-deploy:
+	@echo Deploying SPIFFS image...
+	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyACM1 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/spiffs.bin
 
 firmware:
 	arduino-cli compile --fqbn unsignedio:avr:rnode
@@ -51,7 +57,7 @@ firmware-rnode_ng_20:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
 
 firmware-rnode_ng_21:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=1966080" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
 
 firmware-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
@@ -104,7 +110,7 @@ upload-featheresp32:
 
 release: release-all
 
-release-all: release-rnode release-mega2560 release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21 release-hashes
+release-all: spiffs-image release-rnode release-mega2560 release-tbeam release-lora32_v20 release-lora32_v21 release-lora32_v20_extled release-lora32_v21_extled release-featheresp32 release-genericesp32 release-heltec32_v2 release-heltec32_v2_extled release-rnode_ng_20 release-rnode_ng_21 release-hashes
 
 release-hashes:
 	python ./release_hashes.py > ./Release/release.json
@@ -187,7 +193,7 @@ release-rnode_ng_20:
 	rm -r build
 
 release-rnode_ng_21:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=1966080" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
 	cp ~/.arduino15/packages/esp32/hardware/esp32/2.0.?/tools/partitions/boot_app0.bin build/rnode_firmware_ng21.boot_app0
 	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bin build/rnode_firmware_ng21.bin
 	cp build/esp32.esp32.ttgo-lora32/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_ng21.bootloader

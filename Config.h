@@ -193,6 +193,7 @@
 		#elif BOARD_MODEL == BOARD_RNODE_NG_21
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
+			#define HAS_CONSOLE true
             #define HAS_PMU true
 			#define HAS_NP true
 			const int pin_cs = 18;
