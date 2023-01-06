@@ -22,11 +22,18 @@ volatile bool serial_buffering = false;
   bool bt_init_ran = false;
 #endif
 
+#if HAS_CONSOLE
+  #include "Console.h"
+#endif
+
 char sbuf[128];
 
 #if MCU_VARIANT == MCU_ESP32
   bool packet_ready = false;
 #endif
+
+// TODO: Implement
+bool console_active = true;
 
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
@@ -85,6 +92,10 @@ void setup() {
     #endif
 
     kiss_indicate_reset();
+
+    if (console_active) {
+      console_start();
+    }
   #endif
 
   // Validate board health, EEPROM and config
@@ -945,7 +956,11 @@ void loop() {
   
   } else {
     if (hw_ready) {
-      led_indicate_standby();
+      if (console_active) {
+        console_loop();
+      } else {
+        led_indicate_standby();
+      }
     } else {
 
       led_indicate_not_ready();
