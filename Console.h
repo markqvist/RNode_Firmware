@@ -15,10 +15,6 @@
 #error Target CONFIG_IDF_TARGET is not supported
 #endif
 
-// Replace with your network credentials
-const char* ssid = "RNode Test";
-const char* password = "somepass";
-
 WebServer server(80);
 
 void console_dbg(String msg) {
@@ -63,6 +59,8 @@ String console_get_content_type(String filename) {
     return "application/x-zip";
   } else if (filename.endsWith(".gz")) {
     return "application/x-gzip";
+  } else if (filename.endsWith(".whl")) {
+    return "application/octet-stream";
   }
   return "text/plain";
 }
@@ -83,6 +81,7 @@ bool console_serve_file(String path) {
     File file = SPIFFS.open(path, "r");
     console_dbg("Serving file to client");
     server.streamFile(file, content_type);
+    console_dbg("Closing file");
     file.close();
 
     console_dbg("File serving done");
@@ -104,8 +103,7 @@ void console_register_pages() {
 void console_start() {
   Serial.println("");
   console_dbg("Starting Access Point...");
-  // WiFi.softAP(ssid, password);
-  WiFi.softAP(bt_devname, password);
+  WiFi.softAP(bt_devname);
   delay(150);
   IPAddress ip(10, 0, 0, 1);
   IPAddress nm(255, 255, 255, 0);
@@ -125,10 +123,9 @@ void console_start() {
 
 void console_loop(){
     server.handleClient();
-
     // Internally, this yields the thread and allows
     // other tasks to run.
-    delay(5);
+    delay(2);
 }
 
 // void listDir(fs::FS &fs, const char * dirname, uint8_t levels){

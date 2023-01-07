@@ -22,10 +22,16 @@ prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:samd
 
-spiffs-image:
-	python Release/esptool/spiffsgen.py 2031616 ./Console Release/spiffs.bin
+console-site:
+	make -C Console clean site
 
-spiffs-deploy:
+spiffs: console-site spiffs-image 
+
+spiffs-image:
+	python Release/esptool/spiffsgen.py 2031616 ./Console/build Release/spiffs.bin
+# 	python Release/esptool/spiffsgen.py --obj-name-len 64 2031616 ./Console/build Release/spiffs.bin
+
+upload-spiffs:
 	@echo Deploying SPIFFS image...
 	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyACM1 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/spiffs.bin
 

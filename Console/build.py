@@ -1,9 +1,17 @@
 import markdown
 import os
+import shutil
+
+packages = {
+    "rns": "rns-0.4.6-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.3.1-py3-none-any.whl",
+    "lxmf": "lxmf-0.2.8-py3-none-any.whl",
+}
 
 DEFAULT_TITLE = "RNode Bootstrap Console"
 SOURCES_PATH="./source"
 BUILD_PATH="./build"
+PACKAGES_PATH = "../../dist_archive"
 INPUT_ENCODING="utf-8"
 OUTPUT_ENCODING="utf-8"
 
@@ -13,7 +21,7 @@ document_start = """
 <!doctype html>
 <html>
 <head>
-<link rel="stylesheet" href="water.css?v=5">
+<link rel="stylesheet" href="{ASSET_PATH}css/water.css">
 <link rel="shortcut icon" type="image/x-icon" href="{ASSET_PATH}gfx/icon.png">
 <meta charset="utf-8"/>
 <title>{PAGE_TITLE}</title>
@@ -26,7 +34,7 @@ document_start = """
 
 document_end = """</body></html>"""
 
-menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Guides]({CONTENT_PATH}guides.html) | [Software]({CONTENT_PATH}software/index.html)| [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
+menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Guides]({CONTENT_PATH}guides.html) | [Software]({CONTENT_PATH}software.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
 
 url_maps = [
     # { "path": "", "target": "/.md"},    
@@ -125,6 +133,10 @@ def generate_html(f, root_path):
     menu_html = markdown.markdown(menu_md.replace("{CONTENT_PATH}", root_path), extensions=["markdown.extensions.fenced_code"]).replace("<p></p>", "")
     page_html = markdown.markdown(md, extensions=["markdown.extensions.fenced_code"]).replace("{ASSET_PATH}", root_path)
     page_html = page_html.replace("{LXMF_ADDRESS}", LXMF_ADDRESS)
+    for pkg_name in packages:
+        page_html = page_html.replace("{PKG_"+pkg_name+"}", pkg_name+".zip")
+        page_html = page_html.replace("{PKG_NAME_"+pkg_name+"}", packages[pkg_name])
+
     page_date = get_prop(md, "date")
     if page_date != None:
         page_html = page_html.replace("{DATE}", page_date)
@@ -132,6 +144,39 @@ def generate_html(f, root_path):
     return document_start.replace("{ASSET_PATH}", root_path).replace("{MENU}", menu_html).replace("{PAGE_TITLE}", page_title) + page_html + document_end
 
 source_files = scan_pages(SOURCES_PATH)
+
+def fetch_reticulum_site():
+    r_site_path = BUILD_PATH+"/r"
+    shutil.copytree(PACKAGES_PATH+"/reticulum.network", r_site_path)
+    shutil.rmtree(r_site_path+"/manual")
+
+def gz_all():
+    import gzip
+    for root, dirs, files in os.walk(BUILD_PATH):
+        for file in files:
+            fpath = root+"/"+file
+            print("Gzipping "+fpath+"...")
+            f = open(fpath, "rb")
+            g = gzip.open(fpath+".gz", "wb")
+            g.writelines(f)
+            g.close()
+            f.close()
+            os.unlink(fpath)
+
+from zipfile import ZipFile
+for pkg_name in packages:
+    pkg_file = packages[pkg_name]
+    pkg_full_path = PACKAGES_PATH+"/"+pkg_file
+    if os.path.isfile(pkg_full_path):
+        print("Including "+pkg_file)
+        z = ZipFile(BUILD_PATH+"/"+pkg_name+".zip", "w")
+        z.write(pkg_full_path, pkg_full_path[len(PACKAGES_PATH+"/"):])
+        z.close()
+        # shutil.copy(pkg_full_path, BUILD_PATH+"/"+pkg_name)
+
+    else:
+        print("Could not find "+pkg_full_path)
+        exit(1)
 
 for um in url_maps:
     with open(SOURCES_PATH+"/"+um["target"], "rb") as f:
@@ -160,3 +205,6 @@ for mdf in source_files:
 
         with open(of, "wb") as wf:
             wf.write(html.encode(OUTPUT_ENCODING))
+
+fetch_reticulum_site()
+gz_all()
