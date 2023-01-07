@@ -5,4 +5,5 @@ TODO
 Release/*.hex
 Release/*.zip
 Release/*.json
+Console/build
 build/*
