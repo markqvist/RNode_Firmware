@@ -42,6 +42,11 @@
 	bool bt_enabled = false;
 	bool bt_allow_pairing = false;
 
+	#define M_FRQ_S 27388122
+	#define M_FRQ_R 27388061
+	bool console_active = false;
+	bool sx1276_installed = false;
+
 	#if defined(__AVR_ATmega1284P__)
 	    #define PLATFORM PLATFORM_AVR
 	    #define MCU_VARIANT MCU_1284P

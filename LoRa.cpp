@@ -85,6 +85,8 @@
 
 #define MAX_PKT_LENGTH           255
 
+bool lora_preinit_done = false;
+
 LoRaClass::LoRaClass() :
   _spiSettings(8E6, MSBFIRST, SPI_MODE0),
   _ss(LORA_DEFAULT_SS_PIN), _reset(LORA_DEFAULT_RESET_PIN), _dio0(LORA_DEFAULT_DIO0_PIN),
@@ -97,13 +99,26 @@ LoRaClass::LoRaClass() :
   setTimeout(0);
 }
 
-int LoRaClass::begin(long frequency)
-{
+bool LoRaClass::preInit() {
   // setup pins
   pinMode(_ss, OUTPUT);
   // set SS high
   digitalWrite(_ss, HIGH);
+  
+  SPI.begin();
 
+  // check version
+  uint8_t version = readRegister(REG_VERSION);
+  if (version != 0x12) {
+    return false;
+  }
+
+  lora_preinit_done = true;
+  return true;
+}
+
+int LoRaClass::begin(long frequency)
+{
   if (_reset != -1) {
     pinMode(_reset, OUTPUT);
 
@@ -114,13 +129,10 @@ int LoRaClass::begin(long frequency)
     delay(10);
   }
 
-  // start SPI
-  SPI.begin();
-
-  // check version
-  uint8_t version = readRegister(REG_VERSION);
-  if (version != 0x12) {
-    return 0;
+  if (!lora_preinit_done) {
+    if (!preInit()) {
+      return false;
+    }
   }
 
   // put in sleep mode
@@ -431,6 +443,11 @@ void LoRaClass::setTxPower(int level, int outputPin) {
     writeRegister(REG_PA_DAC, 0x84);
     writeRegister(REG_PA_CONFIG, PA_BOOST | (level - 2));
   }
+}
+
+uint8_t LoRaClass::getTxPower() {
+  byte txp = readRegister(REG_PA_CONFIG);
+  return txp;
 }
 
 void LoRaClass::setFrequency(long frequency) {

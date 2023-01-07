@@ -109,7 +109,7 @@ char bt_devname[11];
   bool bt_init() {
       bt_state = BT_STATE_OFF;
       if (bt_setup_hw()) {
-        if (bt_enabled) bt_start();
+        if (bt_enabled && !console_active) bt_start();
         return true;
       } else {
         return false;
