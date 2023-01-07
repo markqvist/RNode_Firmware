@@ -32,9 +32,6 @@ char sbuf[128];
   bool packet_ready = false;
 #endif
 
-// TODO: Implement
-bool console_active = true;
-
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
@@ -75,6 +72,26 @@ void setup() {
   // Set chip select, reset and interrupt
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
+  
+  if (LoRa.preInit()) {
+    sx1276_installed = true;
+    uint32_t lfr = LoRa.getFrequency();
+    if (lfr == 0) {
+      // Normal boot
+    } else if (lfr == M_FRQ_R) {
+      // Quick reboot
+      #if HAS_CONSOLE
+        if (rtc_get_reset_reason(0) == POWERON_RESET) {
+          console_active = true;
+        }
+      #endif
+    } else {
+      // Unknown boot
+    }
+    LoRa.setFrequency(M_FRQ_S);
+  } else {
+    sx1276_installed = false;
+  }
 
   #if HAS_DISPLAY
     disp_ready = display_init();
@@ -91,15 +108,17 @@ void setup() {
       bt_init_ran = true;
     #endif
 
-    kiss_indicate_reset();
-
     if (console_active) {
       console_start();
+    } else {
+      kiss_indicate_reset();
     }
   #endif
 
   // Validate board health, EEPROM and config
   validate_status();
+
+  LoRa.setFrequency(0);
 }
 
 void lora_receive() {
@@ -864,16 +883,27 @@ void validate_status() {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
           eeprom_ok = true;
-          #if PLATFORM == PLATFORM_ESP32
-            if (device_init()) {
+          if (sx1276_installed) {
+            #if PLATFORM == PLATFORM_ESP32
+              if (device_init()) {
+                hw_ready = true;
+              } else {
+                hw_ready = false;
+              }
+            #else
               hw_ready = true;
-            } else {
-              hw_ready = false;
-            }
-          #else
-            hw_ready = true;
-          #endif
-
+            #endif
+          } else {
+            hw_ready = false;
+            Serial.write("No SX1276/SX1278 radio module found\r\n");
+            #if HAS_DISPLAY
+              if (disp_ready) {
+                device_init_done = true;
+                update_display();
+              }
+            #endif
+          }
+          
           if (hw_ready && eeprom_have_conf()) {
             eeprom_conf_load();
             op_mode = MODE_TNC;
@@ -969,8 +999,10 @@ void loop() {
   }
 
   #if MCU_VARIANT == MCU_ESP32
-    buffer_serial();
-    if (!fifo_isempty(&serialFIFO)) serial_poll();
+    // if (!console_active) {
+      buffer_serial();
+      if (!fifo_isempty(&serialFIFO)) serial_poll();
+    // }
   #else
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif
@@ -984,7 +1016,7 @@ void loop() {
   #endif
 
   #if HAS_BLUETOOTH
-    if (bt_ready) update_bt();
+    if (!console_active && bt_ready) update_bt();
   #endif
 }
 

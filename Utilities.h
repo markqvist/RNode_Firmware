@@ -326,6 +326,7 @@ unsigned long led_standby_ticks = 0;
 		int8_t  led_notready_direction = 0;
 		unsigned long led_notready_ticks = 0;
 		unsigned long led_standby_wait = 350;
+		unsigned long led_console_wait = 1;
 		unsigned long led_notready_wait = 200;
 	
 	#else
@@ -389,6 +390,34 @@ int8_t  led_standby_direction = 0;
 			}
 		}
 
+		void led_indicate_console() {
+			npset(0x60, 0x00, 0x60);
+			// led_standby_ticks++;
+
+			// if (led_standby_ticks > led_console_wait) {
+			// 	led_standby_ticks = 0;
+				
+			// 	if (led_standby_value <= led_standby_min) {
+			// 		led_standby_direction = 1;
+			// 	} else if (led_standby_value >= led_standby_max) {
+			// 		led_standby_direction = -1;
+			// 	}
+
+			// 	uint8_t led_standby_intensity;
+			// 	led_standby_value += led_standby_direction;
+			// 	int led_standby_ti = led_standby_value - led_standby_lng;
+
+			// 	if (led_standby_ti < 0) {
+			// 		led_standby_intensity = 0;
+			// 	} else if (led_standby_ti > led_standby_cut) {
+			// 		led_standby_intensity = led_standby_cut;
+			// 	} else {
+			// 		led_standby_intensity = led_standby_ti;
+			// 	}
+  	// 		npset(led_standby_intensity, 0x00, led_standby_intensity);
+			// }
+		}
+
 	#else
 		void led_indicate_standby() {
 			led_standby_ticks++;
@@ -417,6 +446,10 @@ int8_t  led_standby_direction = 0;
 					led_rx_off();
 				#endif
 			}
+		}
+
+		void led_indicate_console() {
+			led_indicate_standby();
 		}
   #endif
 #endif
@@ -802,6 +835,11 @@ void set_implicit_length(uint8_t len) {
 	} else {
 		implicit = false;
 	}
+}
+
+int getTxPower() {
+	uint8_t txp = LoRa.getTxPower();
+	return (int)txp;
 }
 
 void setTXPower() {

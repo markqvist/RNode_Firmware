@@ -54,6 +54,8 @@ public:
   void idle();
   void sleep();
 
+  bool preInit();
+  uint8_t getTxPower();
   void setTxPower(int level, int outputPin = PA_OUTPUT_PA_BOOST_PIN);
   uint32_t getFrequency();
   void setFrequency(long frequency);
