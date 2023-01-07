@@ -297,7 +297,7 @@ void draw_stat_area() {
 }
 
 void update_stat_area() {
-  if (eeprom_ok && !firmware_update_mode) {
+  if (eeprom_ok && !firmware_update_mode && !console_active) {
     
     draw_stat_area();
     if (disp_mode == DISP_MODE_PORTRAIT) {
@@ -310,6 +310,8 @@ void update_stat_area() {
   } else {
     if (firmware_update_mode) {
       display.drawBitmap(p_as_x, p_as_y, bm_updating, stat_area.width(), stat_area.height(), SSD1306_BLACK, SSD1306_WHITE);
+    } else if (console_active && device_init_done) {
+      display.drawBitmap(p_as_x, p_as_y, bm_console, stat_area.width(), stat_area.height(), SSD1306_BLACK, SSD1306_WHITE);
     }
   }
 }
@@ -338,7 +340,11 @@ void draw_disp_area() {
         if (!device_firmware_ok()) {
           disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
         } else {
-          disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          if (!sx1276_installed) {
+            disp_area.drawBitmap(0, 37, bm_no_radio, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          } else {
+            disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+          }
         }
       } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {      
         char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
@@ -372,7 +378,11 @@ void draw_disp_area() {
           if (radio_online) {
             disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           } else{
-            disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            if (!console_active) {
+              disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            } else {
+              disp_area.drawBitmap(0, 37, bm_console_active, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            }
           }
         } else if (disp_page == 2) {
           if (radio_online) {
