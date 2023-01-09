@@ -201,13 +201,20 @@
 			#define HAS_CONSOLE true
             #define HAS_PMU true
 			#define HAS_NP true
+			#define HAS_SD true
 			const int pin_cs = 18;
 			const int pin_reset = 23;
 			const int pin_dio = 26;
-			const int pin_np = 15;
+			const int pin_np = 12;
+			const int pin_dac = 25;
+			const int pin_adc = 34;
+			const int SD_MISO = 2;
+			const int SD_MOSI = 15;
+			const int SD_CLK = 14;
+			const int SD_CS = 13;
 			#if HAS_NP == false
 				#if defined(EXTERNAL_LEDS)
-					const int pin_led_rx = 15;
+					const int pin_led_rx = 12;
 					const int pin_led_tx = 4;
 				#else
 					const int pin_led_rx = 25;
