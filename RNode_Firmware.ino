@@ -989,7 +989,7 @@ void loop() {
       if (console_active) {
         console_loop();
       } else {
-        led_indicate_standby();
+        //led_indicate_standby();
       }
     } else {
 

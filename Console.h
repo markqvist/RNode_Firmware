@@ -3,6 +3,14 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
+#include "SD.h"
+#include "SPI.h"
+  
+#if HAS_SD
+  SPIClass *spi = NULL;
+#endif
+
+
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp32/rom/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32S2
@@ -115,6 +123,32 @@ void console_start() {
   } else {
     console_dbg("SPIFFS Ready");
   }
+
+  #if HAS_SD
+    spi = new SPIClass(HSPI);
+    spi->begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+    if(!SD.begin(SD_CS, *spi)){
+      console_dbg("No SD card inserted");
+    } else {
+      uint8_t cardType = SD.cardType();
+      if(cardType == CARD_NONE){
+        console_dbg("No SD card type");
+      } else {
+        console_dbg("SD Card Type: ");
+        if(cardType == CARD_MMC){
+          console_dbg("MMC");
+        } else if(cardType == CARD_SD){
+          console_dbg("SDSC");
+        } else if(cardType == CARD_SDHC){
+          console_dbg("SDHC");
+        } else {
+          console_dbg("UNKNOWN");
+        }
+        uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+        Serial.printf("SD Card Size: %lluMB\n", cardSize);
+      }
+    }
+  #endif
 
   console_register_pages();
   server.begin();
