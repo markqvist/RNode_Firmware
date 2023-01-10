@@ -266,7 +266,7 @@ void ISR_VECT receive_callback(int packet_size) {
 
 bool startRadio() {
   update_radio_lock();
-  if (!radio_online) {
+  if (!radio_online && !console_active) {
     if (!radio_locked && hw_ready) {
       if (!LoRa.begin(lora_freq)) {
         // The radio could not be started.
