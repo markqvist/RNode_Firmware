@@ -167,6 +167,8 @@ void LoRaClass::end()
 
   // stop SPI
   SPI.end();
+
+  lora_preinit_done = false;
 }
 
 int LoRaClass::beginPacket(int implicitHeader)
