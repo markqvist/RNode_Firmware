@@ -63,7 +63,7 @@ firmware-rnode_ng_20:
 	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x40\""
 
 firmware-rnode_ng_21:
-	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=1966080" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
+	arduino-cli compile --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x41\""
 
 firmware-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
