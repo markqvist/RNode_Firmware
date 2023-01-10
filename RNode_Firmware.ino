@@ -989,7 +989,7 @@ void loop() {
       if (console_active) {
         console_loop();
       } else {
-        //led_indicate_standby();
+        led_indicate_standby();
       }
     } else {
 
@@ -999,10 +999,8 @@ void loop() {
   }
 
   #if MCU_VARIANT == MCU_ESP32
-    // if (!console_active) {
       buffer_serial();
       if (!fifo_isempty(&serialFIFO)) serial_poll();
-    // }
   #else
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif

@@ -346,7 +346,7 @@ void draw_disp_area() {
             disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           }
         }
-      } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {      
+      } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {
         char *pin_str = (char*)malloc(DISP_PIN_SIZE+1);
         sprintf(pin_str, "%06d", bt_ssp_pin);
 
@@ -356,7 +356,7 @@ void draw_disp_area() {
           uint8_t offset = numeric*5;
           disp_area.drawBitmap(7+9*i, 37+16, bm_n_uh+offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
         }
-
+        free(pin_str);
       } else {
         if (millis()-last_page_flip >= page_interval) {
           disp_page = (++disp_page%pages);
@@ -398,6 +398,7 @@ void draw_disp_area() {
               if (i == 2) dxp += 9*2+4;
               disp_area.drawBitmap(dxp, 37+16, bm_n_uh+bm_offset, 8, 5, SSD1306_WHITE, SSD1306_BLACK);
             }
+            free(v_str);
             disp_area.drawLine(27, 37+19, 28, 37+19, SSD1306_BLACK);
             disp_area.drawLine(27, 37+20, 28, 37+20, SSD1306_BLACK);
           }
