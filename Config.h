@@ -201,7 +201,7 @@
 			#define HAS_CONSOLE true
             #define HAS_PMU true
 			#define HAS_NP true
-			#define HAS_SD true
+			#define HAS_SD false
 			const int pin_cs = 18;
 			const int pin_reset = 23;
 			const int pin_dio = 26;
