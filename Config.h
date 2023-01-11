@@ -122,6 +122,7 @@
 			const int pin_led_rx = 14;
 			const int pin_led_tx = 32;
             #define HAS_BLUETOOTH true
+            #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_TBEAM
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -140,6 +141,7 @@
 			const int pin_led_rx = 14;
 			const int pin_led_tx = 32;
 			#define HAS_BLUETOOTH true
+            #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_0
 			const int pin_cs = 18;
 			const int pin_reset = 12;
@@ -153,6 +155,7 @@
 			#endif
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
+            #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_1
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -167,6 +170,7 @@
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
             #define HAS_PMU true
+            #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_HELTEC32_V2
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -180,10 +184,12 @@
 			#endif
             #define HAS_DISPLAY true
 			#define HAS_BLUETOOTH true
+            #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_20
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
 			#define HAS_NP true
+            #define HAS_CONSOLE true
 			const int pin_cs = 18;
 			const int pin_reset = 12;
 			const int pin_dio = 26;
