@@ -109,7 +109,11 @@ void setup() {
     #endif
 
     if (console_active) {
-      console_start();
+      #if HAS_CONSOLE
+        console_start();
+      #else
+        kiss_indicate_reset();
+      #endif
     } else {
       kiss_indicate_reset();
     }
@@ -987,7 +991,9 @@ void loop() {
   } else {
     if (hw_ready) {
       if (console_active) {
-        console_loop();
+        #if HAS_CONSOLE
+          console_loop();
+        #endif
       } else {
         led_indicate_standby();
       }
