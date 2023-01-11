@@ -131,6 +131,8 @@
             #define HAS_DISPLAY true
             #define HAS_PMU true
             #define HAS_BLUETOOTH true
+            #define HAS_CONSOLE true
+            #define HAS_SD false
 		#elif BOARD_MODEL == BOARD_HUZZAH32
 			const int pin_cs = 4;
 			const int pin_reset = 36;
