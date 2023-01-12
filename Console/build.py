@@ -35,7 +35,7 @@ document_start = """
 
 document_end = """</body></html>"""
 
-menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Guides]({CONTENT_PATH}guides.html) | [Software]({CONTENT_PATH}software.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
+menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Software]({CONTENT_PATH}software.html) | [Guides]({CONTENT_PATH}guides.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
 
 url_maps = [
     # { "path": "", "target": "/.md"},    
@@ -148,8 +148,10 @@ source_files = scan_pages(SOURCES_PATH)
 
 def fetch_reticulum_site():
     r_site_path = BUILD_PATH+"/r"
-    shutil.copytree(PACKAGES_PATH+"/reticulum.network", r_site_path)
-    shutil.rmtree(r_site_path+"/manual")
+    if not os.path.isdir(r_site_path):
+        shutil.copytree(PACKAGES_PATH+"/reticulum.network", r_site_path)
+    if os.path.isdir(r_site_path+"/manual"):
+        shutil.rmtree(r_site_path+"/manual")
 
 def gz_all():
     import gzip
