@@ -29,7 +29,6 @@ spiffs: console-site spiffs-image
 
 spiffs-image:
 	python Release/esptool/spiffsgen.py 2031616 ./Console/build Release/spiffs.bin
-# 	python Release/esptool/spiffsgen.py --obj-name-len 64 2031616 ./Console/build Release/spiffs.bin
 
 upload-spiffs:
 	@echo Deploying SPIFFS image...
