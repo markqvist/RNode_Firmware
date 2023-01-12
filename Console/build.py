@@ -1,5 +1,6 @@
 import markdown
 import os
+import sys
 import shutil
 
 packages = {
@@ -207,4 +208,5 @@ for mdf in source_files:
             wf.write(html.encode(OUTPUT_ENCODING))
 
 fetch_reticulum_site()
-gz_all()
+if not "--no-gz" in sys.argv:
+    gz_all()
