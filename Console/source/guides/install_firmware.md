@@ -1,4 +1,4 @@
-[date]: <> (2022-01-25)
+[date]: <> (2023-01-12)
 [title]: <> (Installing RNode Firmware on Supported Devices)
 [image]: <> (images/a801c7a0-b75b-48c5-8ce7-8cb07012fc96-400x275.jpg)
 [excerpt]: <> (If you have a T-Beam or LoRa32 device handy, it is very easy to get it set up for all the things that the RNode firmware allows you to do.)

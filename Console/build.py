@@ -24,7 +24,7 @@ document_start = """
 <!DOCTYPE html>
 <html>
 <head>
-<link rel="stylesheet" href="{ASSET_PATH}css/water.css?v=2">
+<link rel="stylesheet" href="{ASSET_PATH}css/water.css?v=4">
 <link rel="shortcut icon" type="image/x-icon" href="{ASSET_PATH}gfx/icon.png">
 <meta charset="utf-8"/>
 <title>{PAGE_TITLE}</title>
