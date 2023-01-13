@@ -79,6 +79,14 @@ bool console_serve_file(String path) {
     path += "index.html";
   }
 
+  if (path == "/r/manual/index.html") {
+    path = "/m.html"
+  }
+  if (path == "/r/manual/Reticulum Manual.pdf") {
+    path = "/h.html"
+  }
+
+
   String content_type = console_get_content_type(path);
   String pathWithGz = path + ".gz";
   if (exists(pathWithGz) || exists(path)) {
@@ -89,14 +97,31 @@ bool console_serve_file(String path) {
     File file = SPIFFS.open(path, "r");
     console_dbg("Serving file to client");
     server.streamFile(file, content_type);
-    console_dbg("Closing file");
     file.close();
 
-    console_dbg("File serving done");
+    console_dbg("File serving done\n");
     return true;
+  } else {
+    int spos = pathWithGz.lastIndexOf('/');
+    if (spos > 0) {
+      String remap_path = "/d";
+      remap_path.concat(pathWithGz.substring(spos));
+      Serial.println(remap_path);
+
+      if (exists(remap_path)) {
+        File file = SPIFFS.open(remap_path, "r");
+        console_dbg("Serving remapped file to client");
+        server.streamFile(file, content_type);
+        console_dbg("Closing file");
+        file.close();
+        
+        console_dbg("File serving done\n");
+        return true;
+      }
+    }
   }
 
-  console_dbg("Error: Could not open file for serving");
+  console_dbg("Error: Could not open file for serving\n");
   return false;
 }
 
