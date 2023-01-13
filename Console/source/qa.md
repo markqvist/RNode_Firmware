@@ -16,3 +16,5 @@ Yes. All traffic is end-to-end encrypted. Reticulum *is fundamentally unable to 
 Yes. In theory this is completely possible, but it will take a lot of refinement, development, hardware support and adoption to transition the global base-layer for communication to Reticulum. Please [help us]({ASSET_PATH}contribute.html) towards this goal!  
 - **Is Reticulum as fast and optimised as my favorite TCP/IP stack?**  
 Currently not, but we are working towards being much faster than IP. The primary focus of Reticulum has been to build an understandable and well-documented *reference implementation*, that works exceptionally well over medium-bandwidth to extremely low-bandwidth forms of communication. This focus is very valuable, since it allows people to build secure communications networks that span vast areas, with very simple hardware, and very little cost.
+- **Who created all of this?**  
+The Reticulum protocol, and the RNode system was created by [Mark Qvist]({ASSET_PATH}contact.html), of [unsigned.io](https://unsigned.io).
