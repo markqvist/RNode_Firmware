@@ -7,9 +7,8 @@
 
 This build recipe will help you create an RNode that is suitable for mobile and handheld operation, and offers both wireless and wired connectivity to host devices. It is also useful for permanent installation indoors, or even outdoors, as long as it is protected from water ingress and direct sunlight.
 
-When you have completed this guide, you will end up with an RNode like this:
-
-![Completed Handheld RNode]({ASSET_PATH}images/bg_h_1.webp)
+<img alt="Completed Handheld RNode" src="{ASSET_PATH}images/bg_h_1.webp" style="width: 100%;"/>
+<center>*A completed Handheld RNode*</center>
 
 ### Table of Contents
 
@@ -42,8 +41,8 @@ If you have the version with an *SMA* connector, you will have to desolder it, a
 
 You will also need to demount the OLED display from the small acrylic riser on the board, and unscrew and discard the riser, since the OLED display will be mounted directly into a matching slot in the 3D-printed case.
 
-![Compatible board]({ASSET_PATH}images/bg_h_2.webp)
-*The correct board version for this RNode build recipe*
+<img alt="Compatible board" src="{ASSET_PATH}images/bg_h_2.webp" style="width: 100%;"/>
+<center>*The correct board version for this RNode build recipe*</center>
 
 ### <a name="materials"></a>Step 3: Obtain Materials
 
@@ -63,7 +62,7 @@ In addition to the board, you will need a few other components to build this RNo
 
 ### <a name="parts"></a>Step 4: 3D Print Parts
 
-To complete the build of this RNode, you will need to 3D-print the parts for the casing. Download, extract and slice the STL files from the [parts package](#p) in your preffered software.
+To complete the build of this RNode, you will need to 3D-print the parts for the casing. Download, extract and slice the STL files from the [parts package]({ASSET_PATH}3d/Handheld_RNode_v2.1_Parts.7z) in your preffered software.
 
 - Two of the parts should are LED light-guides, and should be printed in a semi-translucent material:
     - The `LED_Window.stl` file is a light-guide for the NeoPixel LED, mounted in the circular cutout at the top of the device.
@@ -76,7 +75,9 @@ To complete the build of this RNode, you will need to 3D-print the parts for the
     - The `Case_Bottom_No_Battery.stl` file is an alternative bottom shell for the case. It does not have space for a battery, but results in a very compact device.
     - The `Case_Battery_Door.stl` file is the door for the battery compartment of the device. It snap-fits tightly into place in the bottom shell, and features a small slot for opening with a flathead screwdriver or similar.
 
-All files are dimensioned to fit together perfectly without any scaling on a well-tuned 3D-printer. The recommended layer height for all files is 0.15mm.
+All files are dimensioned to fit together perfectly without any scaling on a well-tuned 3D-printer.
+
+The recommended layer height for all files is 0.15mm for FDM printers.
 
 ### <a name="tools"></a>Step 5: Install Tools
 
@@ -139,4 +140,6 @@ With the firmware installed and configured, and the case parts printed, it's tim
 11. Optionally, connect the male JST connector of the **battery** to the female JST connector on the **board**.
 12. Fit the **battery door** into place.
 
-Congratulations, Your Handheld RNode is now complete! Flip the power switch, and start using it!
+Congratulations, Your Handheld RNode is now complete!
+
+Flip the power switch, and start using it!
