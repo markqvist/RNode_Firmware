@@ -1,10 +1,10 @@
 [title]: <> (Get Help)
 ## Get Help
-If you are having trouble, or if something is not working, these resources may be useful:
+If you are having trouble, or if something is not working, this RNode contains a number of useful resources.
 
-- The [Questions & Answers](qa.html) section
-- The [No-Grid Communications Handbook](nghb.html)
-- The [Reticulum Manual](manual/index.html)
+- Read [Questions & Answers](qa.html) section
+- Read the [Reticulum Manual](m/index.html) stored on this RNode
+- Browse a copy of the [Reticulum Website](r/index.html) stored on this RNode
 
 ## Community & Support
 If things still aren't working as expected here are some great places to ask for help:
