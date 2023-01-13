@@ -2,7 +2,6 @@
 [title]: <> (Handheld RNode)
 [image]: <> (gfx/rnode_iso.webp)
 [excerpt]: <> (This RNode is suitable for mobile and handheld operation, and offers both wireless and wired connectivity to host devices. A good all-round unit. It is also suitable for permanent installation indoors.)
-<div class="article_date">{DATE}</div>
 ## Handheld RNode Recipe
 This build recipe will help you create an RNode that is suitable for mobile and handheld operation, and offers both wireless and wired connectivity to host devices. It is also useful for permanent installation indoors, or even outdoors, as long as it is protected from water ingress and direct sunlight.
 
@@ -26,6 +25,7 @@ To complete this build recipe, you will need access to the following items:
 - A 3D printer and the necessary amount of material for printing the [device parts](#parts)
 - 6 pieces of M2x6mm screws to assemble the case
 - A suitable [antenna](#antenna)
+- An optional NeoPixel RGB LED
 - An optional [battery](#battery)
 
 ### <a name="devboard"></a>Step 2: Supported Development Boards
