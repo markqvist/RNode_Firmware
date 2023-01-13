@@ -4,6 +4,7 @@ import sys
 import shutil
 
 packages = {
+    # "rnspure": "rnspure-0.4.6-py3-none-any.whl",
     "rns": "rns-0.4.6-py3-none-any.whl",
     "nomadnet": "nomadnet-0.3.1-py3-none-any.whl",
     "lxmf": "lxmf-0.2.8-py3-none-any.whl",
@@ -149,7 +150,7 @@ def generate_html(f, root_path):
         print("Found topic: "+str(topic)+", rt "+str(rt))
         md = md.replace(rt, tl)
 
-    menu_html = markdown.markdown(menu_md.replace("{CONTENT_PATH}", root_path), extensions=["markdown.extensions.fenced_code"]).replace("<p></p>", "")
+    menu_html = markdown.markdown(menu_md.replace("{CONTENT_PATH}", root_path), extensions=["markdown.extensions.fenced_code", "sane_lists"]).replace("<p></p>", "")
     page_html = markdown.markdown(md, extensions=["markdown.extensions.fenced_code"]).replace("{ASSET_PATH}", root_path)
     page_html = page_html.replace("{LXMF_ADDRESS}", LXMF_ADDRESS)
     for pkg_name in packages:
