@@ -1,4 +1,4 @@
-[title]: <> (Nomad Network)
+[title]: <> (Sideband)
 ## Sideband
 Sideband is an LXMF client for Android, Linux and macOS. It has built-in support for communicating over RNodes, and many other mediums, such as Packet Radio, WiFi, I2P, or anything else Reticulum supports.
 

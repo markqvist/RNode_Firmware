@@ -1,4 +1,4 @@
-[date]: <> (2022-01-26)
+[date]: <> (2023-01-10)
 [title]: <> (How To Make Your Own RNodes)
 [image]: <> (images/e4261dcb-49e5-4cd3-856e-c44fb7522b32-400x275.jpg)
 [excerpt]: <> (This article will outline the general process, and provide the information you need, for building your own RNode from a few basic modules. The RNode will be functionally identical to a commercially purchased board.)

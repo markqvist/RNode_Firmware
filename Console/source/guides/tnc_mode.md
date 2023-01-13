@@ -1,4 +1,4 @@
-[date]: <> (2020-05-03)
+[date]: <> (2023-01-07)
 [title]: <> (Using RNodes With Amateur Radio Software)
 [image]: <> (images/xastir2-e1643321757361-400x275.jpg)
 [excerpt]: <> (If you want to use an RNode with amateur radio applications, like APRS or a packet radio BBS, you will need to put the device into TNC Mode. In this mode, an RNode will behave exactly like a KISS-compatible TNC, which will make it usable with any amateur radio software.)

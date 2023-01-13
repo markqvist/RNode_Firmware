@@ -1,4 +1,4 @@
-[date]: <> (2022-03-26)
+[date]: <> (2023-01-14)
 [title]: <> (Private, Secure and Uncensorable Messaging Over a LoRa Mesh)
 [image]: <> (images/g1p.jpeg)
 [excerpt]: <> (Or: How to set up a completely private, independent and encrypted communication system in half an hour, using stuff you can buy for under $100.)

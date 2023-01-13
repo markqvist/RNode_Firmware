@@ -1,6 +1,6 @@
 [date]: <> (2023-01-14)
 [title]: <> (Handheld RNode)
-[image]: <> (gfx/rnode_iso.png)
+[image]: <> (gfx/rnode_iso.webp)
 [excerpt]: <> (This RNode is suitable for mobile and handheld operation, and offers both wireless and wired connectivity to host devices. A good all-round unit. It is also suitable for permanent installation indoors.)
 <div class="article_date">{DATE}</div>
 ## Handheld RNode Recipe
