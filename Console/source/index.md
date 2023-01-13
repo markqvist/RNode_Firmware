@@ -10,7 +10,7 @@ The tools and information contained in this RNode will allow you to replicate th
 This repository also contains tools, software and information necessary to bootstrap networks and communications systems based on RNodes and Reticulum.
 </td>
 <td width="33%" style="vertical-align:middle;padding-right: 0;">
-<img src="{ASSET_PATH}gfx/rnode_iso.png" width="100%"/></td>
+<img src="{ASSET_PATH}gfx/rnode_iso.webp" width="100%"/></td>
 </tr>
 </tbody>
 </table>
