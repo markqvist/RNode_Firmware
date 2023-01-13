@@ -1,6 +1,6 @@
 [date]: <> (2023-01-10)
 [title]: <> (How To Make Your Own RNodes)
-[image]: <> (images/e4261dcb-49e5-4cd3-856e-c44fb7522b32-400x275.jpg)
+[image]: <> (images/g3p.webp)
 [excerpt]: <> (This article will outline the general process, and provide the information you need, for building your own RNode from a few basic modules. The RNode will be functionally identical to a commercially purchased board.)
 <div class="article_date">{DATE}</div>
 # How To Make Your Own RNodes
@@ -11,8 +11,8 @@ Once you have learned the put together a custom RNode with your own choice of co
 
 If you haven't already, you migh also want to check out how to [install the RNode firmware directly on pre-made LoRa development boards](https://unsigned.io/installing-rnode-firmware-on-supported-devices/).
 
-![A Homemade RNode]({ASSET_PATH}images/e4261dcb-49e5-4cd3-856e-c44fb7522b32-1024x768.jpg)
-*A homemade RNode, based on an ESP32 board and a transceiver module, ready for use*
+![A Homemade RNode]({ASSET_PATH}images/g3p.webp)
+<center>*A homemade RNode, based on an ESP32 board and a transceiver module, ready for use*</center>
 
 Since there is not *one right way* to cut this pie, this article will probably not give the *exact* steps for the combination of components you choose, but will instead attempt to provide you with the information you need to build RNodes from a wide variety of microcontroller boards and LoRa modules. Generally speaking, you will need three things to construct a working RNode:
 

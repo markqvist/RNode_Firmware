@@ -6,7 +6,7 @@
 # Private, Secure and Uncensorable Messaging Over a LoRa Mesh
 *Or: How to set up a completely private, independent and encrypted communication system in half an hour, using stuff you can buy for under $100.*
 
-![]({ASSET_PATH}images/g1p.jpeg)
+![]({ASSET_PATH}images/g1p.webp)
 
 In this post, we will explore how two people, Alice and Bob, can set up a LoRa mesh communication system for their use that has the following characteristics:
 
@@ -39,7 +39,7 @@ First of all, Alice and Bob need to get a compatible piece of radio hardware to 
 
 They take a look at the RNode Firmware [Supported Devices List](https://unsigned.io/rnode_firmware/#supported-hardware) , and decide to go with a couple of LilyGO T-Beam devices. They could have also used others, and they don't need to choose the same device, as long as they are within the same frequency range, all compatible devices work with Reticulum and can communicate with each other, as soon as the RNode Firmware has been installed on them.
 
-![]({ASSET_PATH}images/lora_rnodes.jpeg)
+![]({ASSET_PATH}images/lora_rnodes.webp)
 
 Once the devices arrive, it is time to get the firmware installed. For this they will need a computer running some sort of Linux. Alice has a computer with Ubuntu installed, so they decide to use that. Since Python3 came installed as standard with the OS, Alice can go ahead and install the RNode configuration program by simply opening a terminal and typing:
 
@@ -74,7 +74,7 @@ nomadnet
 
 All required directories and configuration files will now be created, and the client will start up. After a few seconds, Alice will be greeted with a screen like this:
 
-![]({ASSET_PATH}images/nomadnet_init-1024x640.jpg)
+![]({ASSET_PATH}images/nn_init.webp)
 
 Confirming that everything is installed and working, it is time to add the LoRa radio as an interface that Reticulum can use. To do this, she opens up the Reticulum configuration file (located at `˜/.reticulum/config`) in a text editor.
 
@@ -218,19 +218,19 @@ For an LXMF address to be reachable for direct-delivery instant messaging on a R
 
 To make sure his public cryptographic key is known by the network, Bob taps the **Announce** button in the Sideband app:
 
-<center><p><img src="{ASSET_PATH}images/1_announce-e1648319612571.png"/></p></center>
+<center><p><img src="{ASSET_PATH}images/an1.webp"/></p></center>
 
 After a few seconds, Bobs announce shows up in the **Announce Stream** section of the Nomad Network program on Alices computer:
 
-<center><p><img src="{ASSET_PATH}images/nomadnet_announce-1024x640.jpg"/></p></center>
+<center><p><img src="{ASSET_PATH}images/nn_an.webp"/></p></center>
 
 Using the received announce, Alice starts a conversation with Bob. Either one of them could also have started the conversation by manually typing in the others LXMF address in their program, but in many cases it can be convenient to use the announces. Now that everything is ready, they exchange a few messages to test the system. On Bobs Android phone, this looks like this:
 
-<center><p><img style="max-width: 100%; width: 400px;" src="{ASSET_PATH}images/3_conv.png"/></p></center>
+<center><p><img style="max-width: 100%; width: 300px;" src="{ASSET_PATH}images/3_conv.webp"/></p></center>
 
 And on Alices computer running Nomad Network, it looks like this:
 
-<center><p><img src="{ASSET_PATH}images/nomadnet_conv-1024x640.jpg"/></p></center>
+<center><p><img src="{ASSET_PATH}images/nn_conv.webp"/></p></center>
 
 Although pretty useful, what we have explored here does not even begin to scratch the surface of what is possible with Reticulum and associated software. I hope you will find yourself inspired to explore and read deeper into the documentation and available software.
 

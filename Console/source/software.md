@@ -6,7 +6,11 @@ This RNode contains a repository of downloadable software and utilities, that ar
 
 If possible, you can check that the `SHA-256` hashes of any downloaded files correspond to the list of release hashes published on the [Reticulum Release page](https://github.com/markqvist/Reticulum/releases).
 
-**You Have The Source!** Due to the size limitations of shipping all this software within an RNode, we don't include separate source-code archives for the below programs, but *all the source code is included within the Python .whl files*! You can simply unzip any of them with any program that understands `zip` files, and you will find the source code inside the unzipped directory (for some zip programs, you may need to change the file ending to `.zip`).
+**You Have The Source!** Due to the size limitations of shipping all this software within an RNode, we don't include separate source-code archives for the below programs, but *all the source code is included within the Python .whl files*!
+
+You can simply unzip any of them with any program that understands `zip` files, and you will find the source code inside the unzipped directory (for some zip programs, you may need to change the file ending to `.zip`).
+
+You can also download the copy of the [RNode Firmware source-code]({ASSET_PATH}pkg/rnode_firmware.zip) that is stored in this RNode.
 <br/><br/>
 <center>
 <h3>Choose a software package to get started</h3>

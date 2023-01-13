@@ -2,7 +2,6 @@
 ## Get Help
 If you are having trouble, or if something is not working, this RNode contains a number of useful resources.
 
-- The [unsigned.io](https://unsigned.io/) website
 - Read [Questions & Answers](qa.html) section
 - Read the [Reticulum Manual](m/index.html) stored on this RNode
 - Browse a copy of the [Reticulum Website](r/index.html) stored on this RNode

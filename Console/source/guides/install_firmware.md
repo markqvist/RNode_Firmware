@@ -1,6 +1,6 @@
 [date]: <> (2023-01-12)
 [title]: <> (Installing RNode Firmware on Supported Devices)
-[image]: <> (images/a801c7a0-b75b-48c5-8ce7-8cb07012fc96-400x275.jpg)
+[image]: <> (images/g2p.webp)
 [excerpt]: <> (If you have a T-Beam or LoRa32 device handy, it is very easy to get it set up for all the things that the RNode firmware allows you to do.)
 <div class="article_date">{DATE}</div>
 # Installing RNode Firmware on Supported Devices
@@ -18,8 +18,8 @@ So let's get started! You will need either a **LilyGO T-Beam v1.1**, a **LilyGO 
 
 It is currently recommended to use one of the following devices: A **LilyGO LoRa32 v2.1** (also known as **TTGO T3 v1.6.1**) or a **LilyGO T-Beam v1.1**.
 
-![Compatible LoRa devices]({ASSET_PATH}images/a801c7a0-b75b-48c5-8ce7-8cb07012fc96-1024x768.jpg)
-*Some of the device types compatible with this installation guide*
+![Compatible LoRa devices]({ASSET_PATH}images/g2p.webp)
+<center>*Some of the device types compatible with this installation guide*</center>
 
 ## Device Variations
 
