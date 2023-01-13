@@ -2,6 +2,8 @@
 ## Reticulum
 The cryptographic networking stack for building resilient networks anywhere. This packages requires you have `python` and `pip` installed on your computer. This should come as standard on most operating systems released since 2020.
 
+<p align="center"><img width="30%" src="{ASSET_PATH}m/_static/rns_logo_512.png"></p>
+
 ### Local Installation
 If you do not have access to the Internet, or would prefer to install Reticulum directly from this RNode, you can use the following instructions.
 

@@ -2,8 +2,6 @@
 ## Keep Communications Free and Open
 Please take part in keeping the continued development, maintenance and distribution of the RNode ecosystem possible by donating via one of the following channels:
 
-Donating to the project directly helps improve the entire system.
-
 - Monero<br/>
   ```
   84FpY1QbxHcgdseePYNmhTHcrgMX4nFfBYtz2GKYToqHVVhJp8Eaw1Z1EedRnKD19b3B8NiLCGVxzKV17UMmmeEsCrPyA5w
