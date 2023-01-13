@@ -7,6 +7,8 @@ clean:
 
 dirs:
 	@mkdir -p ./build
+	@mkdir -p ./build/3d
+	@mkdir -p ./build/pkg
 	@mkdir -p ./build/css
 	@mkdir -p ./build/gfx
 	@mkdir -p ./build/images

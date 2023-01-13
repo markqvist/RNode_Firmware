@@ -5,8 +5,8 @@ The cryptographic networking stack for building resilient networks anywhere. Thi
 ### Local Installation
 If you do not have access to the Internet, or would prefer to install Reticulum directly from this RNode, you can use the following instructions.
 
-- Download the [{PKG_rns}]({ASSET_PATH}{PKG_rns}) package from this RNode and unzip it
-- Install it with the command `pip install {PKG_NAME_rns}`
+- Download the [{PKG_BASE_rns}]({ASSET_PATH}{PKG_rns}) package from this RNode and unzip it
+- Install it with the command `pip install ./{PKG_NAME_rns}`
 - Verify the installed Reticulum version by running `rnstatus --version`
 
 ### Online Installation

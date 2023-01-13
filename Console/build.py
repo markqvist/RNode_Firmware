@@ -153,7 +153,8 @@ def generate_html(f, root_path):
     page_html = markdown.markdown(md, extensions=["markdown.extensions.fenced_code"]).replace("{ASSET_PATH}", root_path)
     page_html = page_html.replace("{LXMF_ADDRESS}", LXMF_ADDRESS)
     for pkg_name in packages:
-        page_html = page_html.replace("{PKG_"+pkg_name+"}", pkg_name+".zip")
+        page_html = page_html.replace("{PKG_"+pkg_name+"}", "pkg/"+pkg_name+".zip")
+        page_html = page_html.replace("{PKG_BASE_"+pkg_name+"}", pkg_name+".zip")
         page_html = page_html.replace("{PKG_NAME_"+pkg_name+"}", packages[pkg_name])
 
     page_date = get_prop(md, "date")
@@ -172,18 +173,30 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
+    pm = 176
     scale_imgs = [
-        ("_images/board_rnodev2.png", 256),
-        ("_images/board_rnode.png", 256),
-        ("_images/board_heltec32.png", 256),
-        ("_images/board_t3v21.png", 256),
-        ("_images/board_t3v20.png", 256),
-        ("_images/sideband_devices.webp", 380),
-        ("_images/board_tbeam.png", 256),
-        ("_images/nomadnet_3.png", 380),
-        ("_images/radio_is5ac.png", 256),
-        ("_images/radio_rblhg5.png", 256),
-        ("_static/rns_logo_512.png", 256),
+        # ("_images/board_rnodev2.png", 256),
+        # ("_images/board_rnode.png", 256),
+        # ("_images/board_heltec32.png", 256),
+        # ("_images/board_t3v21.png", 256),
+        # ("_images/board_t3v20.png", 256),
+        # ("_images/sideband_devices.webp", 380),
+        # ("_images/board_tbeam.png", 256),
+        # ("_images/nomadnet_3.png", 380),
+        # ("_images/radio_is5ac.png", 256),
+        # ("_images/radio_rblhg5.png", 256),
+        # ("_static/rns_logo_512.png", 256),
+        ("_images/board_rnodev2.png", pm),
+        ("_images/board_rnode.png", pm),
+        ("_images/board_heltec32.png", pm),
+        ("_images/board_t3v21.png", pm),
+        ("_images/board_t3v20.png", pm),
+        ("_images/sideband_devices.webp", pm),
+        ("_images/board_tbeam.png", pm),
+        ("_images/nomadnet_3.png", pm),
+        ("_images/radio_is5ac.png", pm),
+        ("_images/radio_rblhg5.png", pm),
+        ("_static/rns_logo_512.png", pm),
     ]
 
     import subprocess
@@ -236,6 +249,37 @@ def fetch_reticulum_site():
         shutil.copytree(PACKAGES_PATH+"/reticulum.network", r_site_path)
     if os.path.isdir(r_site_path+"/manual"):
         optimise_manual(r_site_path+"/manual")
+    remove_files = [
+        "gfx/reticulum_logo_512.png",
+    ]
+    for file in remove_files:
+        fp = r_site_path+"/"+file
+        print("Removing file: "+str(fp))
+        os.unlink(fp)
+    replace_paths()
+
+def replace_paths():
+    repls = [
+        ("gfx/reticulum_logo_512.png", "/m/_static/rns_logo_512.png")
+    ]
+    for root, dirs, files in os.walk(BUILD_PATH):
+        for file in files:
+            fpath = root+"/"+file
+            if fpath.endswith(".html"):
+                print("Performing replacements in "+fpath+"")
+                f = open(fpath, "rb")
+                html = f.read().decode("utf-8")
+                f.close()
+                for s,r in repls:
+                    html = html.replace(s,r)
+                f = open(fpath, "wb")
+                f.write(html.encode("utf-8"))
+                f.close()
+
+                # if not os.path.isdir(BUILD_PATH+"/d"):
+                #     os.makedirs(BUILD_PATH+"/d")
+                # shutil.move(fpath, BUILD_PATH+"/d/")
+
 
 def remap_names():
     for root, dirs, files in os.walk(BUILD_PATH):
@@ -269,7 +313,7 @@ for pkg_name in packages:
     pkg_full_path = PACKAGES_PATH+"/"+pkg_file
     if os.path.isfile(pkg_full_path):
         print("Including "+pkg_file)
-        z = ZipFile(BUILD_PATH+"/"+pkg_name+".zip", "w")
+        z = ZipFile(BUILD_PATH+"/pkg/"+pkg_name+".zip", "w")
         z.write(pkg_full_path, pkg_full_path[len(PACKAGES_PATH+"/"):])
         z.close()
         # shutil.copy(pkg_full_path, BUILD_PATH+"/"+pkg_name)
