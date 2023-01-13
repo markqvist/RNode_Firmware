@@ -80,10 +80,10 @@ bool console_serve_file(String path) {
   }
 
   if (path == "/r/manual/index.html") {
-    path = "/m.html"
+    path = "/m.html";
   }
   if (path == "/r/manual/Reticulum Manual.pdf") {
-    path = "/h.html"
+    path = "/h.html";
   }
 
 
