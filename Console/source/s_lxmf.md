@@ -10,8 +10,8 @@ Installing this LXMF library allows other programs on your system, like Nomad Ne
 
 If you do not have access to the Internet, or would prefer to install LXMF directly from this RNode, you can use the following instructions.
 
-- Download the [{PKG_lxmf}]({ASSET_PATH}{PKG_lxmf}) package from this RNode and unzip it
-- Install it with the command `pip install {PKG_NAME_lxmf}`
+- Download the [{PKG_BASE_lxmf}]({ASSET_PATH}{PKG_lxmf}) package from this RNode and unzip it
+- Install it with the command `pip install ./{PKG_NAME_lxmf}`
 - Verify the installed Reticulum version by running `lxmd --version`
 
 If you do not have an Internet connection while installing make sure to install the [Reticulum](./s_rns.html) package first.

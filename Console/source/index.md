@@ -7,7 +7,7 @@ You have connected to the <b>RNode Bootstrap Console</b>.<br/>
 <br/>
 The tools and information contained in this RNode will allow you to replicate the design, build more RNodes and grow your communications ecosystems.<br/>
 <br/>
-This repository also contains tools, software and information necessary to bootstrap networks and communications systems based on Reticulum and RNodes.
+This repository also contains tools, software and information necessary to bootstrap networks and communications systems based on RNodes and Reticulum.
 </td>
 <td width="33%" style="vertical-align:middle;padding-right: 0;">
 <img src="{ASSET_PATH}gfx/rnode_iso.png" width="100%"/></td>
