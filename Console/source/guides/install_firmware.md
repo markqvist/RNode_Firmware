@@ -9,9 +9,9 @@ Do you have one of the devices available that the RNode Firmware supports? In th
 
 With the firmware installed, you can use your newly created RNode as:
 
-- A [LoRa interface for Reticulum](https://markqvist.github.io/Reticulum/manual/interfaces.html#rnode-lora-interface)
+- A [LoRa interface for Reticulum]({ASSET_PATH}m/interfaces.html#rnode-lora-interface)
 - A LoRa packet sniffer with [LoRaMon](https://unsigned.io/loramon/)
-- A Linux network interface using the [tncattach program](https://unsigned.io/tncattach/)
+- A Linux network interface using the [tncattach program]({ASSET_PATH}pkg/tncattach.zip)
 - A LoRa-based TNC for almost any amateur radio packet application
 
 So let's get started! You will need either a **LilyGO T-Beam v1.1**, a **LilyGO LoRa32 v2.0**, a **LilyGO LoRa32 v2.1** or a **Heltec LoRa32 v2** device. More supported devices are added regularly, so it might be useful to check the latest [list of supported devices](https://unsigned.io/rnode_firmware/#supported-hardware) as well.
@@ -29,7 +29,7 @@ Some devices come with transceiver chips that are currently unsupported by the R
 
 ## Preparations
 
-To get started, you will need to download at least version 2.1.0 of the [RNode Configuration Utility](https://unsigned.io/rnodeconf). The easiest way by far is to simply install it with `pip`, if you already have that installed on your system (if not, go install `python` and `python-pip` now, it will come in handy later).
+To get started, you will need to download at least version 2.1.0 of the [RNode Configuration Utility]({ASSET_PATH}m/using.html#the-rnodeconf-utility). The easiest way by far is to simply install it with `pip`, if you already have that installed on your system (if not, go install `python` and `python-pip` now, it will come in handy later).
 
 The `rnodeconf` program is part of the `rns` package. To install it, open up a terminal and type:
 
@@ -82,9 +82,9 @@ Remember to replace `/dev/ttyUSB0` with the actual port the installer used in th
 
 On the hardware side, you should see the status LED flashing briefly approximately every 2 seconds. If all of the above checks out, congratulations! Your RNode is now ready to use. If your device has a display, it should also come alive and show you various information related to the device state.
 
-If you want to use it with [Reticulum](https://reticulum.network), [Nomad Network](https://unsigned.io/nomadnet), [LoRaMon](https://unsigned.io/loramon), or other such applications, leave it in the default `Normal (host-controlled)` mode.
+If you want to use it with [Reticulum]({ASSET_PATH}s_rns.html), [Nomad Network]({ASSET_PATH}s_nn.html), [LoRaMon](https://unsigned.io/loramon), or other such applications, leave it in the default `Normal (host-controlled)` mode.
 
-If you want to use it with legacy amateur radio applications that work with KISS TNCs, you should [set it up in TNC mode](https://unsigned.io/using-an-rnode-with-amateur-radio-software/).
+If you want to use it with legacy amateur radio applications that work with KISS TNCs, you should [set it up in TNC mode]({ASSET_PATH}guides/tnc_mode.html).
 
 ## External Display & LEDs
 If you are using a **T-Beam** device, you can connect an external **SSD1306** OLED display using the following setup:

@@ -9,7 +9,7 @@ This article will outline the general process, and provide the information you n
 
 Once you have learned the put together a custom RNode with your own choice of components, you can use these skills to create your own RNode designs from scratch, using either a custom-designed PCB, or simply by mounting your choice of modules in a enclosure or case.
 
-If you haven't already, you migh also want to check out how to [install the RNode firmware directly on pre-made LoRa development boards](https://unsigned.io/installing-rnode-firmware-on-supported-devices/).
+If you haven't already, you migh also want to check out how to [install the RNode firmware directly on pre-made LoRa development boards]({ASSET_PATH}guides/install_firmware.html).
 
 ![A Homemade RNode]({ASSET_PATH}images/g3p.webp)
 <center>*A homemade RNode, based on an ESP32 board and a transceiver module, ready for use*</center>
@@ -56,17 +56,12 @@ In the photo above I used an Adafruit Feather ESP32 board and a ModTronix inAir4
 9. Connect the *DIO0* pin of the transceiver module to the *DIO0 interrupt pin* of the microcontroller board.
 10. You can optionally connect transmit and receiver LEDs to the corresponding pins of the microcontroller board.
 
-The pin layouts of your transceiver module and microcontroller board will vary, but you can look up the correct pin assignments for your processor type and board layout in the [Config.h](https://github.com/markqvist/RNode_Firmware/blob/master/Config.h) file of the [RNode Firmware](https://unsigned.io/rnode_firmware).
+The pin layouts of your transceiver module and microcontroller board will vary, but you can look up the correct pin assignments for your processor type and board layout in the `Config.h` file of the [RNode Firmware]({ASSET_PATH}pkg/rnode_firmware.zip).
 
 ## Loading the Firmware
-Once the hardware is assembled, you are ready to load the firmware onto the board and configure the configuration parameters in the boards EEPROM. Luckily, this process is completely automated by the [RNode Configuration Utility](https://markqvist.github.io/Reticulum/manual/using.html#the-rnodeconf-utility). To prepare for loading the firmware, make sure that `python` and `pip` is installed on your system, then install the `rns` package (which includes the `rnodeconf` program) by issuing the command:
+Once the hardware is assembled, you are ready to load the firmware onto the board and configure the configuration parameters in the boards EEPROM. Luckily, this process is completely automated by the [RNode Configuration Utility]({ASSET_PATH}m/using.html#the-rnodeconf-utility).
 
-
-```txt
-pip install rns
-```
-
-If installation goes well, you can now move on to the next step.
+The `rnodeconf` program is included in the `rns` package. Please read [these instructions]({ASSET_PATH}s_rns.html) for more information on how to install it from this repository, or from the Internet. If installation goes well, you can now move on to the next step.
 
 > *Take Care*: A LoRa transceiver module **must** be connected to the board for the firmware to start and accept commands. If the firmware does not verify that the correct transceiver is available on the SPI bus, execution is stopped, and the board will not accept commands. If you find the board unresponsive after installing the firmware, or EEPROM configuration fails, double-check your transceiver module wiring!
 
