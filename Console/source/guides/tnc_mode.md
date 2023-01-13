@@ -5,17 +5,11 @@
 <div class="article_date">{DATE}</div>
 # Using RNodes With Amateur Radio Software
 
-If you want to use an [RNode](https://unsigned.io/rnode/) with amateur radio applications, like [APRS](https://unsigned.io/aprs-over-lora-with-rnode/) or a packet radio BBS, you will need to put the device into *TNC Mode*. In this mode, an RNode will behave exactly like a KISS-compatible TNC, which will make it usable with any amateur radio software that can talk to a KISS TNC over a serial port.
+If you want to use an RNode with amateur radio applications, like APRS or a packet radio BBS, you will need to put the device into *TNC Mode*. In this mode, an RNode will behave exactly like a KISS-compatible TNC, which will make it usable with any amateur radio software that can talk to a KISS TNC over a serial port.
 
-Whether you RNode is [bought from my shop](https://unsigned.io/shop/product/rnode/), [made from a compatible LoRa board](https://unsigned.io/installing-rnode-firmware-on-supported-devices/) or [built by yourself](https://unsigned.io/how-to-make-your-own-rnodes/), you can use the [RNode Configuration Utility](https://unsigned.io/rnodeconf) to change settings on your device, including putting it into TNC mode.
+You can use the [RNode Configuration Utility]({ASSET_PATH}m/using.html#the-rnodeconf-utility) to change settings on your device, including putting it into TNC mode. 
 
-The easiest way to install `rnodeconf` on your system is by installing the `rns` package using `pip`. You probably already have `python` and `pip` installed if you use a relatively recent version of Linux or macOS. If not, go and install Python 3 now. When that is done, you can simply install `rnodeconf` by opening up a terminal and typing:
-
-```
-pip install rns
-```
-
-After a few seconds, the program should be installed and ready to use. If this is the very first time you are installing something with `pip`, you might need to close your terminal and open it again, or in some cases restart your computer, before the `rnodeconf` command becomes available.
+The `rnodeconf` program is included in the `rns` package. Please read [these instructions]({ASSET_PATH}s_rns.html) for more information on how to install it from this repository, or from the Internet.
 
 With the `rnodeconf` program installed, you can put your RNode into TNC mode simply by entering the command:
 
