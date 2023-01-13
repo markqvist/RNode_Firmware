@@ -121,7 +121,7 @@ def render_topic(topic_entries):
         md += "<span class=\"topic\">"
         md += "<img class=\"topic_image\" src=\""+str(topic["image"])+"\"/>"
         md += "<span class=\"topic_title\">"+str(topic["title"])+"</span>"
-        md += "<span class=\"topic_date\">"+str(topic["date"])+"</span>"
+        #md += "<span class=\"topic_date\">"+str(topic["date"])+"</span>"
         md += "<span class=\"topic_excerpt\">"+str(topic["excerpt"])+"</span>"
         md += "</span>"
         md += "</a>"
