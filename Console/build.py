@@ -196,7 +196,7 @@ def optimise_manual(path):
         ("_images/nomadnet_3.png", pm),
         ("_images/radio_is5ac.png", pm),
         ("_images/radio_rblhg5.png", pm),
-        ("_static/rns_logo_512.png", pm),
+        ("_static/rns_logo_512.png", 256),
     ]
 
     import subprocess
