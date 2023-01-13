@@ -28,6 +28,17 @@
     src: url(yond.woff2);
 }
 
+html {
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  -ms-text-size-adjust: none;
+}
+
+body {
+  font-size: 1.1em;
+}
+
 body button {
   margin-bottom: 0.8em;
   margin-left: 0.2em;
@@ -196,7 +207,7 @@ textarea {
 }
 
 h1 {
-  font-size: 2.2em;
+  font-size: 1.7em;
   margin-top: 0;
 }
 
@@ -216,6 +227,7 @@ h1 {
 }
 
 h2 {
+  font-size: 1.4em;
   color: #fff;
   color: var(--text-bright);
 }

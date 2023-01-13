@@ -29,8 +29,8 @@ Another great way to contribute, is to spread awareness about the RNode project.
 - Teach others to build and use RNodes, and how to set up resilient and private communications systems
 - Learn about using Reticulum to set up resilient communications networks, and teach these skills to people in your area that need them
 
-## Contribute Code & Ideas
-If you like to build and design, there is plenty of oppertunities to take part in the community around RNode, and the wider Reticulum community as well. There's always plenty of work to do, from writing code, to translating guides and information, to designing parts, devices and integrations. You can find us the following places:
+## Contribute Code & Material
+If you like to write, build and design, there is plenty of oppertunities to take part in the community around RNode, and the wider Reticulum community as well. There's always plenty of work to do, from writing code, tutorials and guides, to designing parts, devices and integrations, and translating material to other languages. You can find us the following places:
 
 - The [Reticulum Matrix Channel](element://room/!TRaVWNnQhAbvuiSnEK%3Amatrix.org?via=matrix.org) at `#reticulum:matrix.org`
 - The [discussion forum](https://github.com/markqvist/Reticulum/discussions) on GitHub

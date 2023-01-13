@@ -13,16 +13,17 @@ DEFAULT_TITLE = "RNode Bootstrap Console"
 SOURCES_PATH="./source"
 BUILD_PATH="./build"
 PACKAGES_PATH = "../../dist_archive"
+RNS_SOURCE_PATH = "../../Reticulum"
 INPUT_ENCODING="utf-8"
 OUTPUT_ENCODING="utf-8"
 
 LXMF_ADDRESS = "8dd57a738226809646089335a6b03695"
 
 document_start = """
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-<link rel="stylesheet" href="{ASSET_PATH}css/water.css">
+<link rel="stylesheet" href="{ASSET_PATH}css/water.css?v=2">
 <link rel="shortcut icon" type="image/x-icon" href="{ASSET_PATH}gfx/icon.png">
 <meta charset="utf-8"/>
 <title>{PAGE_TITLE}</title>
@@ -35,7 +36,24 @@ document_start = """
 
 document_end = """</body></html>"""
 
-menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Software]({CONTENT_PATH}software.html) | [Guides]({CONTENT_PATH}guides.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
+menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Software]({CONTENT_PATH}software.html) | [Learn]({CONTENT_PATH}learn.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
+
+manual_redirect = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="refresh" content="0; url=/m/index.html">
+</head>
+</html>
+"""
+help_redirect = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="refresh" content="0; url=/help.html">
+</head>
+</html>
+"""
 
 url_maps = [
     # { "path": "", "target": "/.md"},    
@@ -146,12 +164,91 @@ def generate_html(f, root_path):
 
 source_files = scan_pages(SOURCES_PATH)
 
+mf = open(BUILD_PATH+"/m.html", "w")
+mf.write(manual_redirect)
+mf.close()
+mf = open(BUILD_PATH+"/h.html", "w")
+mf.write(help_redirect)
+mf.close()
+
+def optimise_manual(path):
+    scale_imgs = [
+        ("_images/board_rnodev2.png", 256),
+        ("_images/board_rnode.png", 256),
+        ("_images/board_heltec32.png", 256),
+        ("_images/board_t3v21.png", 256),
+        ("_images/board_t3v20.png", 256),
+        ("_images/sideband_devices.webp", 380),
+        ("_images/board_tbeam.png", 256),
+        ("_images/nomadnet_3.png", 380),
+        ("_images/radio_is5ac.png", 256),
+        ("_images/radio_rblhg5.png", 256),
+        ("_static/rns_logo_512.png", 256),
+    ]
+
+    import subprocess
+    import shlex
+    for i,s in scale_imgs:
+        fp = path+"/"+i
+        resize = "convert "+fp+" -resize "+str(s)+" "+fp
+        print(resize)
+        subprocess.call(shlex.split(resize), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    remove_files = [
+        "objects.inv",
+        "Reticulum Manual.pdf",
+        "_static/styles/furo.css.map",
+        "_static/scripts/furo.js.map",
+        "_static/jquery-3.6.0.js",
+        "_static/jquery.js",
+        "_images/sideband_1.png",
+
+        # Too long
+        # "_static/sphinx_highlight.js",
+        # "_static/copybutton_funcs.js",
+        "_static/_sphinx_javascript_frameworks_compat.js",
+        # "_static/underscore-1.13.1.js",
+        # "_static/documentation_options.js",
+        # "_static/scripts/furo-extensions.js",
+        "_static/scripts/furo.js.LICENSE.txt",
+        # "_static/styles/furo-extensions.css",
+        "_static/styles/furo-extensions.css.map",
+
+    ]
+    for file in remove_files:
+        fp = path+"/"+file
+        print("Removing file: "+str(fp))
+        os.unlink(fp)
+
+    remove_dirs = [
+        "_sources",
+    ]
+    for d in remove_dirs:
+        fp = path+"/"+d
+        print("Removing dir: "+str(fp))
+        shutil.rmtree(fp)
+
+    shutil.move(path, BUILD_PATH+"/m")
+
 def fetch_reticulum_site():
     r_site_path = BUILD_PATH+"/r"
     if not os.path.isdir(r_site_path):
         shutil.copytree(PACKAGES_PATH+"/reticulum.network", r_site_path)
     if os.path.isdir(r_site_path+"/manual"):
-        shutil.rmtree(r_site_path+"/manual")
+        optimise_manual(r_site_path+"/manual")
+
+def remap_names():
+    for root, dirs, files in os.walk(BUILD_PATH):
+        for file in files:
+            fpath = root+"/"+file
+            spath = fpath.replace(BUILD_PATH, "")
+            if len(spath) > 31:
+                print("Path "+spath+" is too long, remapping...")
+                if not os.path.isdir(BUILD_PATH+"/d"):
+                    os.makedirs(BUILD_PATH+"/d")
+                shutil.move(fpath, BUILD_PATH+"/d/")
+
+            
 
 def gz_all():
     import gzip
@@ -212,3 +309,6 @@ for mdf in source_files:
 fetch_reticulum_site()
 if not "--no-gz" in sys.argv:
     gz_all()
+
+if not "--no-remap" in sys.argv:
+    remap_names()
