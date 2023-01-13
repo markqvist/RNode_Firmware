@@ -5,7 +5,7 @@ This section contains the tools and guides necessary to create more RNodes. Crea
 In addition, you are very much **encouraged** to create RNodes for sale or commercial purposes. Doing so requires buying a copy of the RNode Firmware for each unit produced for commercial purposes. Please read the [selling RNodes]({ASSET_PATH}sell_rnodes.html) section for more details.
 
 ### Firmware Source Code
-If you would like to inspect or compile the RNode Firmware source code yourself, you can download a copy of the [RNode Firmware source-code]({ASSET_PATH}rnode_firmware.zip) stored in this RNode.
+If you would like to inspect or compile the RNode Firmware source code yourself, you can download a copy of the [RNode Firmware source-code]({ASSET_PATH}pkg/rnode_firmware.zip) stored in this RNode.
 
 ### Getting Started
 To create your own RNodes, there are generally three distinct paths you can take:

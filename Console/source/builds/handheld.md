@@ -62,7 +62,7 @@ In addition to the board, you will need a few other components to build this RNo
 
 ### <a name="parts"></a>Step 4: 3D Print Parts
 
-To complete the build of this RNode, you will need to 3D-print the parts for the casing. Download, extract and slice the STL files from the [parts package]({ASSET_PATH}3d/Handheld_RNode_v2.1_Parts.7z) in your preffered software.
+To complete the build of this RNode, you will need to 3D-print the parts for the casing. Download, extract and slice the STL files from the [parts package]({ASSET_PATH}3d/Handheld_RNode_Parts.7z) in your preffered software.
 
 - Two of the parts should are LED light-guides, and should be printed in a semi-translucent material:
     - The `LED_Window.stl` file is a light-guide for the NeoPixel LED, mounted in the circular cutout at the top of the device.
