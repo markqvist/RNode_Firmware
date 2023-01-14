@@ -18,11 +18,11 @@ In later parts of this series, we will expand the system to provide these oppert
 
 To accomplish this, we will be building a small and simple system based on freely available and Open Source software. To realise our system we will need the following components:
 
-- A networking system that can function reliably and efficiently even without any functional Internet infrastructure available. This will be provided by [Reticulum](https://reticulum.network).
-- Software that Alice and Bob can interact with on their computers and mobile devices to actually communicate with each other. This will be provided by the programs [Nomad Network](https://unsigned.io/nomadnet) and [Sideband](https://unsigned.io/sideband).
-- Radio hardware that Reticulum can use to cover the 7 kilometer distance between Bobs apartment and Alices house. This will be provided by installing the [RNode Firmware](https://unsigned.io/rnode_firmware) on a couple of small LoRa radio modules that can be purchased cheaply off Amazon or similar online vendors.
+- A networking system that can function reliably and efficiently even without any functional Internet infrastructure available. This will be provided by [Reticulum]({ASSET_PATH}r/index.html).
+- Software that Alice and Bob can interact with on their computers and mobile devices to actually communicate with each other. This will be provided by the programs [Nomad Network]({ASSET_PATH}s_nn.html) and [Sideband]({ASSET_PATH}s_sideband.html).
+- Radio hardware that Reticulum can use to cover the 7 kilometer distance between Bobs apartment and Alices house. This will be provided by installing the [RNode Firmware]({ASSET_PATH}guides/install_firmware.html) on a couple of small LoRa radio modules that can be purchased cheaply off Amazon or similar online vendors.
 
-As you might have already guessed, the "magic glue" that acutally makes this entire system possible is [Reticulum](https://reticulum.network/).
+As you might have already guessed, the "magic glue" that acutally makes this entire system possible is [Reticulum]({ASSET_PATH}r/index.html).
 
 Reticulum is a complete networking stack that was designed to handle challenging situations and requirements like this. Reticulum is an incredibly flexible networking platform, that can use almost anything as a carrier for digital information transfer, and it can automatically form secure mesh networks with very minimal resources, infrastructure and setup.
 
@@ -33,11 +33,11 @@ The user-facing software that Alice and Bob will be installing already includes 
 Let's get started.
 
 # LoRa Radio Setup
-The first step is to get the LoRa radios prepared and installed. I have written in more length and details about these subjects in other posts on this site ([Installing RNode Firmware on Supported Devices](https://unsigned.io/installing-rnode-firmware-on-supported-devices/) and [How To Make Your Own RNodes](https://unsigned.io/how-to-make-your-own-rnodes/)), so this article will just quickly guide you through the basics required to get up and running. For much more information, read the above articles.
+The first step is to get the LoRa radios prepared and installed. I have written in more length and details about these subjects in other posts on this site ([Installing RNode Firmware on Supported Devices]({ASSET_PATH}guides/install_firmware.html) and [How To Make Your Own RNodes]({ASSET_PATH}guides/make_rnodes.html), so this article will just quickly guide you through the basics required to get up and running. For much more information, read the above articles.
 
 First of all, Alice and Bob need to get a compatible piece of radio hardware to use. Had they been living closer to each other, they might have just been able to use WiFi, but they need to cover a distance of more than 7 kilometers, so they decide to go with a couple of LoRa radios.
 
-They take a look at the RNode Firmware [Supported Devices List](https://unsigned.io/rnode_firmware/#supported-hardware) , and decide to go with a couple of LilyGO T-Beam devices. They could have also used others, and they don't need to choose the same device, as long as they are within the same frequency range, all compatible devices work with Reticulum and can communicate with each other, as soon as the RNode Firmware has been installed on them.
+They take a look at the RNode Firmware [Supported Devices List]({ASSET_PATH}supported.html), and decide to go with a couple of LilyGO T-Beam devices. They could have also used others, and they don't need to choose the same device, as long as they are within the same frequency range, all compatible devices work with Reticulum and can communicate with each other, as soon as the RNode Firmware has been installed on them.
 
 ![]({ASSET_PATH}images/lora_rnodes.webp)
 
@@ -47,7 +47,7 @@ Once the devices arrive, it is time to get the firmware installed. For this they
 pip install rnodeconf
 ```
 
-The above command installs the program they need to flash the LoRa radios with the right firmware. If for some reason Python3 had not already been installed on Alices computer, she would have had to install it first with the command `sudo apt install python3 python3-pip`.
+The above command installs the program they need to flash the LoRa radios with the right firmware. If for some reason Python3 had not already been installed on Alices computer, she would have had to install it first with the command `sudo apt install python python-pip`.
 
 Now that the firmware installer is ready, it is time to actually get the firmware on to the devices. Alice launches the installer with the following command:
 
@@ -78,7 +78,7 @@ All required directories and configuration files will now be created, and the cl
 
 Confirming that everything is installed and working, it is time to add the LoRa radio as an interface that Reticulum can use. To do this, she opens up the Reticulum configuration file (located at `˜/.reticulum/config`) in a text editor.
 
-By referring to the [RNode LoRa Interface](https://markqvist.github.io/Reticulum/manual/interfaces.html#rnode-lora-interface) section of the [Reticulum Manual](https://markqvist.github.io/Reticulum/manual/), she can just copy-and-paste in a new configuration section for the interface, and edit the radio parameters to her requirements. She ends up with a configuration file that looks like this in it's entirity:
+By referring to the [RNode LoRa Interface]({ASSET_PATH}m/interfaces.html#rnode-lora-interface) section of the [Reticulum Manual]({ASSET_PATH}m), she can just copy-and-paste in a new configuration section for the interface, and edit the radio parameters to her requirements. She ends up with a configuration file that looks like this in it's entirity:
 
 ```
 [reticulum]
@@ -114,7 +114,7 @@ By referring to the [RNode LoRa Interface](https://markqvist.github.io/Reticulum
 Alice can now start the Nomad Network client again, and this time around it will initialise and use the LoRa radio installed in her attic. Having completed Alices part of the setup, lets move on to Bobs apartment.
 
 # Installation at Bobs Apartment
-Bob likes his messaging to happen on a handy device like a phone, so he decides to go with the [Sideband](https://unsigned.io/sideband) app instead of Nomad Network. He goes to the [download page](https://github.com/markqvist/Sideband/releases/latest) and installs the APK on his Android phone. He now needs a way to connect to the LoRa radio already running at Alices house to establish communication.
+Bob likes his messaging to happen on a handy device like a phone, so he decides to go with the [Sideband]({ASSET_PATH}s_sideband.html) app instead of Nomad Network. He goes to the [download page](https://github.com/markqvist/Sideband/releases/latest) and installs the APK on his Android phone. He now needs a way to connect to the LoRa radio already running at Alices house to establish communication.
 
 Since he doesn't want to walk around with the LoRa radio constantly dangling by a USB cable from his phone, he decides to set up a Reticulum gateway in his apartment using a Raspberry Pi he had lying around. The RNode LoRa radio will connect via USB to the Raspberry Pi, and the Raspberry Pi will be connected to the WiFi network in his apartment.
 
@@ -204,7 +204,7 @@ To allow other devices on his network to route through his new Reticulum gateway
 Everything is ready, and when Bob launches the Sideband appplication on his phone, Alice and him will now be able to communicate securely and independently of any other infrastructure.
 
 # Communication
-Both the [Nomad Network](https://unsigned.io/nomadnet) program and the [Sideband](https://unsigned.io/sideband) application use a cryptographic message delivery system named [LXMF](https://unsigned.io/lxmf), that in turn uses Reticulum for encryption and privacy guarantees. Both Nomad Network and Sideband are *LXMF clients*.
+Both the [Nomad Network]({ASSET_PATH}s_nn.html) program and the [Sideband]({ASSET_PATH}s_sidband.html) application use a cryptographic message delivery system named [LXMF]({ASSET_PATH}s_lxmf.html), that in turn uses Reticulum for encryption and privacy guarantees. Both Nomad Network and Sideband are *LXMF clients*.
 
 Much like many different e-mail clients exist, so can many different LXMF clients, and they can all communicate with each other, which is why Alice and Bob can message each other even though they prefer to use very different kinds of user-facing software.
 
@@ -234,4 +234,4 @@ And on Alices computer running Nomad Network, it looks like this:
 
 Although pretty useful, what we have explored here does not even begin to scratch the surface of what is possible with Reticulum and associated software. I hope you will find yourself inspired to explore and read deeper into the documentation and available software.
 
-In the next parts of this series, we will explore how to add more features to the system, such as offline message delivery, expanding the system to allow communication for a larger number of people, bridging isolated networks over both the Internet and the Invisible Internet (I2P), using Reticulum over Packet Radio, and using LoRa interfaces diretcly on Android devices.
+To learn more, take a look at the [Learn]({ASSET_PATH}learn.html) section.

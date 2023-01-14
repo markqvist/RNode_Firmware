@@ -73,6 +73,24 @@ rnodeconf --autoinstall
 
 The installer will now ask you to insert the device you want to set up, scan for connected serial ports, and ask you a number of questions regarding the device. When it has the information it needs, it will install the correct firmware and configure the necessary parameters in the device EEPROM for it to function properly.
 
+> **Please Note!** If you are connected to the Internet while installing, the autoinstaller will automatically download any needed firmware files to a local cache before installing.
+
+> If you do not have an active Internet connection while installing, you can extract and use the firmware from this device instead. This will **only** work if you are building the same type of RNode as the device you are extracting from, as the firmware has to match the targeted board and hardware configuration.
+
+If you need to extract the firmware from an existing RNode, run the following command:
+
+```
+rnodeconf --extract
+```
+
+If `rnodeconf` finds a working RNode, it will extract and save the firmware from the device for later use. You can then run the auto-installer with the `--use-extracted` option to use the locally extracted file:
+
+```
+rnodeconf --autoinstall --use-extracted
+```
+
+This also works for updating the firmware on existing RNodes, so you can extract a newer firmware from one RNode, and deploy it onto other RNodes using the same method. Just use the `--update` option instead of `--autoinstall`.
+
 If the install goes well, you will be greated with a success message telling you that your device is now ready. To confirm everything is OK, you can query the device info with:
 
 ```txt

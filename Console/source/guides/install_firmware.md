@@ -14,7 +14,7 @@ With the firmware installed, you can use your newly created RNode as:
 - A Linux network interface using the [tncattach program]({ASSET_PATH}pkg/tncattach.zip)
 - A LoRa-based TNC for almost any amateur radio packet application
 
-So let's get started! You will need either a **LilyGO T-Beam v1.1**, a **LilyGO LoRa32 v2.0**, a **LilyGO LoRa32 v2.1** or a **Heltec LoRa32 v2** device. More supported devices are added regularly, so it might be useful to check the latest [list of supported devices](https://unsigned.io/rnode_firmware/#supported-hardware) as well.
+So let's get started! You will need either a **LilyGO T-Beam v1.1**, a **LilyGO LoRa32 v2.0**, a **LilyGO LoRa32 v2.1** or a **Heltec LoRa32 v2** device. More supported devices are added regularly, so it might be useful to check the latest [list of supported devices]({ASSET_PATH}supported.html) as well.
 
 It is currently recommended to use one of the following devices: A **LilyGO LoRa32 v2.1** (also known as **TTGO T3 v1.6.1**) or a **LilyGO T-Beam v1.1**.
 
@@ -29,19 +29,13 @@ Some devices come with transceiver chips that are currently unsupported by the R
 
 ## Preparations
 
-To get started, you will need to download at least version 2.1.0 of the [RNode Configuration Utility]({ASSET_PATH}m/using.html#the-rnodeconf-utility). The easiest way by far is to simply install it with `pip`, if you already have that installed on your system (if not, go install `python` and `python-pip` now, it will come in handy later).
+To get started, you will need to install at least version 2.1.0 of the [RNode Configuration Utility]({ASSET_PATH}m/using.html#the-rnodeconf-utility). 
 
-The `rnodeconf` program is part of the `rns` package. To install it, open up a terminal and type:
-
-```
-pip install rns
-```
-
-After a few seconds, you should have `rnodeconf` installed and ready to go. If this is the very first time you install something with `pip`, you might need to close your terminal and open it again (or in some cases even reboot your computer), for the `rnodeconf` command to become available.
-
-We are now ready to start installing the firmware. To install the RNode firmware on your devices, run the RNode autoinstaller using this command:
+The `rnodeconf` program is included in the `rns` package. Please read [these instructions]({ASSET_PATH}s_rns.html) for more information on how to install it from this repository, or from the Internet. If installation goes well, you can now move on to the next step.
 
 ## Install The Firmware
+
+We are now ready to start installing the firmware. To install the RNode Firmware on your devices, run the RNode autoinstaller using this command:
 
 ```txt
 rnodeconf --autoinstall
@@ -50,6 +44,24 @@ rnodeconf --autoinstall
 The installer will now ask you to insert the device you want to set up, scan for connected serial ports, and ask you a number of questions regarding the device. When it has the information it needs, it will install the correct firmware and configure the necessary parameters in the device EEPROM for it to function properly.
 
 If the install goes well, you will be greated with a success message telling you that your device is now ready.
+
+> **Please Note!** If you are connected to the Internet while installing, the autoinstaller will automatically download any needed firmware files to a local cache before installing.
+
+> If you do not have an active Internet connection while installing, you can extract and use the firmware from this device instead. This will **only** work if you are building the same type of RNode as the device you are extracting from, as the firmware has to match the targeted board and hardware configuration.
+
+If you need to extract the firmware from an existing RNode, run the following command:
+
+```
+rnodeconf --extract
+```
+
+If `rnodeconf` finds a working RNode, it will extract and save the firmware from the device for later use. You can then run the auto-installer with the `--use-extracted` option to use the locally extracted file:
+
+```
+rnodeconf --autoinstall --use-extracted
+```
+
+This also works for updating the firmware on existing RNodes, so you can extract a newer firmware from one RNode, and deploy it onto other RNodes using the same method. Just use the `--update` option instead of `--autoinstall`.
 
 ## Verify Installation
 To confirm everything is OK, you can query the device info with:
@@ -86,8 +98,20 @@ If you want to use it with [Reticulum]({ASSET_PATH}s_rns.html), [Nomad Network](
 
 If you want to use it with legacy amateur radio applications that work with KISS TNCs, you should [set it up in TNC mode]({ASSET_PATH}guides/tnc_mode.html).
 
+## External RGB LED
+If you are using a **LilyGO LoRa32 v2.1** device, you can connect an external **NeoPixel RGB LED** for device status using the following setup:
+
+- Connect the NeoPixel **V+** pin to the **3.3v** pin on the board.
+- Connect the NeoPixel **GND** pin to the **GND** pin on the board.
+- Connect the NeoPixel **DATA** pin to **IO Pin 12** on the board.
+
+For the firmware to activate the NeoPixel LED, you must also make specific choices in the autoinstaller guide:
+
+- When asked what type of device you have, select **A specific kind of RNode**.
+- When asked what model the device is, select the **Handheld v2.x RNode** that matches the frequency of your board.
+
 ## External Display & LEDs
-If you are using a **T-Beam** device, you can connect an external **SSD1306** OLED display using the following setup:
+If you are using a **LilyGO T-Beam** device, you can connect an external **SSD1306 OLED** display using the following setup:
 
 - The **SSD1306**-based display must be set to use **I2C** and address `0x3D`
 - Connect display **GND** to T-Beam **GND**
