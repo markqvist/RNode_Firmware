@@ -5,7 +5,7 @@ import shutil
 
 packages = {
     # "rnspure": "rnspure-0.4.6-py3-none-any.whl",
-    "rns": "rns-0.4.6-py3-none-any.whl",
+    "rns": "rns-0.4.7-py3-none-any.whl",
     "nomadnet": "nomadnet-0.3.1-py3-none-any.whl",
     "lxmf": "lxmf-0.2.8-py3-none-any.whl",
 }
