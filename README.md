@@ -28,28 +28,34 @@ pip install rns --upgrade
 rnodeconf --autoinstall
 ```
 
-## Supported Hardware
-
+## Supported Boards & Devices
 The RNode Firmware supports the following boards:
 
-- The original RNode from [unsigned.io](https://unsigned.io/)
-- RNode v2.x variants from [unsigned.io](https://unsigned.io/)
-- Homebrew RNodes based on ATmega1284p boards
-- Homebrew RNodes based on ATmega2560 boards
-- Homebrew RNodes based on Adafruit Feather ESP32 boards
-- Homebrew RNodes based on generic ESP32 boards
+- Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
+- Original v1.x RNodes from [unsigned.io](https://unsigned.io/shop/product/rnode)
 - LilyGO T-Beam v1.1 devices
 - LilyGO LoRa32 v2.0 devices
 - LilyGO LoRa32 v2.1 devices
 - Heltec LoRa32 v2 devices
+- Homebrew RNodes based on ATmega1284p boards
+- Homebrew RNodes based on ATmega2560 boards
+- Homebrew RNodes based on Adafruit Feather ESP32 boards
+- Homebrew RNodes based on generic ESP32 boards
+
+## Supported Transceiver Modules
+The RNode Firmware supports all transceiver modules based on **Semtech SX1276** or **Semtech SX1278** chips, that have an **SPI interface** and expose the **DIO_0** interrupt pin from the chip.
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.54`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.55`. This release brings the following changes:
 
-- An updated power management driver for v2 RNodes and T-Beam devices.
-- Updated RGB LED animations and indications
-- Tweaked and updated various display graphics
+- Added the **RNode Bootstrap Console** to all WiFi-capable RNodes. All such RNodes now contain a complete repository of information, software, guides and tools for replicating the RNode desing, and creating more RNodes.
+- RNodes can now supply other RNodes with firmware images, with allows creating RNodes and bootstrapping communication networks, even if the Internet is unavailable.
+- Improved RGB LED handling.
+- Improved power management and charge status handling.
+- Improved Bluetooth handling.
+
+You must have at least version `2.1.0` of `rnodeconf` installed to update the RNode Firmware to version `1.55`. Get it by updating the `rns` package to at least version `0.4.7`.
 
 ## Operating Modes
 RNode can operate in two modes, host-controlled (default) and TNC mode:
