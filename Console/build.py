@@ -176,17 +176,6 @@ mf.close()
 def optimise_manual(path):
     pm = 176
     scale_imgs = [
-        # ("_images/board_rnodev2.png", 256),
-        # ("_images/board_rnode.png", 256),
-        # ("_images/board_heltec32.png", 256),
-        # ("_images/board_t3v21.png", 256),
-        # ("_images/board_t3v20.png", 256),
-        # ("_images/sideband_devices.webp", 380),
-        # ("_images/board_tbeam.png", 256),
-        # ("_images/nomadnet_3.png", 380),
-        # ("_images/radio_is5ac.png", 256),
-        # ("_images/radio_rblhg5.png", 256),
-        # ("_static/rns_logo_512.png", 256),
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
         ("_images/board_heltec32.png", pm),
