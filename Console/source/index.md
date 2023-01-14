@@ -23,6 +23,6 @@ This repository also contains tools, software and information necessary to boots
 <a href="./learn.html"><button type="button" id="task-rns">Learn More</button></a>
 <a href="./m/networks.html"><button type="button" id="task-rns">Build A Network</button></a>
 <a href="./help.html"><button type="button" id="task-rns">Get Help</button></a>
-<a href="https://unsigned.io/shop"><button type="button" id="task-rns">Buy RNodes</button></a>
+<a href="https://unsigned.io/shop"><button type="button" id="task-rns">Buy an RNode</button></a>
 <a href="./contribute.html"><button type="button" id="task-rns">Contribute</button></a>
 </center>

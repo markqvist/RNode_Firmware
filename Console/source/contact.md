@@ -1,6 +1,8 @@
 [title]: <> (Contact)
 # Contact Me
 
+**Hello!** I am the creator of the RNode ecosystem.
+
 If you have any general questions or comments about any of the projects I maintain, I encourage you to post it in one of the following places:
 
 - The [discussion forum](https://github.com/markqvist/Reticulum/discussions) on GitHub

@@ -13,7 +13,7 @@ This build recipe will help you create an RNode that is suitable for mobile and 
 ### Table of Contents
 
 1. [Preparation](#prep)
-2. [Supported Board](#devboard)
+2. [Supported Boards](#devboard)
 3. [Materials](#materials)
 4. [Print Parts](#parts)
 5. [Install Tools](#tools)
@@ -48,23 +48,22 @@ You will also need to demount the OLED display from the small acrylic riser on t
 
 In addition to the board, you will need a few other components to build this RNode.
 
-- A suitable antenna. Most boards purchased online include a passable antenna, but you may want to upgrade it to a better one.
-- 6 pieces of M2x6mm screws for assembling the case. Can be bought in most hardware stores or from online vendors.
-- An optional NeoPixel RGB LED for displaying status, and TX/RX activity. If you do not want to add this, it can simply be omitted.
-  - The easiest way is to use the PCB-mounted NeoPixel "mini-buttons" manufactured by [adafruit.com](https://www.adafruit.com/product/1612). These fit exactly into the slot in the mounting position in the 3D-printed case, and are easy to connect cables to.
-- An optional lithium-polymer battery.
-  - This RNode supports 3.7v, single-cell LiPo batteries
-  - 1.25mm JST connector
-  - The standard case can fit up to a 700mAh LP602248 battery
-    - Maximum battery dimensions for this case is 50mm x 25mm x 6mm
-  - There is a larger bottom casing available that fits 1100mAh batteries
-    - Maximum battery dimensions for this case is 50mm x 25mm x 12mm
+- A suitable **antenna**. Most boards purchased online include a passable antenna, but you may want to upgrade it to a better one.
+- 6 pieces of **M2x6mm screws** for assembling the case. Can be bought in most hardware stores or from online vendors.
+- An optional **NeoPixel RGB LED** for displaying status, and TX/RX activity. If you do not want to add this, it can simply be omitted.
+    - The easiest way is to use the PCB-mounted NeoPixel "mini-buttons" manufactured by [adafruit.com](https://www.adafruit.com/product/1612). These fit exactly into the slot in the mounting position in the 3D-printed case, and are easy to connect cables to.
+- An optional **lithium-polymer battery**.
+    - This RNode supports **3.7v**, **single-cell** LiPo batteries with a **1.25mm JST connector**
+    - The standard case can fit up to a 700mAh LP602248 battery
+        - Maximum battery dimensions for this case is 50mm x 25mm x 6mm
+    - There is a larger bottom casing available that fits 1100mAh batteries
+        - Maximum battery dimensions for this case is 50mm x 25mm x 12mm
 
 ### <a name="parts"></a>Step 4: 3D Print Parts
 
-To complete the build of this RNode, you will need to 3D-print the parts for the casing. Download, extract and slice the STL files from the [parts package]({ASSET_PATH}3d/Handheld_RNode_Parts.7z) in your preffered software.
+To complete the build of this RNode, you will need to 3D-print the parts for the casing. Download, extract and slice the STL files from the [parts package]({ASSET_PATH}3d/Handheld_RNode_Parts.7z) in your preferred software.
 
-- Two of the parts should are LED light-guides, and should be printed in a semi-translucent material:
+- Two of the parts are LED light-guides, and should be printed in a semi-translucent material:
     - The `LED_Window.stl` file is a light-guide for the NeoPixel LED, mounted in the circular cutout at the top of the device.
     - The `LED_Guide.stl` file is a light-guide for the power and charging LEDs, mounted in the rectangular grove at the bottom of the device.
 - The rest of the parts can be printed in any material, but for durability and heat-resistance, PETG is recommended.
@@ -97,7 +96,7 @@ rnodeconf --autoinstall
 3. You will now be asked what device this is, select the option **A Specific Kind of RNode**.
 4. The installer will ask you what model your device is. Select the **Handheld RNode v2.x** option that matches the frequency band of your device.
 5. The installer will display a summary of your choices. If you are satisfied, confirm your selection.
-6. The installer will now automaticall install and configure the firmware and prepare the device for use.
+6. The installer will now automatically install and configure the firmware and prepare the device for use.
 
 > **Please Note!** If you are connected to the Internet while installing, the autoinstaller will automatically download any needed firmware files to a local cache before installing.
 
@@ -106,16 +105,16 @@ rnodeconf --autoinstall
 If you need to extract the firmware from an existing RNode, run the following command:
 
 ```
-rnodeconf --extract-firmware /dev/ttyUSB0
+rnodeconf --extract
 ```
 
-Remember to replace `/dev/ttyUSB0` with the port the RNode is actually connected to. If `rnodeconf` finds a working RNode on the specified port, it will extract and save the firmware from the device for later use. You can then run the auto-installer with the `--no-check` and `--fw-version`options to use the locally extracted file:
+If `rnodeconf` finds a working RNode, it will extract and save the firmware from the device for later use. You can then run the auto-installer with the `--use-extracted` option to use the locally extracted file:
 
 ```
-rnodeconf --autoinstall --no-check --fw-version 1.55
+rnodeconf --autoinstall --use-extracted
 ```
 
-Make sure to replace the version number with the one that actually matches the extracted firmware.
+This also works for updating the firmware on existing RNodes, so you can extract a newer firmware from one RNode, and deploy it onto other RNodes using the same method. Just use the `--update` option instead of `--autoinstall`.
 
 ### <a name="assembly"></a>Step 7: Assembly
 
