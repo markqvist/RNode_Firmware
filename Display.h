@@ -327,6 +327,9 @@ void update_stat_area() {
       display.drawBitmap(p_as_x, p_as_y, bm_updating, stat_area.width(), stat_area.height(), SSD1306_BLACK, SSD1306_WHITE);
     } else if (console_active && device_init_done) {
       display.drawBitmap(p_as_x, p_as_y, bm_console, stat_area.width(), stat_area.height(), SSD1306_BLACK, SSD1306_WHITE);
+      if (disp_mode == DISP_MODE_LANDSCAPE) {
+        display.drawLine(p_as_x, 0, p_as_x, 64, SSD1306_WHITE);
+      }
     }
   }
 }
