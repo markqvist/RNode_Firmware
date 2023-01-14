@@ -203,19 +203,9 @@ def optimise_manual(path):
         "_static/scripts/furo.js.map",
         "_static/jquery-3.6.0.js",
         "_static/jquery.js",
-        # "_images/sideband_1.png",
-
-        # Too long
-        # "_static/sphinx_highlight.js",
-        # "_static/copybutton_funcs.js",
         "_static/_sphinx_javascript_frameworks_compat.js",
-        # "_static/underscore-1.13.1.js",
-        # "_static/documentation_options.js",
-        # "_static/scripts/furo-extensions.js",
         "_static/scripts/furo.js.LICENSE.txt",
-        # "_static/styles/furo-extensions.css",
         "_static/styles/furo-extensions.css.map",
-
     ]
     for file in remove_files:
         fp = path+"/"+file
