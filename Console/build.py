@@ -4,10 +4,9 @@ import sys
 import shutil
 
 packages = {
-    # "rnspure": "rnspure-0.4.6-py3-none-any.whl",
     "rns": "rns-0.4.7-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.3.1-py3-none-any.whl",
-    "lxmf": "lxmf-0.2.8-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.3.2-py3-none-any.whl",
+    "lxmf": "lxmf-0.2.9-py3-none-any.whl",
 }
 
 DEFAULT_TITLE = "RNode Bootstrap Console"
@@ -204,7 +203,7 @@ def optimise_manual(path):
         "_static/scripts/furo.js.map",
         "_static/jquery-3.6.0.js",
         "_static/jquery.js",
-        "_images/sideband_1.png",
+        # "_images/sideband_1.png",
 
         # Too long
         # "_static/sphinx_highlight.js",
