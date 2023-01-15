@@ -128,4 +128,4 @@ If you distribute or modify this work, you **must** adhere to the terms of the G
 
 If you want to charge money (or similar) or receive compensation for providing the firmware to others, use the firmware in your own commercial products, or make and sell RNodes, you simplify commercial deployment by purchasing a commercial license, which is cheap and easy.
 
-I provide a range of convenient tools and resources for anyone who wants commercially produce RNodes or provide services based on RNode, so just get in contact with me to get started.
+I provide a range of convenient tools and resources for anyone who wants commercially produce RNodes or provide services based on RNode, so just get in [contact with me](https://unsigned.io/contact/) to get started.
