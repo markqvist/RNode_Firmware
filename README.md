@@ -4,8 +4,8 @@ This is the firmware that powers RNodes. An RNode is an open, free and unrestric
 
 RNode is not a product, and not any *one* specific device in particular. It is a system that is easy to replicate across space and time, that produces highly functional communications tools, which respects user autonomy and empowers individuals and communities to protect their sovereignty, privacy and ability to communicate and exchange data and ideas freely.
 
-<img src="Documentation/images/rnv21_bgp.webp">
-<center>*An RNode made from readily available and cheap parts, in a durable 3D printed case*</center>
+<img src="Documentation/images/rnv21_bgp.webp" width="100%">
+*An RNode made from readily available and cheap parts, in a durable 3D printed case*
 
 The RNode system is primarily software, which *transforms* different kinds of available hardware devices into functional, physical RNodes, which can then be used to solve a wide range of communications tasks. Such RNodes can be modified and built to suit the specific time, locale and environment they need to exist in.
 
@@ -15,8 +15,8 @@ If you notice the presence of a circularity in the naming of the system as a who
 
 The designs, guides and software stored within allows users to create more RNodes, and even to bootstrap entire communications networks, completely independently of existing infrastructure, or in situations where infrastructure has become unreliable or is broken.
 
-![RNode](Documentation/images/126dcfe92fb7.webp)
-<center>*Where there is no Internet, RNodes will still communicate*</center>
+<img src="Documentation/images/126dcfe92fb7.webp" width="100%">
+*Where there is no Internet, RNodes will still communicate*
 
 The production of one particular RNode device is not an end, but the potential starting point of a new branch of devices on the tree of the RNode system as a whole.
 
