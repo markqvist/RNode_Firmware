@@ -1,14 +1,28 @@
 # RNode Firmware
 
-This is the firmware that powers RNodes. An RNode is an open, free and unrestricted digital radio transceiver. It enables anyone to send and receive any kind of data over both short and very long distances. RNodes can be used with many different kinds of programs and systems, but they are especially well suited for use with [Reticulum](https://reticulum.network).
+This is the open firmware that powers RNodes.
+
+An RNode is an open, free and unrestricted digital radio transceiver. It enables anyone to send and receive any kind of data over both short and very long distances. RNodes can be used with many different kinds of programs and systems, but they are especially well suited for use with [Reticulum](https://reticulum.network).
 
 RNode is not a product, and not any *one* specific device in particular. It is a system that is easy to replicate across space and time, that produces highly functional communications tools, which respects user autonomy and empowers individuals and communities to protect their sovereignty, privacy and ability to communicate and exchange data and ideas freely.
 
 <img src="Documentation/images/rnv21_bgp.webp" width="100%">
 
-<center><i>An RNode made from readily available and cheap parts, in a durable 3D printed case</i></center>
+<center><i>An RNode made from readily available and cheap parts, in a durable 3D printed case</i></center><br/><br/>
 
 The RNode system is primarily software, which *transforms* different kinds of available hardware devices into functional, physical RNodes, which can then be used to solve a wide range of communications tasks. Such RNodes can be modified and built to suit the specific time, locale and environment they need to exist in.
+
+## Latest Release
+
+The latest release, installable through `rnodeconf`, is version `1.55`. This release brings the following changes:
+
+- Added the **RNode Bootstrap Console** to all WiFi-capable RNodes. All such RNodes now contain a complete repository of information, software, guides and tools for replicating the RNode desing, and creating more RNodes.
+- RNodes can now supply other RNodes with firmware images, with allows creating RNodes and bootstrapping communication networks, even if the Internet is unavailable.
+- Improved RGB LED handling.
+- Improved power management and charge status handling.
+- Improved Bluetooth handling.
+
+You must have at least version `2.1.0` of `rnodeconf` installed to update the RNode Firmware to version `1.55`. Get it by updating the `rns` package to at least version `0.4.7`.
 
 ## A Self-Replicating System
 
@@ -18,7 +32,7 @@ The designs, guides and software stored within allows users to create more RNode
 
 <img src="Documentation/images/126dcfe92fb7.webp" width="100%"/>
 
-<center><i>Where there is no Internet, RNodes will still communicate</i></center>
+<center><i>Where there is no Internet, RNodes will still communicate</i></center><br/><br/>
 
 The production of one particular RNode device is not an end, but the potential starting point of a new branch of devices on the tree of the RNode system as a whole.
 
@@ -83,18 +97,6 @@ The RNode Firmware supports the following boards:
 
 ## Supported Transceiver Modules
 The RNode Firmware supports all transceiver modules based on **Semtech SX1276** or **Semtech SX1278** chips, that have an **SPI interface** and expose the **DIO_0** interrupt pin from the chip.
-
-## Latest Release
-
-The latest release, installable through `rnodeconf`, is version `1.55`. This release brings the following changes:
-
-- Added the **RNode Bootstrap Console** to all WiFi-capable RNodes. All such RNodes now contain a complete repository of information, software, guides and tools for replicating the RNode desing, and creating more RNodes.
-- RNodes can now supply other RNodes with firmware images, with allows creating RNodes and bootstrapping communication networks, even if the Internet is unavailable.
-- Improved RGB LED handling.
-- Improved power management and charge status handling.
-- Improved Bluetooth handling.
-
-You must have at least version `2.1.0` of `rnodeconf` installed to update the RNode Firmware to version `1.55`. Get it by updating the `rns` package to at least version `0.4.7`.
 
 ## Support RNode Development
 You can help support the continued development of open, free and private communications systems by donating via one of the following channels:
