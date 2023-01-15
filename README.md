@@ -1,6 +1,6 @@
 # RNode Firmware
 
-This is the open firmware that powers RNodes.
+This is the open firmware that powers RNode devices.
 
 An RNode is an open, free and unrestricted digital radio transceiver. It enables anyone to send and receive any kind of data over both short and very long distances. RNodes can be used with many different kinds of programs and systems, but they are especially well suited for use with [Reticulum](https://reticulum.network).
 
