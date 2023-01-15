@@ -61,6 +61,25 @@ The RNode system has been designed to allow reliable systems for basic human com
 
 While **speeds are lower** than WiFi, typical communication **ranges are many times higher**. Several kilometers can be acheived with usable bitrates, even in urban areas, and over **100 kilometers** can be achieved in line-of-sight conditions.
 
+## Supported Boards & Devices
+The RNode Firmware supports the following boards:
+
+- Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
+- Original v1.x RNodes from [unsigned.io](https://unsigned.io/shop/product/rnode)
+- LilyGO T-Beam v1.1 devices
+- LilyGO LoRa32 v2.0 devices
+- LilyGO LoRa32 v2.1 devices
+- Heltec LoRa32 v2 devices
+- Homebrew RNodes based on ATmega1284p boards
+- Homebrew RNodes based on ATmega2560 boards
+- Homebrew RNodes based on Adafruit Feather ESP32 boards
+- Homebrew RNodes based on generic ESP32 boards
+
+## Supported Transceiver Modules
+The RNode Firmware supports all transceiver modules based on **Semtech SX1276** or **Semtech SX1278** chips, that have an **SPI interface** and expose the **DIO_0** interrupt pin from the chip.
+
+Support for **SX1262**, **SX1268** and **SX1280** is being implemented. Please support the project with donations if you want this faster!
+
 ## Getting Started Fast
 You can download and flash the firmware to all the supported boards using the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). All firmware releases are now handled and installed directly through the `rnodeconf` utility, which is inclueded in the `rns` package. It can be installed via `pip`:
 
@@ -80,23 +99,6 @@ For more detailed instruction and in-depth guides, you can have a look at some o
 - Once you've got the hang of it, start [selling your RNodes](https://unsigned.io/sell_rnodes.html)
 
 If you would rather just buy a pre-made unit, you can visit [my shop](https://unsigned.io/shop) and purchase my particular version of the [Handheld RNode](https://unsigned.io/shop/handheld-rnode/), which I can assure you is made to the highest quality, and with a lot of care.
-
-## Supported Boards & Devices
-The RNode Firmware supports the following boards:
-
-- Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
-- Original v1.x RNodes from [unsigned.io](https://unsigned.io/shop/product/rnode)
-- LilyGO T-Beam v1.1 devices
-- LilyGO LoRa32 v2.0 devices
-- LilyGO LoRa32 v2.1 devices
-- Heltec LoRa32 v2 devices
-- Homebrew RNodes based on ATmega1284p boards
-- Homebrew RNodes based on ATmega2560 boards
-- Homebrew RNodes based on Adafruit Feather ESP32 boards
-- Homebrew RNodes based on generic ESP32 boards
-
-## Supported Transceiver Modules
-The RNode Firmware supports all transceiver modules based on **Semtech SX1276** or **Semtech SX1278** chips, that have an **SPI interface** and expose the **DIO_0** interrupt pin from the chip.
 
 ## Support RNode Development
 You can help support the continued development of open, free and private communications systems by donating via one of the following channels:
