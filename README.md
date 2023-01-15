@@ -45,12 +45,12 @@ The RNode design is meant to flexible and hackable. At it's core, it is a low-po
 Depeding on configuration, it can be used for local networking purposes, or to send data over very long distances. Once you have an RNode, there is a wide variety of possible uses:
 
 - As a network adapter for [Reticulum](https://reticulum.network)
-- Messaging using [Sideband]({ASSET_PATH}software/Sideband.html)
-- Information sharing and communication using [Nomad Network]({ASSET_PATH}software/Nomad_Network.html)
-- LoRa-based [KISS-compatible amateur radio TNC]({ASSET_PATH}guides/2020_05_03_using_rnodes_with_amateur_radio_software.html)
+- Messaging using [Sideband](https://unsigned.io/software/Sideband.html)
+- Information sharing and communication using [Nomad Network](https://unsigned.io/software/Nomad_Network.html)
+- LoRa-based [KISS-compatible amateur radio TNC](https://unsigned.io/guides/2020_05_03_using_rnodes_with_amateur_radio_software.html)
 - LoRa development platform
-- [Packet sniffer]({ASSET_PATH}software/LoRaMon.html) for LoRa networks
-- Long range [Ethernet and IP network interface]({ASSET_PATH}guides/2020_05_27_ethernet-and-ip-over-packet-radio-tncs.html) on Linux
+- [Packet sniffer](https://unsigned.io/software/LoRaMon.html) for LoRa networks
+- Long range [Ethernet and IP network interface](https://unsigned.io/guides/2020_05_27_ethernet-and-ip-over-packet-radio-tncs.html) on Linux
 - As a general-purpose long-range data radio
 
 ## Types & Performance
