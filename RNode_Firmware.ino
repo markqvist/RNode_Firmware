@@ -137,7 +137,7 @@ void setup() {
   // Validate board health, EEPROM and config
   validate_status();
 
-  LoRa.setFrequency(0);
+  if (!op_mode == MODE_TNC) LoRa.setFrequency(0);
 }
 
 void lora_receive() {
