@@ -32,6 +32,7 @@ char bt_devname[11];
 
   void bt_confirm_pairing(uint32_t numVal) {
     bt_ssp_pin = numVal;
+    kiss_indicate_btpin();
     if (bt_allow_pairing) {
       SerialBT.confirmReply(true);
     } else {

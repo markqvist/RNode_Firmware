@@ -26,6 +26,7 @@
 #endif
 
 #if HAS_BLUETOOTH == true
+	void kiss_indicate_btpin();
   #include "Bluetooth.h"
 #endif
 
@@ -672,6 +673,18 @@ void kiss_indicate_frequency() {
 	escaped_serial_write(lora_freq>>8);
 	escaped_serial_write(lora_freq);
 	serial_write(FEND);
+}
+
+void kiss_indicate_btpin() {
+	#if HAS_BLUETOOTH
+		serial_write(FEND);
+		serial_write(CMD_BT_PIN);
+		escaped_serial_write(bt_ssp_pin>>24);
+		escaped_serial_write(bt_ssp_pin>>16);
+		escaped_serial_write(bt_ssp_pin>>8);
+		escaped_serial_write(bt_ssp_pin);
+		serial_write(FEND);
+	#endif
 }
 
 void kiss_indicate_random(uint8_t byte) {
