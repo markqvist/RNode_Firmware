@@ -7,6 +7,8 @@
 
 This build recipe will help you create an RNode that is suitable for mobile and handheld operation, and offers both wireless and wired connectivity to host devices. It is also useful for permanent installation indoors, or even outdoors, as long as it is protected from water ingress and direct sunlight.
 
+Depending on the board you use, it will offer a workable frequency range between **420 and 520 MHz**, or **820 and 1020 MHz**, and a maximum TX power of **17 dBm** (50 mW).
+
 <img alt="Completed Handheld RNode" src="{ASSET_PATH}images/bg_h_1.webp" style="width: 100%;"/>
 <center>*A completed Handheld RNode*</center>
 
