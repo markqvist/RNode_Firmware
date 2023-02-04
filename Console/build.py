@@ -4,9 +4,9 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.4.7-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.3.2-py3-none-any.whl",
-    "lxmf": "lxmf-0.2.9-py3-none-any.whl",
+    "rns": "rns-0.4.8-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.3.3-py3-none-any.whl",
+    "lxmf": "lxmf-0.3.0-py3-none-any.whl",
 }
 
 DEFAULT_TITLE = "RNode Bootstrap Console"
