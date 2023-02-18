@@ -88,25 +88,33 @@ void setup() {
   // pins for the LoRa module
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
   
-  if (LoRa.preInit()) {
-    sx1276_installed = true;
-    uint32_t lfr = LoRa.getFrequency();
-    if (lfr == 0) {
-      // Normal boot
-    } else if (lfr == M_FRQ_R) {
-      // Quick reboot
-      #if HAS_CONSOLE
-        if (rtc_get_reset_reason(0) == POWERON_RESET) {
-          console_active = true;
-        }
-      #endif
+  #if MCU_VARIANT == MCU_ESP32
+    // Check installed transceiver chip and
+    // probe boot parameters.
+    if (LoRa.preInit()) {
+      sx1276_installed = true;
+      uint32_t lfr = LoRa.getFrequency();
+      if (lfr == 0) {
+        // Normal boot
+      } else if (lfr == M_FRQ_R) {
+        // Quick reboot
+        #if HAS_CONSOLE
+          if (rtc_get_reset_reason(0) == POWERON_RESET) {
+            console_active = true;
+          }
+        #endif
+      } else {
+        // Unknown boot
+      }
+      LoRa.setFrequency(M_FRQ_S);
     } else {
-      // Unknown boot
+      sx1276_installed = false;
     }
-    LoRa.setFrequency(M_FRQ_S);
-  } else {
-    sx1276_installed = false;
-  }
+  #else
+    // Older variants only came with SX1276/78 chips,
+    // so assume that to be the case for now.
+    sx1276_installed = true;
+  #endif
 
   #if HAS_DISPLAY
     disp_ready = display_init();
