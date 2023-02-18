@@ -36,7 +36,7 @@ data:
 
 external:
 	make -C $(PATH_RETICULUM_WEBSITE) clean website
-	rm -r $(PATH_PACKAGES)/reticulum.network
+	-rm -r $(PATH_PACKAGES)/reticulum.network
 	cp -r $(PATH_RETICULUM_WEBSITE)/build $(PATH_PACKAGES)/reticulum.network
 
 site: clean external dirs data sourcepack pages
