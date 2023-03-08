@@ -17,11 +17,11 @@ If you do not have access to the Internet, or would prefer to install Nomad Netw
 - If you do not have an Internet connection while installing make sure to install the [Reticulum](./s_rns.html) and [LXMF](./s_lxmf.html) packages first
 - Download the [{PKG_BASE_nomadnet}]({ASSET_PATH}{PKG_nomadnet}) package from this RNode and unzip it
 - Install it with the command `pip install ./{PKG_NAME_nomadnet}`
-- Verify the installed Reticulum version by running `nomadnet --version`
+- Verify the installed Nomad Network version by running `nomadnet --version`
 
 ### Online Installation
 
 If you are connected to the Internet, you can try to install the latest version of Nomad Network via the `pip` package manager.
 
 - Install Nomad Network by running the command `pip install nomadnet`
-- Verify the installed Reticulum version by running `nomadnet --version`
+- Verify the installed Nomad Network version by running `nomadnet --version`
