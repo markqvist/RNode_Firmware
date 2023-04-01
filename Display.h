@@ -95,7 +95,11 @@ bool display_init() {
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
     #endif
-
+    
+    #if BOARD_MODEL == BOARD_LORA32_V1_0
+      Wire.begin(SDA_OLED, SCL_OLED);
+    #endif
+    
     if(!display.begin(SSD1306_SWITCHCAPVCC, DISP_ADDR)) {
       return false;
     } else {
@@ -104,6 +108,9 @@ bool display_init() {
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
       #elif BOARD_MODEL == BOARD_RNODE_NG_21
+        disp_mode = DISP_MODE_PORTRAIT;
+        display.setRotation(3);
+      #elif BOARD_MODEL == BOARD_LORA32_V1_0
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
       #elif BOARD_MODEL == BOARD_LORA32_V2_0
