@@ -35,7 +35,7 @@
 	#define BOARD_GENERIC_ESP32 0x35
 	#define BOARD_LORA32_V2_0   0x36
 	#define BOARD_LORA32_V2_1   0x37
-	#define BOARD_LORA32_V1_0   0x38
+	#define BOARD_LORA32_V1_0   0x39
 	#define BOARD_HELTEC32_V2   0x38
 	#define BOARD_RNODE_NG_20   0x40
 	#define BOARD_RNODE_NG_21   0x41
