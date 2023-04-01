@@ -171,7 +171,7 @@
 			#endif
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
-            #define HAS_CONSOLE false
+            #define HAS_CONSOLE true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_0
 			const int pin_cs = 18;
 			const int pin_reset = 12;
