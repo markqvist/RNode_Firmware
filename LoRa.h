@@ -93,6 +93,7 @@ private:
   static void onDio0Rise();
 
   void handleLowDataRate();
+  void optimizeModemSensitivity();
 
 private:
   SPISettings _spiSettings;

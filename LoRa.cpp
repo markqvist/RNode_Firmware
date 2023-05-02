@@ -61,8 +61,10 @@
 #define REG_FREQ_ERROR_LSB       0x2a
 #define REG_RSSI_WIDEBAND        0x2c
 #define REG_DETECTION_OPTIMIZE   0x31
+#define REG_HIGH_BW_OPTIMIZE_1   0x36
 #define REG_DETECTION_THRESHOLD  0x37
 #define REG_SYNC_WORD            0x39
+#define REG_HIGH_BW_OPTIMIZE_2   0x3a
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
 #define REG_PA_DAC               0x4d
@@ -460,6 +462,8 @@ void LoRaClass::setFrequency(long frequency) {
   writeRegister(REG_FRF_MSB, (uint8_t)(frf >> 16));
   writeRegister(REG_FRF_MID, (uint8_t)(frf >> 8));
   writeRegister(REG_FRF_LSB, (uint8_t)(frf >> 0));
+
+  optimizeModemSensitivity();
 }
 
 uint32_t LoRaClass::getFrequency() {
@@ -526,6 +530,21 @@ void LoRaClass::handleLowDataRate(){
   }
 }
 
+void LoRaClass::optimizeModemSensitivity(){
+  byte bw = (readRegister(REG_MODEM_CONFIG_1) >> 4);
+  uint32_t freq = getFrequency();
+
+  if (bw == 9 && 410E6 <= freq <= 525E6) {
+    writeRegister(REG_HIGH_BW_OPTIMIZE_1, 0x02);
+    writeRegister(REG_HIGH_BW_OPTIMIZE_2, 0x7f);
+  } else if (bw == 9 && 862E6 <= freq <= 1020E6) {
+    writeRegister(REG_HIGH_BW_OPTIMIZE_1, 0x02);
+    writeRegister(REG_HIGH_BW_OPTIMIZE_2, 0x64);
+  } else {
+    writeRegister(REG_HIGH_BW_OPTIMIZE_1, 0x03);
+  }
+}
+
 void LoRaClass::setSignalBandwidth(long sbw)
 {
   int bw;
@@ -555,6 +574,7 @@ void LoRaClass::setSignalBandwidth(long sbw)
   writeRegister(REG_MODEM_CONFIG_1, (readRegister(REG_MODEM_CONFIG_1) & 0x0f) | (bw << 4));
   
   handleLowDataRate();
+  optimizeModemSensitivity();
 }
 
 void LoRaClass::setCodingRate4(int denominator)
