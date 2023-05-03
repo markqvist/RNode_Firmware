@@ -116,9 +116,7 @@ You can help support the continued development of open, free and private communi
 - Ko-Fi: https://ko-fi.com/markqvist
 
 ## License & Use
-The RNode Firmware is Copyright © 2023 Mark Qvist / [unsigned.io](https://unsigned.io), and is made available under a dual GPL+commercial license.
-
-Unless otherwise noted, the source code and binaries in this repository and related release sections is licensed under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
+The RNode Firmware is Copyright © 2023 Mark Qvist / [unsigned.io](https://unsigned.io). Unless otherwise noted, the source code and binaries in this repository and related release sections are licensed under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
 
 The 3D-printable object files, mechanical design, illustrations and related material, and all guide and photo material is released under a **Creative Commons - Attribution - Noncommercial - Share Alike 4.0** license.
 
