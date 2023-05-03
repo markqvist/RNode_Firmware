@@ -21,6 +21,7 @@
 	#define PRODUCT_RNODE  0x03
 	#define PRODUCT_HMBRW  0xF0
 	#define PRODUCT_TBEAM  0xE0
+	#define PRODUCT_T32_10 0xB2
 	#define PRODUCT_T32_20 0xB0
 	#define PRODUCT_T32_21 0xB1
 	#define PRODUCT_H32_V2 0xC0
