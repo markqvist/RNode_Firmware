@@ -14,15 +14,13 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.55`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.60`. This release brings the following changes:
 
-- Added the **RNode Bootstrap Console** to all WiFi-capable RNodes. All such RNodes now contain a complete repository of information, software, guides and tools for replicating the RNode desing, and creating more RNodes.
-- RNodes can now supply other RNodes with firmware images, with allows creating RNodes and bootstrapping communication networks, even if the Internet is unavailable.
-- Improved RGB LED handling.
+- Updated the on-board **RNode Bootstrap Console** with the latest versions of information, software, guides and tools for replicating the RNode desing, creating more RNodes, and setting up networks.
+- Optimised receiver sensitivity for 500 KHz bandwidth modes.
 - Improved power management and charge status handling.
-- Improved Bluetooth handling.
 
-You must have at least version `2.1.0` of `rnodeconf` installed to update the RNode Firmware to version `1.55`. Get it by updating the `rns` package to at least version `0.4.7`.
+You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.60`. Get it by updating the `rns` package to at least version `0.5.1`.
 
 ## A Self-Replicating System
 
@@ -124,10 +122,6 @@ Unless otherwise noted, the source code and binaries in this repository and rela
 
 The 3D-printable object files, mechanical design, illustrations and related material, and all guide and photo material is released under a **Creative Commons - Attribution - Noncommercial - Share Alike 4.0** license.
 
-Permission is hereby granted to use the RNode Firmware in *binary form from this repository* for any and all purposes, ***so long as no payment or compensation is charged or received for such distribution or use***. Binary copies of the firmware obtained from this repository (or via the `rnodeconf` utility) are explicitly licensed under these conditions.
+Permission is hereby granted to use the RNode Firmware in *binary form from this repository* for any and all purposes, ***so long as none of the attributions, credits and donation addresses are changed***. Binary copies of the firmware obtained from this repository (or via the `rnodeconf` utility) are explicitly licensed under these conditions.
 
 If you distribute or modify this work, you **must** adhere to the terms of the GPLv3, including, but not limited to, providing up-to-date source code upon distribution, displaying appropriate copyright and license notices in prominent positions of all conveyed works, and making users aware of their rights to the software under the GPLv3.
-
-If you want to charge money (or similar) or receive compensation for providing the firmware to others, use the firmware in your own commercial products, or make and sell RNodes, you simplify commercial deployment by purchasing a commercial license, which is cheap and easy.
-
-I provide a range of convenient tools and resources for anyone who wants commercially produce RNodes or provide services based on RNode, so just get in [contact with me](https://unsigned.io/contact/) to get started.
