@@ -117,6 +117,10 @@ void setup() {
   #endif
 
   #if HAS_DISPLAY
+    if (EEPROM.read(eeprom_addr(ADDR_CONF_DSET)) != CONF_OK_BYTE) {
+      eeprom_update(eeprom_addr(ADDR_CONF_DSET), CONF_OK_BYTE);
+      eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
+    }
     disp_ready = display_init();
     update_display();
   #endif
@@ -798,6 +802,7 @@ void serialCallback(uint8_t sbyte) {
                 ESCAPE = false;
             }
             display_intensity = sbyte;
+            di_conf_save(display_intensity);
         }
 
       #endif

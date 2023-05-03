@@ -134,6 +134,8 @@ bool display_init() {
       disp_area.cp437(true);
       display.cp437(true);
 
+      display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
+
       return true;
     }
   #else
