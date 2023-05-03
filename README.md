@@ -65,6 +65,7 @@ The RNode Firmware supports the following boards:
 - Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
 - Original v1.x RNodes from [unsigned.io](https://unsigned.io/shop/product/rnode)
 - LilyGO T-Beam v1.1 devices
+- LilyGO LoRa32 v1.0 devices
 - LilyGO LoRa32 v2.0 devices
 - LilyGO LoRa32 v2.1 devices
 - Heltec LoRa32 v2 devices
@@ -79,7 +80,7 @@ The RNode Firmware supports all transceiver modules based on **Semtech SX1276** 
 Support for **SX1262**, **SX1268** and **SX1280** is being implemented. Please support the project with donations if you want this faster!
 
 ## Getting Started Fast
-You can download and flash the firmware to all the supported boards using the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). All firmware releases are now handled and installed directly through the `rnodeconf` utility, which is inclueded in the `rns` package. It can be installed via `pip`:
+You can download and flash the firmware to all the supported boards using the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). All firmware releases are now handled and installed directly through the `rnodeconf` utility, which is included in the `rns` package. It can be installed via `pip`:
 
 ```
 # Install rnodeconf via rns package
