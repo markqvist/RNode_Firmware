@@ -18,7 +18,7 @@ The latest release, installable through `rnodeconf`, is version `1.60`. This rel
 
 - Updated the on-board **RNode Bootstrap Console** with the latest versions of information, software, guides and tools for replicating the RNode desing, creating more RNodes, and setting up networks.
 - Optimised receiver sensitivity for 500 KHz bandwidth modes.
-- Improved power management and charge status handling.
+- Added support for LilyGO LoRa32 v1.0 boards.
 
 You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.60`. Get it by updating the `rns` package to at least version `0.5.1`.
 
