@@ -117,10 +117,12 @@ You can help support the continued development of open, free and private communi
 - Ko-Fi: https://ko-fi.com/markqvist
 
 ## License & Use
-The RNode Firmware is Copyright © 2023 Mark Qvist / [unsigned.io](https://unsigned.io). Unless otherwise noted, the source code and binaries in this repository and related release sections are licensed under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
+The RNode Firmware is Copyright © 2023 Mark Qvist / [unsigned.io](https://unsigned.io), and is made available under the **GNU General Public License v3.0**. The source code includes an SX1276 driver that is released under MIT License, and Copyright © 2018 Sandeep Mistry / Mark Qvist.
 
-The 3D-printable object files, mechanical design, illustrations and related material, and all guide and photo material is released under a **Creative Commons - Attribution - Noncommercial - Share Alike 4.0** license.
+You can obtain the source code from [git.unsigned.io](https://git.unsigned.io/markqvist/RNode_Firmware) or [GitHub](https://github.com/markqvist/rnode_firmware).
 
-Permission is hereby granted to use the RNode Firmware in *binary form from this repository* for any and all purposes, ***so long as none of the attributions, credits and donation addresses are changed***. Binary copies of the firmware obtained from this repository (or via the `rnodeconf` utility) are explicitly licensed under these conditions.
+The RNode Ecosystem is free and non-proprietary, and actively seeks to distribute it's ownership and control. If you want to build RNodes for commercial purposes, including selling them, you must do so adhering to the Open Source licenses that the various parts of the RNode project is released under, and under your own responsibility.
 
 If you distribute or modify this work, you **must** adhere to the terms of the GPLv3, including, but not limited to, providing up-to-date source code upon distribution, displaying appropriate copyright and license notices in prominent positions of all conveyed works, and making users aware of their rights to the software under the GPLv3.
+
+In practice, this means that you can use the firmware commercially, but you must understand your obligation to provide all future users of the system with the same rights, that you have been provided by the GPLv3. If you intend using the RNode Firmware commercially, it is worth reading [this page]({ASSET_PATH}sell_rnodes.html).

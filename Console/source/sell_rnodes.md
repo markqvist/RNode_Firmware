@@ -1,7 +1,9 @@
 [title]: <> (Sell RNodes)
 ## Build & Sell RNodes
-If you want to build RNodes for commercial purposes, including selling them, you are highly encouraged to use all the resources available in this Repository, and on the [unsigned.io](https://unsigned.io/) website.
+Creating any number of RNodes is completely free and unrestricted for all personal, non-commercial and humanitarian purposes. Feel free to use all the resources provided here, and on the [unsigned.io](https://unsigned.io/) website. If doing so provides value to you or your community, you are encouraged to [contribute]({ASSET_PATH}donate.html) whatever you find to be reasonable.
 
-Any commercial use of the RNode firmware, 3D design files, logos, brand name or any other materials require that you buy a copy of the firmware for each unit you produce. By doing so, you are supporting the continued development of the ecosystem, and you will also gain access to additional tools and resources, along with the support and help of the creator of the RNode system.
+The RNode Ecosystem is free and non-proprietary, and actively seeks to distribute it's ownership and control. If you want to build RNodes for commercial purposes, including selling them, you must do so adhering to the Open Source licenses that the various parts of the RNode project is released under, and under your own responsibility.
 
-Please [contact me]({ASSET_PATH}/contact.html), and I will help you get started effortlessly.
+The RNode Firmware is released under GPLv3, and basing commercial works on it means (among other things), that you must also make your derivatives open source and available under the same terms.
+
+In practice, this means that you can use the firmware commercially, but you should understand your obligation to provide all future users of the system the same rights that you have been provided by the GPLv3.
