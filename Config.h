@@ -19,7 +19,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x3C
+	#define MIN_VERS  0x3D
 
 	#define PLATFORM_AVR   0x90
     #define PLATFORM_ESP32 0x80
