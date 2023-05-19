@@ -87,16 +87,18 @@ void set_contrast(Adafruit_SSD1306 *display, uint8_t contrast) {
 
 bool display_init() {
   #if HAS_DISPLAY
-    #if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0 || BOARD_LORA32_V1_0
+    #if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0
       int pin_display_en = 16;
       digitalWrite(pin_display_en, LOW);
       delay(50);
       digitalWrite(pin_display_en, HIGH);
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
-    #endif
-    
-    #if BOARD_MODEL == BOARD_LORA32_V1_0
+    #elif BOARD_MODEL == BOARD_LORA32_V1_0
+      int pin_display_en = 16;
+      digitalWrite(pin_display_en, LOW);
+      delay(50);
+      digitalWrite(pin_display_en, HIGH);
       Wire.begin(SDA_OLED, SCL_OLED);
     #endif
     
