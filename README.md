@@ -14,13 +14,11 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.60`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.61`. This release brings the following changes:
 
-- Updated the on-board **RNode Bootstrap Console** with the latest versions of information, software, guides and tools for replicating the RNode desing, creating more RNodes, and setting up networks.
-- Optimised receiver sensitivity for 500 KHz bandwidth modes.
-- Added support for LilyGO LoRa32 v1.0 boards.
+- Fixed a bug that caused display initialisation to fail on some boards
 
-You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.60`. Get it by updating the `rns` package to at least version `0.5.1`.
+You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.61`. Get it by updating the `rns` package to at least version `0.5.2`.
 
 ## A Self-Replicating System
 
