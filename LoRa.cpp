@@ -67,6 +67,7 @@
 #define REG_HIGH_BW_OPTIMIZE_2   0x3a
 #define REG_DIO_MAPPING_1        0x40
 #define REG_VERSION              0x42
+#define REG_TCXO                 0x4b
 #define REG_PA_DAC               0x4d
 
 // Modes
@@ -422,6 +423,16 @@ void LoRaClass::idle()
 void LoRaClass::sleep()
 {
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_SLEEP);
+}
+
+void LoRaClass::enableTCXO() {
+  uint8_t tcxo_reg = readRegister(REG_TCXO);
+  writeRegister(REG_TCXO, tcxo_reg | 0x10);
+}
+
+void LoRaClass::disableTCXO() {
+  uint8_t tcxo_reg = readRegister(REG_TCXO);
+  writeRegister(REG_TCXO, tcxo_reg & 0xEF);
 }
 
 void LoRaClass::setTxPower(int level, int outputPin) {

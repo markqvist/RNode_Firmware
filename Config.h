@@ -87,6 +87,7 @@
 
     #define HAS_DISPLAY false
     #define HAS_BLUETOOTH false
+    #define HAS_TCXO false
     #define HAS_PMU false
     #define HAS_NP false
 
@@ -147,6 +148,7 @@
 			const int pin_led_tx = 4;
             #define HAS_DISPLAY true
             #define HAS_PMU true
+            #define HAS_TCXO true
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
             #define HAS_SD false

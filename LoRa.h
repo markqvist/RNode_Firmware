@@ -68,6 +68,8 @@ public:
   uint8_t modemStatus();
   void enableCrc();
   void disableCrc();
+  void enableTCXO();
+  void disableTCXO();
 
   // deprecated
   void crc() { enableCrc(); }
