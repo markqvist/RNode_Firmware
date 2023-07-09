@@ -4,7 +4,7 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.5.5-py3-none-any.whl",
+    "rns": "rns-0.5.6-py3-none-any.whl",
     "nomadnet": "nomadnet-0.3.5-py3-none-any.whl",
     "lxmf": "lxmf-0.3.1-py3-none-any.whl",
     "rnsh": "rnsh-0.1.1-py3-none-any.whl",
@@ -200,6 +200,7 @@ def optimise_manual(path):
     remove_files = [
         "objects.inv",
         "Reticulum Manual.pdf",
+        "Reticulum Manual.epub",
         "_static/styles/furo.css.map",
         "_static/scripts/furo.js.map",
         "_static/jquery-3.6.0.js",
@@ -211,7 +212,10 @@ def optimise_manual(path):
     for file in remove_files:
         fp = path+"/"+file
         print("Removing file: "+str(fp))
-        os.unlink(fp)
+        try:
+            os.unlink(fp)
+        except Exception as e:
+            print("An error occurred while attempting to unlink "+str(fp)+": "+str(e))
 
     remove_dirs = [
         "_sources",
