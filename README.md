@@ -38,7 +38,7 @@ This tree fits into the larger biome of Free & Open Communications Systems, whic
 
 The RNode design is meant to flexible and hackable. At it's core, it is a low-power, but extremely long-range digital radio transceiver. Coupled with Reticulum, it provides encrypted and secure communications.
 
-Depeding on configuration, it can be used for local networking purposes, or to send data over very long distances. Once you have an RNode, there is a wide variety of possible uses:
+Depending on configuration, it can be used for local networking purposes, or to send data over very long distances. Once you have an RNode, there is a wide variety of possible uses:
 
 - As a network adapter for [Reticulum](https://reticulum.network)
 - Messaging using [Sideband](https://unsigned.io/software/Sideband.html)
