@@ -436,6 +436,17 @@ void draw_disp_area() {
     } else {
       disp_area.drawBitmap(0, 0, fb, disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
     }
+    if (display_diagnostics) {
+      disp_area.setCursor(0, 0);
+      disp_area.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
+      disp_area.setTextSize(1);
+      disp_area.printf("B:%.1fK\r\n", (float)lora_bitrate/1000.0);
+      disp_area.printf("U:%.1f%%\r\n", total_channel_util*100.0);
+      disp_area.printf("L:%.1f%%\r\n", local_channel_util*100.0);
+      disp_area.printf("A:%.2f%%\r\n", airtime*100.0);
+      disp_area.printf("a:%.2f%%\r\n", longterm_airtime*100.0);
+      disp_area.printf("C:%d\r\n", current_airtime_bin());
+    }
   }
 }
 

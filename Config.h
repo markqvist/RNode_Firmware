@@ -22,7 +22,7 @@
 	#define MIN_VERS  0x3F
 
 	#define PLATFORM_AVR   0x90
-    #define PLATFORM_ESP32 0x80
+  #define PLATFORM_ESP32 0x80
 
 	#define MCU_1284P 0x91
 	#define MCU_2560  0x92
@@ -301,6 +301,7 @@
 	int  lora_txp      = 0xFF;
 	uint32_t lora_bw   = 0;
 	uint32_t lora_freq = 0;
+	uint32_t lora_bitrate = 0;
 
 	// Operational variables
 	bool radio_locked  = true;
@@ -337,6 +338,26 @@
 	uint32_t stat_rx		= 0;
 	uint32_t stat_tx		= 0;
 
+	#define STATUS_INTERVAL_MS 3
+	#if MCU_VARIANT == MCU_ESP32
+	  #define DCD_SAMPLES 2500
+		#define UTIL_UPDATE_INTERVAL_MS 1000
+		#define UTIL_UPDATE_INTERVAL (UTIL_UPDATE_INTERVAL_MS/STATUS_INTERVAL_MS)
+		#define AIRTIME_LONGTERM 3600
+		#define AIRTIME_LONGTERM_MS (AIRTIME_LONGTERM*1000)
+		#define AIRTIME_BINLEN_MS (STATUS_INTERVAL_MS*DCD_SAMPLES)
+		#define AIRTIME_BINS ((AIRTIME_LONGTERM*1000)/AIRTIME_BINLEN_MS)
+		bool util_samples[DCD_SAMPLES];
+		uint16_t airtime_bins[AIRTIME_BINS];
+		int dcd_sample = 0;
+		float local_channel_util = 0.0;
+		float total_channel_util = 0.0;
+		float airtime = 0.0;
+		float longterm_airtime = 0.0;
+		float us_per_byte = 0.0;
+		#define current_airtime_bin(void) (millis()%AIRTIME_LONGTERM_MS)/AIRTIME_BINLEN_MS
+	#endif
+
 	bool stat_signal_detected = false;
 	bool stat_signal_synced   = false;
 	bool stat_rx_ongoing      = false;
@@ -346,7 +367,7 @@
 	uint16_t dcd_count        = 0;
 	uint16_t dcd_threshold    = 15;
 
-	uint32_t status_interval_ms = 3;
+	uint32_t status_interval_ms = STATUS_INTERVAL_MS;
 	uint32_t last_status_update = 0;
 
 	// Status flags
@@ -366,6 +387,7 @@
     float battery_percent = 0.0;
     uint8_t battery_state = 0x00;
     uint8_t display_intensity = 0xFF;
+    bool display_diagnostics = true;
     bool device_init_done = false;
     bool eeprom_ok = false;
     bool firmware_update_mode = false;

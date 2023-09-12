@@ -89,6 +89,9 @@ void setup() {
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
   
   #if MCU_VARIANT == MCU_ESP32
+    for (uint16_t ai = 0; ai < DCD_SAMPLES; ai++) { util_samples[ai] = false; }
+    for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { airtime_bins[ai] = 0; }
+
     // Check installed transceiver chip and
     // probe boot parameters.
     if (LoRa.preInit()) {
@@ -396,6 +399,27 @@ void flushQueue(void) {
   queue_flushing = false;
 }
 
+void add_airtime(uint16_t written) {
+  #if MCU_VARIANT == MCU_ESP32
+    float ms_cost = ((float)written * us_per_byte)/1000.0;
+    airtime_bins[current_airtime_bin()] += ms_cost;
+  #endif
+}
+
+void update_airtime() {
+  #if MCU_VARIANT == MCU_ESP32
+    uint16_t cb = current_airtime_bin();
+    uint16_t pb = cb-1; if (cb < 0) { cb = AIRTIME_BINS-1; }
+    airtime = (float)(airtime_bins[cb]+airtime_bins[pb])/(2.0*AIRTIME_BINLEN_MS);
+
+    uint32_t longterm_airtime_sum = 0;
+    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) {
+      longterm_airtime_sum += airtime_bins[bin];
+    }
+    longterm_airtime = (float)longterm_airtime_sum/(float)AIRTIME_LONGTERM_MS;
+  #endif
+}
+
 void transmit(uint16_t size) {
   if (radio_online) {
     if (!promisc) {
@@ -411,19 +435,19 @@ void transmit(uint16_t size) {
       LoRa.write(header); written++;
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa.write(tbuf[i]);  
+        LoRa.write(tbuf[i]);
 
         written++;
 
         if (written == 255) {
-          LoRa.endPacket();
+          LoRa.endPacket(); add_airtime(written);
           LoRa.beginPacket();
           LoRa.write(header);
           written = 1;
         }
       }
 
-      LoRa.endPacket();
+      LoRa.endPacket(); add_airtime(written);
       led_tx_off();
 
       lora_receive();
@@ -452,7 +476,7 @@ void transmit(uint16_t size) {
 
         written++;
       }
-      LoRa.endPacket();
+      LoRa.endPacket(); add_airtime(written);
       led_tx_off();
 
       lora_receive();
@@ -858,6 +882,22 @@ void updateModemStatus() {
 void checkModemStatus() {
   if (millis()-last_status_update >= status_interval_ms) {
     updateModemStatus();
+
+    #if MCU_VARIANT == MCU_ESP32
+      util_samples[dcd_sample] = dcd;
+      dcd_sample = (dcd_sample+1)%DCD_SAMPLES;
+      if (dcd_sample % UTIL_UPDATE_INTERVAL == 0) {
+        int util_count = 0;
+        for (int ui = 0; ui < DCD_SAMPLES; ui++) {
+          if (util_samples[ui]) util_count++;
+        }
+        local_channel_util = (float)util_count / (float)DCD_SAMPLES;
+        total_channel_util = local_channel_util + airtime;
+        if (total_channel_util > 1.0) total_channel_util = 1.0;
+
+        update_airtime();
+      }
+    #endif
   }
 }
 
@@ -1007,10 +1047,9 @@ void loop() {
 
         if (!dcd) {
           dcd_waiting = false;
-
           flushQueue();
-          
         }
+
       } else {
         dcd_waiting = true;
       }

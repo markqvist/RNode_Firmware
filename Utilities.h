@@ -860,12 +860,28 @@ inline uint8_t packetSequence(uint8_t header) {
 	return header >> 4;
 }
 
+void updateBitrate() {
+	#if MCU_VARIANT == MCU_ESP32
+		if (radio_online) {
+			//             self.bitrate = self.r_sf * ( (4.0/self.r_cr) / (math.pow(2,self.r_sf)/(self.r_bandwidth/1000)) ) * 1000
+			//             self.bitrate_kbps = round(self.bitrate/1000.0, 2)
+			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
+			us_per_byte = 1000000.0/((float)lora_bitrate/8.0);
+
+		} else {
+			lora_bitrate = 0;
+		}
+	#endif
+}
+
 void setSpreadingFactor() {
 	if (radio_online) LoRa.setSpreadingFactor(lora_sf);
+	updateBitrate();
 }
 
 void setCodingRate() {
 	if (radio_online) LoRa.setCodingRate4(lora_cr);
+	updateBitrate();
 }
 
 void set_implicit_length(uint8_t len) {
@@ -912,6 +928,7 @@ void getBandwidth() {
 	if (radio_online) {
 			lora_bw = LoRa.getSignalBandwidth();
 	}
+	updateBitrate();
 }
 
 void setBandwidth() {
