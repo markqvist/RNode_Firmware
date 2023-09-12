@@ -19,7 +19,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x3F
+	#define MIN_VERS  0x40
 
 	#define PLATFORM_AVR   0x90
   #define PLATFORM_ESP32 0x80
@@ -349,9 +349,11 @@
 		#define AIRTIME_BINS ((AIRTIME_LONGTERM*1000)/AIRTIME_BINLEN_MS)
 		bool util_samples[DCD_SAMPLES];
 		uint16_t airtime_bins[AIRTIME_BINS];
+		float longterm_bins[AIRTIME_BINS];
 		int dcd_sample = 0;
 		float local_channel_util = 0.0;
 		float total_channel_util = 0.0;
+		float longterm_channel_util = 0.0;
 		float airtime = 0.0;
 		float longterm_airtime = 0.0;
 		float us_per_byte = 0.0;

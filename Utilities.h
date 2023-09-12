@@ -1181,6 +1181,16 @@ void unlock_rom() {
 	eeprom_erase();
 }
 
+void init_channel_stats() {
+	for (uint16_t ai = 0; ai < DCD_SAMPLES; ai++) { util_samples[ai] = false; }
+	for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { airtime_bins[ai] = 0; }
+	for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { longterm_bins[ai] = 0.0; }
+	local_channel_util = 0.0;
+	total_channel_util = 0.0;
+	airtime = 0.0;
+	longterm_airtime = 0.0;
+}
+
 typedef struct FIFOBuffer
 {
   unsigned char *begin;

@@ -89,8 +89,7 @@ void setup() {
   LoRa.setPins(pin_cs, pin_reset, pin_dio);
   
   #if MCU_VARIANT == MCU_ESP32
-    for (uint16_t ai = 0; ai < DCD_SAMPLES; ai++) { util_samples[ai] = false; }
-    for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { airtime_bins[ai] = 0; }
+    init_channel_stats();
 
     // Check installed transceiver chip and
     // probe boot parameters.
@@ -402,14 +401,19 @@ void flushQueue(void) {
 void add_airtime(uint16_t written) {
   #if MCU_VARIANT == MCU_ESP32
     float ms_cost = ((float)written * us_per_byte)/1000.0;
-    airtime_bins[current_airtime_bin()] += ms_cost;
+    uint16_t cb = current_airtime_bin();
+    uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
+    airtime_bins[cb] += ms_cost;
+    airtime_bins[nb] = 0;
   #endif
 }
 
 void update_airtime() {
   #if MCU_VARIANT == MCU_ESP32
     uint16_t cb = current_airtime_bin();
-    uint16_t pb = cb-1; if (cb < 0) { cb = AIRTIME_BINS-1; }
+    uint16_t pb = cb-1; if (pb < 0) { pb = AIRTIME_BINS-1; }
+    uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
+    airtime_bins[nb] = 0;
     airtime = (float)(airtime_bins[cb]+airtime_bins[pb])/(2.0*AIRTIME_BINLEN_MS);
 
     uint32_t longterm_airtime_sum = 0;
@@ -417,6 +421,12 @@ void update_airtime() {
       longterm_airtime_sum += airtime_bins[bin];
     }
     longterm_airtime = (float)longterm_airtime_sum/(float)AIRTIME_LONGTERM_MS;
+
+    float longterm_channel_util_sum = 0.0;
+    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) {
+      longterm_channel_util_sum += longterm_bins[bin];
+    }
+    longterm_channel_util = (float)longterm_channel_util_sum/(float)AIRTIME_BINS;
   #endif
 }
 
@@ -894,6 +904,8 @@ void checkModemStatus() {
         local_channel_util = (float)util_count / (float)DCD_SAMPLES;
         total_channel_util = local_channel_util + airtime;
         if (total_channel_util > 1.0) total_channel_util = 1.0;
+
+        longterm_bins[current_airtime_bin()] = total_channel_util;
 
         update_airtime();
       }

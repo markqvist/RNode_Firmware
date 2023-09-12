@@ -17,6 +17,7 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "Fonts/Org_01.h"
 #define DISP_W 128
 #define DISP_H 64
 #if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0
@@ -35,6 +36,8 @@
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
 #endif
+
+#define SMALL_FONT &Org_01
 
 Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 
@@ -359,12 +362,46 @@ void draw_disp_area() {
     if (firmware_update_mode) disp_area.drawBitmap(0, p_by, bm_fw_update, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
   } else {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
-      if (device_signatures_ok()) {
-        disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+      if (radio_online && display_diagnostics) {
+        disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK);
+        disp_area.setFont(SMALL_FONT);
+        disp_area.setTextColor(SSD1306_WHITE);
+        disp_area.setTextWrap(false);
+
+        disp_area.setCursor(1, 14);
+        disp_area.print("On");
+        disp_area.setCursor(1+12, 14);
+        disp_area.print("@");
+        disp_area.setCursor(1+12+1+6, 14);
+        disp_area.printf("%.1fKbps", (float)lora_bitrate/1000.0);
+
+        disp_area.setCursor(2, 23);
+        disp_area.print("Channel Load");
+        
+        disp_area.setCursor(11, 33);
+        if (total_channel_util < 0.099) {
+          disp_area.printf("%.1f%%", total_channel_util*100.0);
+        } else {
+          disp_area.printf("%.0f%%", total_channel_util*100.0);
+        }
+        disp_area.drawBitmap(2, 26, bm_hg_low, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+
+        disp_area.setCursor(32+11, 33);
+        if (longterm_channel_util < 0.099) {
+          disp_area.printf("%.1f%%", longterm_channel_util*100.0);
+        } else {
+          disp_area.printf("%.0f%%", longterm_channel_util*100.0);
+        }
+        disp_area.drawBitmap(32+2, 26, bm_hg_high, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+
       } else {
-        disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+        if (device_signatures_ok()) {
+          disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+        } else {
+          disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
+        }
       }
-      
+
       if (!hw_ready || radio_error || !device_firmware_ok()) {
         if (!device_firmware_ok()) {
           disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
@@ -393,30 +430,49 @@ void draw_disp_area() {
           if (not community_fw and disp_page == 0) disp_page = 1;
         }
 
-        if (disp_page == 0) {
-          if (true || device_signatures_ok()) {
-            if (radio_online) {
-              disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+        if (radio_online) {
+          if (display_diagnostics) {
+            disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
+            disp_area.setFont(SMALL_FONT);
+            disp_area.setTextColor(SSD1306_BLACK);
+            disp_area.setTextWrap(false);
+            
+            disp_area.setCursor(1+20+10, 37+3+7-3+1+1);
+            disp_area.print("Airtime");
+            
+            disp_area.setCursor(11, 37+13+10-4+1);
+            if (total_channel_util < 0.099) {
+              disp_area.printf("%.1f%%", airtime*100.0);
             } else {
-              disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+              disp_area.printf("%.0f%%", airtime*100.0);
             }
+            disp_area.drawBitmap(2, 37+6+10-4+1, bm_hg_low, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
+
+            disp_area.setCursor(32+11, 37+13+10-4+1);
+            if (longterm_channel_util < 0.099) {
+              disp_area.printf("%.1f%%", longterm_airtime*100.0);
+            } else {
+              disp_area.printf("%.0f%%", longterm_airtime*100.0);
+            }
+            disp_area.drawBitmap(32+2, 37+6+10-4+1, bm_hg_high, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
+
           } else {
-            disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          }
-        } else if (disp_page == 1) {
-          if (radio_online) {
             disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          } else{
+          }
+        } else {
+          if (disp_page == 0) {
+            if (device_signatures_ok()) {
+              disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            } else {
+              disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            }
+          } else if (disp_page == 1) {
             if (!console_active) {
               disp_area.drawBitmap(0, 37, bm_hwok, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             } else {
               disp_area.drawBitmap(0, 37, bm_console_active, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             }
-          }
-        } else if (disp_page == 2) {
-          if (radio_online) {
-            disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
-          } else{
+          } else if (disp_page == 2) {
             disp_area.drawBitmap(0, 37, bm_version, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             char *v_str = (char*)malloc(3+1);
             sprintf(v_str, "%01d%02d", MAJ_VERS, MIN_VERS);
@@ -435,17 +491,6 @@ void draw_disp_area() {
       }
     } else {
       disp_area.drawBitmap(0, 0, fb, disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
-    }
-    if (display_diagnostics) {
-      disp_area.setCursor(0, 0);
-      disp_area.setTextColor(SSD1306_WHITE, SSD1306_BLACK);
-      disp_area.setTextSize(1);
-      disp_area.printf("B:%.1fK\r\n", (float)lora_bitrate/1000.0);
-      disp_area.printf("U:%.1f%%\r\n", total_channel_util*100.0);
-      disp_area.printf("L:%.1f%%\r\n", local_channel_util*100.0);
-      disp_area.printf("A:%.2f%%\r\n", airtime*100.0);
-      disp_area.printf("a:%.2f%%\r\n", longterm_airtime*100.0);
-      disp_area.printf("C:%d\r\n", current_airtime_bin());
     }
   }
 }
