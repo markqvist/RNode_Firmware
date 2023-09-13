@@ -33,6 +33,8 @@
   #define CMD_DETECT      0x08
   #define CMD_IMPLICIT    0x09
   #define CMD_LEAVE       0x0A
+  #define CMD_ST_ALOCK    0x0B
+  #define CMD_LT_ALOCK    0x0C
   #define CMD_PROMISC     0x0E
   #define CMD_READY       0x0F
 
@@ -40,6 +42,7 @@
   #define CMD_STAT_TX     0x22
   #define CMD_STAT_RSSI   0x23
   #define CMD_STAT_SNR    0x24
+  #define CMD_STAT_CHTM   0x25
   #define CMD_BLINK       0x30
   #define CMD_RANDOM      0x40
 

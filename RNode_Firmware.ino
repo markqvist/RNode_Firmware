@@ -312,6 +312,8 @@ bool startRadio() {
       } else {
         radio_online = true;
 
+        init_channel_stats();
+
         setTXPower();
         setBandwidth();
         setSpreadingFactor();
@@ -395,6 +397,9 @@ void flushQueue(void) {
 
   queue_height = 0;
   queued_bytes = 0;
+  #if MCU_VARIANT == MCU_ESP32
+    update_airtime();
+  #endif
   queue_flushing = false;
 }
 
@@ -427,6 +432,8 @@ void update_airtime() {
       longterm_channel_util_sum += longterm_bins[bin];
     }
     longterm_channel_util = (float)longterm_channel_util_sum/(float)AIRTIME_BINS;
+
+    kiss_indicate_channel_stats();
   #endif
 }
 
@@ -650,6 +657,52 @@ void serialCallback(uint8_t sbyte) {
         startRadio();
         kiss_indicate_radiostate();
       }
+    } else if (command == CMD_ST_ALOCK) {
+      if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 2) {
+          uint16_t at = (uint16_t)cmdbuf[0] << 8 | (uint16_t)cmdbuf[1];
+
+          if (at == 0) {
+            st_airtime_limit = 0.0;
+          } else {
+            st_airtime_limit = (float)at/(100.0*100.0);
+            if (st_airtime_limit >= 1.0) { st_airtime_limit = 0.0; }
+          }
+          kiss_indicate_st_alock();
+        }
+    } else if (command == CMD_LT_ALOCK) {
+      if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 2) {
+          uint16_t at = (uint16_t)cmdbuf[0] << 8 | (uint16_t)cmdbuf[1];
+
+          if (at == 0) {
+            lt_airtime_limit = 0.0;
+          } else {
+            lt_airtime_limit = (float)at/(100.0*100.0);
+            if (lt_airtime_limit >= 1.0) { lt_airtime_limit = 0.0; }
+          }
+          kiss_indicate_lt_alock();
+        }
     } else if (command == CMD_STAT_RX) {
       kiss_indicate_stat_rx();
     } else if (command == CMD_STAT_TX) {
@@ -885,7 +938,11 @@ void updateModemStatus() {
   if (dcd_led) {
     led_rx_on();
   } else {
-    led_rx_off();
+    if (airtime_lock) {
+      led_indicate_airtime_lock();
+    } else {
+      led_rx_off();
+    }
   }
 }
 
@@ -905,7 +962,10 @@ void checkModemStatus() {
         total_channel_util = local_channel_util + airtime;
         if (total_channel_util > 1.0) total_channel_util = 1.0;
 
-        longterm_bins[current_airtime_bin()] = total_channel_util;
+        int16_t cb = current_airtime_bin();
+        uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
+        if (total_channel_util > longterm_bins[cb]) longterm_bins[cb] = total_channel_util;
+        longterm_bins[nb] = 0.0;
 
         update_airtime();
       }
@@ -1047,23 +1107,29 @@ void loop() {
         kiss_indicate_stat_snr();
         kiss_write_packet();
       }
+
+      airtime_lock = false;
+      if (st_airtime_limit != 0.0 && airtime >= st_airtime_limit) airtime_lock = true;
+      if (lt_airtime_limit != 0.0 && longterm_airtime >= lt_airtime_limit) airtime_lock = true;
     #endif
 
-    if (queue_height > 0) {
-      if (!dcd_waiting) updateModemStatus();
+    if (!airtime_lock) {
+      if (queue_height > 0) {
+        if (!dcd_waiting) updateModemStatus();
 
-      if (!dcd && !dcd_led) {
-        if (dcd_waiting) delay(lora_rx_turnaround_ms);
+        if (!dcd && !dcd_led) {
+          if (dcd_waiting) delay(lora_rx_turnaround_ms);
 
-        updateModemStatus();
+          updateModemStatus();
 
-        if (!dcd) {
-          dcd_waiting = false;
-          flushQueue();
+          if (!dcd) {
+            dcd_waiting = false;
+            flushQueue();
+          }
+
+        } else {
+          dcd_waiting = true;
         }
-
-      } else {
-        dcd_waiting = true;
       }
     }
   

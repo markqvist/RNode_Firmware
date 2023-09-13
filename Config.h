@@ -359,6 +359,9 @@
 		float us_per_byte = 0.0;
 		#define current_airtime_bin(void) (millis()%AIRTIME_LONGTERM_MS)/AIRTIME_BINLEN_MS
 	#endif
+	float st_airtime_limit = 0.0;
+	float lt_airtime_limit = 0.0;
+	bool airtime_lock = false;
 
 	bool stat_signal_detected = false;
 	bool stat_signal_synced   = false;

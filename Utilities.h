@@ -218,6 +218,13 @@ void led_indicate_error(int cycles) {
 	#endif
 }
 
+// LED Indication: Airtime Lock
+void led_indicate_airtime_lock() {
+	#if HAS_NP == true
+		npset(32,0,2);
+	#endif
+}
+
 // LED Indication: Boot Error
 void led_indicate_boot_error() {
 	#if HAS_NP == true
@@ -685,6 +692,44 @@ void kiss_indicate_frequency() {
 	escaped_serial_write(lora_freq>>8);
 	escaped_serial_write(lora_freq);
 	serial_write(FEND);
+}
+
+void kiss_indicate_st_alock() {
+	uint16_t at = (uint16_t)(st_airtime_limit*100*100);
+	serial_write(FEND);
+	serial_write(CMD_ST_ALOCK);
+	escaped_serial_write(at>>8);
+	escaped_serial_write(at);
+	serial_write(FEND);
+}
+
+void kiss_indicate_lt_alock() {
+	uint16_t at = (uint16_t)(lt_airtime_limit*100*100);
+	serial_write(FEND);
+	serial_write(CMD_LT_ALOCK);
+	escaped_serial_write(at>>8);
+	escaped_serial_write(at);
+	serial_write(FEND);
+}
+
+void kiss_indicate_channel_stats() {
+	#if MCU_VARIANT == MCU_ESP32
+		uint16_t ats = (uint16_t)(airtime*100*100);
+		uint16_t atl = (uint16_t)(longterm_airtime*100*100);
+		uint16_t cls = (uint16_t)(total_channel_util*100*100);
+		uint16_t cll = (uint16_t)(longterm_channel_util*100*100);
+		serial_write(FEND);
+		serial_write(CMD_STAT_CHTM);
+		escaped_serial_write(ats>>8);
+		escaped_serial_write(ats);
+		escaped_serial_write(atl>>8);
+		escaped_serial_write(atl);
+		escaped_serial_write(cls>>8);
+		escaped_serial_write(cls);
+		escaped_serial_write(cll>>8);
+		escaped_serial_write(cll);
+		serial_write(FEND);
+	#endif
 }
 
 void kiss_indicate_btpin() {
@@ -1182,13 +1227,15 @@ void unlock_rom() {
 }
 
 void init_channel_stats() {
-	for (uint16_t ai = 0; ai < DCD_SAMPLES; ai++) { util_samples[ai] = false; }
-	for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { airtime_bins[ai] = 0; }
-	for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { longterm_bins[ai] = 0.0; }
-	local_channel_util = 0.0;
-	total_channel_util = 0.0;
-	airtime = 0.0;
-	longterm_airtime = 0.0;
+	#if MCU_VARIANT == MCU_ESP32
+		for (uint16_t ai = 0; ai < DCD_SAMPLES; ai++) { util_samples[ai] = false; }
+		for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { airtime_bins[ai] = 0; }
+		for (uint16_t ai = 0; ai < AIRTIME_BINS; ai++) { longterm_bins[ai] = 0.0; }
+		local_channel_util = 0.0;
+		total_channel_util = 0.0;
+		airtime = 0.0;
+		longterm_airtime = 0.0;
+	#endif
 }
 
 typedef struct FIFOBuffer
