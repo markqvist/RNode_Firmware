@@ -363,36 +363,66 @@ void draw_disp_area() {
   } else {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
       if (radio_online && display_diagnostics) {
-        disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK);
-        disp_area.setFont(SMALL_FONT);
-        disp_area.setTextColor(SSD1306_WHITE);
-        disp_area.setTextWrap(false);
+        disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK); disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
+        disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE);
 
-        disp_area.setCursor(1, 14);
+        disp_area.setCursor(1, 13);
         disp_area.print("On");
-        disp_area.setCursor(1+12, 14);
+        disp_area.setCursor(13, 13);
         disp_area.print("@");
-        disp_area.setCursor(1+12+1+6, 14);
+        disp_area.setCursor(20, 13);
         disp_area.printf("%.1fKbps", (float)lora_bitrate/1000.0);
 
-        disp_area.setCursor(2, 23);
-        disp_area.print("Channel Load");
+        //disp_area.setCursor(31, 23-1);
+        disp_area.setCursor(2, 23-1);
+        disp_area.print("Airtime:");
         
-        disp_area.setCursor(11, 33);
+        disp_area.setCursor(11, 33-1);
         if (total_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", total_channel_util*100.0);
+          disp_area.printf("%.1f%%", airtime*100.0);
+        } else {
+          //disp_area.printf("%.0f%%", total_channel_util*100.0);
+          disp_area.printf("%.0f%%", airtime*100.0);
+        }
+        disp_area.drawBitmap(2, 26-1, bm_hg_low, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+
+        disp_area.setCursor(32+11, 33-1);
+        if (longterm_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", longterm_channel_util*100.0);
+          disp_area.printf("%.1f%%", longterm_airtime*100.0);
+        } else {
+          //disp_area.printf("%.0f%%", longterm_channel_util*100.0);
+          disp_area.printf("%.0f%%", longterm_airtime*100.0);
+        }
+        disp_area.drawBitmap(32+2, 26-1, bm_hg_high, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+
+
+        disp_area.setTextColor(SSD1306_BLACK);
+        disp_area.setCursor(2, 46);
+        disp_area.print("Channel");
+        disp_area.setCursor(38, 46);
+        disp_area.print("Load:");
+        
+        disp_area.setCursor(11, 57);
+        if (total_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", airtime*100.0);
           disp_area.printf("%.1f%%", total_channel_util*100.0);
         } else {
+          //disp_area.printf("%.0f%%", airtime*100.0);
           disp_area.printf("%.0f%%", total_channel_util*100.0);
         }
-        disp_area.drawBitmap(2, 26, bm_hg_low, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+        disp_area.drawBitmap(2, 50, bm_hg_low, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
 
-        disp_area.setCursor(32+11, 33);
+        disp_area.setCursor(32+11, 57);
         if (longterm_channel_util < 0.099) {
+          //disp_area.printf("%.1f%%", longterm_airtime*100.0);
           disp_area.printf("%.1f%%", longterm_channel_util*100.0);
         } else {
+          //disp_area.printf("%.0f%%", longterm_airtime*100.0);
           disp_area.printf("%.0f%%", longterm_channel_util*100.0);
         }
-        disp_area.drawBitmap(32+2, 26, bm_hg_high, 5, 9, SSD1306_WHITE, SSD1306_BLACK);
+        disp_area.drawBitmap(32+2, 50, bm_hg_high, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
 
       } else {
         if (device_signatures_ok()) {
@@ -431,32 +461,7 @@ void draw_disp_area() {
         }
 
         if (radio_online) {
-          if (display_diagnostics) {
-            disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
-            disp_area.setFont(SMALL_FONT);
-            disp_area.setTextColor(SSD1306_BLACK);
-            disp_area.setTextWrap(false);
-            
-            disp_area.setCursor(1+20+10, 37+3+7-3+1+1);
-            disp_area.print("Airtime");
-            
-            disp_area.setCursor(11, 37+13+10-4+1);
-            if (total_channel_util < 0.099) {
-              disp_area.printf("%.1f%%", airtime*100.0);
-            } else {
-              disp_area.printf("%.0f%%", airtime*100.0);
-            }
-            disp_area.drawBitmap(2, 37+6+10-4+1, bm_hg_low, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
-
-            disp_area.setCursor(32+11, 37+13+10-4+1);
-            if (longterm_channel_util < 0.099) {
-              disp_area.printf("%.1f%%", longterm_airtime*100.0);
-            } else {
-              disp_area.printf("%.0f%%", longterm_airtime*100.0);
-            }
-            disp_area.drawBitmap(32+2, 37+6+10-4+1, bm_hg_high, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
-
-          } else {
+          if (!display_diagnostics) {
             disp_area.drawBitmap(0, 37, bm_online, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           }
         } else {
