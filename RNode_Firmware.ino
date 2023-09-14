@@ -318,6 +318,7 @@ bool startRadio() {
         setBandwidth();
         setSpreadingFactor();
         setCodingRate();
+        setPreamble();
         getFrequency();
 
         LoRa.enableCrc();
@@ -403,12 +404,17 @@ void flushQueue(void) {
   queue_flushing = false;
 }
 
+#define PHY_HEADER_LORA_SYMBOLS 8
 void add_airtime(uint16_t written) {
   #if MCU_VARIANT == MCU_ESP32
-    float ms_cost = ((float)written * us_per_byte)/1000.0;
+    float packet_cost_ms = 0.0;
+    float payload_cost_ms = ((float)written * lora_us_per_byte)/1000.0;
+    packet_cost_ms += payload_cost_ms;
+    packet_cost_ms += (lora_preamble_symbols+4.25)*lora_symbol_time_ms;
+    packet_cost_ms += PHY_HEADER_LORA_SYMBOLS * lora_symbol_time_ms;
     uint16_t cb = current_airtime_bin();
     uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
-    airtime_bins[cb] += ms_cost;
+    airtime_bins[cb] += packet_cost_ms;
     airtime_bins[nb] = 0;
   #endif
 }

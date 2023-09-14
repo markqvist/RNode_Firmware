@@ -290,18 +290,23 @@
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
 	const int lora_rx_turnaround_ms = 50;
+	const int csma_slot_ms = lora_rx_turnaround_ms;
 
 	// SX1276 RSSI offset to get dBm value from
 	// packet RSSI register
 	const int  rssi_offset = 157;
 
 	// Default LoRa settings
-	int  lora_sf   	   = 0;
-	int  lora_cr       = 5;
-	int  lora_txp      = 0xFF;
-	uint32_t lora_bw   = 0;
-	uint32_t lora_freq = 0;
-	uint32_t lora_bitrate = 0;
+	int  lora_sf   	           = 0;
+	int  lora_cr               = 5;
+	int  lora_txp              = 0xFF;
+	uint32_t lora_bw           = 0;
+	uint32_t lora_freq         = 0;
+	uint32_t lora_bitrate      = 0;
+	long lora_preamble_symbols = 6;
+	float lora_symbol_time_ms  = 0.0;
+	float lora_symbol_rate     = 0.0;
+	float lora_us_per_byte     = 0.0;
 
 	// Operational variables
 	bool radio_locked  = true;
@@ -356,7 +361,6 @@
 		float longterm_channel_util = 0.0;
 		float airtime = 0.0;
 		float longterm_airtime = 0.0;
-		float us_per_byte = 0.0;
 		#define current_airtime_bin(void) (millis()%AIRTIME_LONGTERM_MS)/AIRTIME_BINLEN_MS
 	#endif
 	float st_airtime_limit = 0.0;
