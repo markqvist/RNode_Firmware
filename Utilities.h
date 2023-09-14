@@ -912,6 +912,7 @@ void updateBitrate() {
 			lora_symbol_time_ms = (1.0/lora_symbol_rate)*1000.0;
 			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
 			lora_us_per_byte = 1000000.0/((float)lora_bitrate/8.0);
+			csma_slot_ms = lora_symbol_time_ms*10;
 		} else {
 			lora_bitrate = 0;
 		}

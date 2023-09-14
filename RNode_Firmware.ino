@@ -373,6 +373,7 @@ void flushQueue(void) {
   if (!queue_flushing) {
     queue_flushing = true;
 
+    led_tx_on();
     uint16_t processed = 0;
 
     #if MCU_VARIANT == MCU_ESP32
@@ -394,6 +395,9 @@ void flushQueue(void) {
         processed++;
       }
     }
+
+    lora_receive();
+    led_tx_off();
   }
 
   queue_height = 0;
@@ -439,6 +443,7 @@ void update_airtime() {
     }
     longterm_channel_util = (float)longterm_channel_util_sum/(float)AIRTIME_BINS;
 
+    update_csma_p();
     kiss_indicate_channel_stats();
   #endif
 }
@@ -446,7 +451,6 @@ void update_airtime() {
 void transmit(uint16_t size) {
   if (radio_online) {
     if (!promisc) {
-      led_tx_on();
       uint16_t  written = 0;
       uint8_t header  = random(256) & 0xF0;
 
@@ -471,9 +475,6 @@ void transmit(uint16_t size) {
       }
 
       LoRa.endPacket(); add_airtime(written);
-      led_tx_off();
-
-      lora_receive();
     } else {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
@@ -500,9 +501,6 @@ void transmit(uint16_t size) {
         written++;
       }
       LoRa.endPacket(); add_airtime(written);
-      led_tx_off();
-
-      lora_receive();
     }
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
@@ -934,7 +932,7 @@ void updateModemStatus() {
     }
   } else {
     if (dcd_count > 0) {
-      dcd_count--;
+      dcd_count = 0;
     } else {
       dcd_led = false;
     }
@@ -1099,6 +1097,13 @@ void validate_status() {
   }
 }
 
+#define _e 2.71828183
+#define _S 10.0
+float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
+void update_csma_p() {
+  csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime)))*255.0);
+}
+
 void loop() {
   if (radio_online) {
     checkModemStatus();
@@ -1121,21 +1126,41 @@ void loop() {
 
     if (!airtime_lock) {
       if (queue_height > 0) {
-        if (!dcd_waiting) updateModemStatus();
+        #if MCU_VARIANT == MCU_ESP32
 
-        if (!dcd && !dcd_led) {
-          if (dcd_waiting) delay(lora_rx_turnaround_ms);
+          if (dcd_waiting && (millis() >= dcd_wait_until)) { dcd_waiting = false; }
+          if (!dcd_waiting) {
+            updateModemStatus();
+            long check_time = millis();
 
-          updateModemStatus();
-
-          if (!dcd) {
-            dcd_waiting = false;
-            flushQueue();
+            if (!dcd) {
+              uint8_t csma_r = (uint8_t)random(256);
+              if (csma_p >= csma_r) {
+                flushQueue();
+              } else {
+                dcd_waiting = true;
+                dcd_wait_until = check_time+csma_slot_ms;
+              }
+            }
           }
+          
+        #else
+          if (!dcd_waiting) updateModemStatus();
 
-        } else {
-          dcd_waiting = true;
-        }
+          if (!dcd && !dcd_led) {
+            if (dcd_waiting) delay(lora_rx_turnaround_ms);
+
+            updateModemStatus();
+
+            if (!dcd) {
+              dcd_waiting = false;
+              flushQueue();
+            }
+
+          } else {
+            dcd_waiting = true;
+          }
+        #endif
       }
     }
   

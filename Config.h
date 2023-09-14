@@ -290,7 +290,10 @@
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
 	const int lora_rx_turnaround_ms = 50;
-	const int csma_slot_ms = lora_rx_turnaround_ms;
+	uint8_t csma_p = 0;
+	float csma_p_min = 0.1;
+	float csma_p_max = 0.8;
+	int csma_slot_ms = lora_rx_turnaround_ms;
 
 	// SX1276 RSSI offset to get dBm value from
 	// packet RSSI register
@@ -311,11 +314,11 @@
 	// Operational variables
 	bool radio_locked  = true;
 	bool radio_online  = false;
-    bool community_fw  = true;
+	bool community_fw  = true;
 	bool hw_ready      = false;
-    bool radio_error   = false;
-    bool disp_ready    = false;
-    bool pmu_ready     = false;
+	bool radio_error   = false;
+	bool disp_ready    = false;
+	bool pmu_ready     = false;
 	bool promisc       = false;
 	bool implicit      = false;
 	uint8_t implicit_l = 0;
@@ -370,11 +373,12 @@
 	bool stat_signal_detected = false;
 	bool stat_signal_synced   = false;
 	bool stat_rx_ongoing      = false;
-	bool dcd				  = false;
+	bool dcd                  = false;
 	bool dcd_led              = false;
 	bool dcd_waiting          = false;
+	long dcd_wait_until       = 0;
 	uint16_t dcd_count        = 0;
-	uint16_t dcd_threshold    = 15;
+	uint16_t dcd_threshold    = 6;
 
 	uint32_t status_interval_ms = STATUS_INTERVAL_MS;
 	uint32_t last_status_update = 0;
@@ -396,7 +400,7 @@
     float battery_percent = 0.0;
     uint8_t battery_state = 0x00;
     uint8_t display_intensity = 0xFF;
-    bool display_diagnostics = true;
+    bool display_diagnostics = true;    
     bool device_init_done = false;
     bool eeprom_ok = false;
     bool firmware_update_mode = false;
