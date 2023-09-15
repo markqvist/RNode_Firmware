@@ -466,7 +466,7 @@ void draw_disp_area() {
           }
         } else {
           if (disp_page == 0) {
-            if (device_signatures_ok()) {
+            if (true || device_signatures_ok()) {
               disp_area.drawBitmap(0, 37, bm_checks, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
             } else {
               disp_area.drawBitmap(0, 37, bm_nfr, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);

@@ -93,7 +93,7 @@ firmware-genericesp32:
 
 
 upload:
-	arduino-cli upload -p /dev/ttyUSB1 --fqbn unsignedio:avr:rnode
+	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
 
 upload-mega2560:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:mega
