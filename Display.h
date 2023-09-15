@@ -366,11 +366,11 @@ void draw_disp_area() {
         disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK); disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
         disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE);
 
-        disp_area.setCursor(1, 13);
+        disp_area.setCursor(2, 13);
         disp_area.print("On");
-        disp_area.setCursor(13, 13);
+        disp_area.setCursor(14, 13);
         disp_area.print("@");
-        disp_area.setCursor(20, 13);
+        disp_area.setCursor(21, 13);
         disp_area.printf("%.1fKbps", (float)lora_bitrate/1000.0);
 
         //disp_area.setCursor(31, 23-1);
