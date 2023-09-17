@@ -732,6 +732,29 @@ void kiss_indicate_channel_stats() {
 	#endif
 }
 
+void kiss_indicate_phy_stats() {
+	#if MCU_VARIANT == MCU_ESP32
+		uint16_t lst = (uint16_t)(lora_symbol_time_ms*1000);
+		uint16_t lsr = (uint16_t)(lora_symbol_rate);
+		uint16_t prs = (uint16_t)(lora_preamble_symbols+4);
+		uint16_t prt = (uint16_t)((lora_preamble_symbols+4)*lora_symbol_time_ms);
+		uint16_t cst = (uint16_t)(csma_slot_ms);
+		serial_write(FEND);
+		serial_write(CMD_STAT_PHYPRM);
+		escaped_serial_write(lst>>8);
+		escaped_serial_write(lst);
+		escaped_serial_write(lsr>>8);
+		escaped_serial_write(lsr);
+		escaped_serial_write(prs>>8);
+		escaped_serial_write(prs);
+		escaped_serial_write(prt>>8);
+		escaped_serial_write(prt);
+		escaped_serial_write(cst>>8);
+		escaped_serial_write(cst);
+		serial_write(FEND);
+	#endif
+}
+
 void kiss_indicate_btpin() {
 	#if HAS_BLUETOOTH
 		serial_write(FEND);
@@ -905,6 +928,11 @@ inline uint8_t packetSequence(uint8_t header) {
 	return header >> 4;
 }
 
+void setPreamble() {
+	if (radio_online) LoRa.setPreambleLength(lora_preamble_symbols);
+	kiss_indicate_phy_stats();
+}
+
 void updateBitrate() {
 	#if MCU_VARIANT == MCU_ESP32
 		if (radio_online) {
@@ -912,7 +940,15 @@ void updateBitrate() {
 			lora_symbol_time_ms = (1.0/lora_symbol_rate)*1000.0;
 			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
 			lora_us_per_byte = 1000000.0/((float)lora_bitrate/8.0);
-			csma_slot_ms = lora_symbol_time_ms*10;
+			// csma_slot_ms = lora_symbol_time_ms*10;
+			float target_preamble_symbols = (LORA_PREAMBLE_TARGET_MS/lora_symbol_time_ms)-LORA_PREAMBLE_SYMBOLS_HW;
+			if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) {
+				target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN;
+			} else {
+				target_preamble_symbols = ceil(target_preamble_symbols);
+			}
+			lora_preamble_symbols = (long)target_preamble_symbols;
+			setPreamble();
 		} else {
 			lora_bitrate = 0;
 		}
@@ -926,11 +962,6 @@ void setSpreadingFactor() {
 
 void setCodingRate() {
 	if (radio_online) LoRa.setCodingRate4(lora_cr);
-	updateBitrate();
-}
-
-void setPreamble() {
-	if (radio_online) LoRa.setPreambleLength(lora_preamble_symbols);
 	updateBitrate();
 }
 

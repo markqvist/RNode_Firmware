@@ -289,17 +289,24 @@
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
-	const int lora_rx_turnaround_ms = 50;
-	uint8_t csma_p = 0;
-	float csma_p_min = 0.1;
-	float csma_p_max = 0.8;
-	int csma_slot_ms = lora_rx_turnaround_ms;
 
 	// SX1276 RSSI offset to get dBm value from
 	// packet RSSI register
 	const int  rssi_offset = 157;
 
 	// Default LoRa settings
+	const int lora_rx_turnaround_ms = 66;
+	const int lora_post_tx_yield_slots = 6;
+	uint32_t post_tx_yield_timeout = 0;
+	#define LORA_PREAMBLE_SYMBOLS_HW  4
+	#define LORA_PREAMBLE_SYMBOLS_MIN 6
+	#define LORA_PREAMBLE_TARGET_MS   15
+	#define LORA_CAD_SYMBOLS 3
+	int csma_slot_ms = 50;
+	float csma_p_min = 0.1;
+	float csma_p_max = 0.8;
+	uint8_t csma_p = 0;
+
 	int  lora_sf   	           = 0;
 	int  lora_cr               = 5;
 	int  lora_txp              = 0xFF;
@@ -370,18 +377,19 @@
 	float lt_airtime_limit = 0.0;
 	bool airtime_lock = false;
 
-	bool stat_signal_detected = false;
-	bool stat_signal_synced   = false;
-	bool stat_rx_ongoing      = false;
-	bool dcd                  = false;
-	bool dcd_led              = false;
-	bool dcd_waiting          = false;
-	long dcd_wait_until       = 0;
-	uint16_t dcd_count        = 0;
-	uint16_t dcd_threshold    = 6;
+	bool stat_signal_detected   = false;
+	bool stat_signal_synced     = false;
+	bool stat_rx_ongoing        = false;
+	bool dcd                    = false;
+	bool dcd_led                = false;
+	bool dcd_waiting            = false;
+	long dcd_wait_until         = 0;
+	uint16_t dcd_count          = 0;
+	uint16_t dcd_threshold      = 2;
 
 	uint32_t status_interval_ms = STATUS_INTERVAL_MS;
 	uint32_t last_status_update = 0;
+	uint32_t last_dcd = 0;
 
 	// Status flags
 	const uint8_t SIG_DETECT = 0x01;

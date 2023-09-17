@@ -318,7 +318,6 @@ bool startRadio() {
         setBandwidth();
         setSpreadingFactor();
         setCodingRate();
-        setPreamble();
         getFrequency();
 
         LoRa.enableCrc();
@@ -398,6 +397,7 @@ void flushQueue(void) {
 
     lora_receive();
     led_tx_off();
+    post_tx_yield_timeout = millis()+(lora_post_tx_yield_slots*csma_slot_ms);
   }
 
   queue_height = 0;
@@ -925,20 +925,30 @@ void updateModemStatus() {
   if (status & RX_ONGOING == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
 
   if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
-    if (dcd_count < dcd_threshold) {
-      dcd_count++;
-      dcd = true;
-    } else {
-      dcd = true;
-      dcd_led = true;
+    if (stat_rx_ongoing) {
+      if (dcd_count < dcd_threshold) {
+        dcd_count++;
+      } else {
+        last_dcd = last_status_update;
+        dcd_led = true;
+        dcd = true;
+      }
     }
   } else {
-    if (dcd_count > 0) {
-      dcd_count = 0;
-    } else {
+    #define DCD_LED_STEP_D 3
+    if (dcd_count == 0) {
       dcd_led = false;
+    } else if (dcd_count > DCD_LED_STEP_D) {
+      dcd_count -= DCD_LED_STEP_D;
+    } else {
+      dcd_count = 0;
     }
-    dcd = false;
+
+    if (last_status_update > last_dcd+csma_slot_ms) {
+      dcd = false;
+      dcd_led = false;
+      dcd_count = 0;
+    }
   }
 
   if (dcd_led) {
@@ -1110,8 +1120,6 @@ void validate_status() {
 
 void loop() {
   if (radio_online) {
-    checkModemStatus();
-
     #if MCU_VARIANT == MCU_ESP32
       if (packet_ready) {
         portENTER_CRITICAL(&update_lock);
@@ -1128,22 +1136,26 @@ void loop() {
       if (lt_airtime_limit != 0.0 && longterm_airtime >= lt_airtime_limit) airtime_lock = true;
     #endif
 
+    checkModemStatus();
     if (!airtime_lock) {
       if (queue_height > 0) {
         #if MCU_VARIANT == MCU_ESP32
+          long check_time = millis();
+          if (check_time > post_tx_yield_timeout) {
+            if (dcd_waiting && (check_time >= dcd_wait_until)) { dcd_waiting = false; }
+            if (!dcd_waiting) {
+              for (uint8_t dcd_i = 0; dcd_i < dcd_threshold*2; dcd_i++) {
+                delay(STATUS_INTERVAL_MS); updateModemStatus();
+              }
 
-          if (dcd_waiting && (millis() >= dcd_wait_until)) { dcd_waiting = false; }
-          if (!dcd_waiting) {
-            updateModemStatus();
-            long check_time = millis();
-
-            if (!dcd) {
-              uint8_t csma_r = (uint8_t)random(256);
-              if (csma_p >= csma_r) {
-                flushQueue();
-              } else {
-                dcd_waiting = true;
-                dcd_wait_until = check_time+csma_slot_ms;
+              if (!dcd) {
+                uint8_t csma_r = (uint8_t)random(256);
+                if (csma_p >= csma_r) {
+                  flushQueue();
+                } else {
+                  dcd_waiting = true;
+                  dcd_wait_until = millis()+csma_slot_ms;
+                }
               }
             }
           }
