@@ -62,8 +62,6 @@ It's easy to create your own RNodes from one of the supported development boards
 
 <img src="Documentation/images/devboards_1.webp" width="100%"/>
 
-<center><i>What does all these devices have in common? They are all RNodes!</i></center><br/><br/>
-
 The RNode Firmware supports the following boards:
 
 - Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
