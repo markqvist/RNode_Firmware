@@ -58,6 +58,12 @@ The RNode system has been designed to allow reliable systems for basic human com
 While **speeds are lower** than WiFi, typical communication **ranges are many times higher**. Several kilometers can be acheived with usable bitrates, even in urban areas, and over **100 kilometers** can be achieved in line-of-sight conditions.
 
 ## Supported Boards & Devices
+It's easy to create your own RNodes from one of the supported development boards and devices. If a device or board you want to use is not yet supported, you are welcome to join the effort and help creating a board definition and pin mapping for it!
+
+<img src="Documentation/images/devboards_1.webp" width="100%"/>
+
+<center><i>What does all these devices have in common? They are all RNodes!</i></center><br/><br/>
+
 The RNode Firmware supports the following boards:
 
 - Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
@@ -71,12 +77,6 @@ The RNode Firmware supports the following boards:
 - Homebrew RNodes based on ATmega2560 boards
 - Homebrew RNodes based on Adafruit Feather ESP32 boards
 - Homebrew RNodes based on generic ESP32 boards
-
-<img src="Documentation/images/devboards_1.webp" width="100%"/>
-
-<center><i>What does all these devices have in common? They are all RNodes!</i></center><br/><br/>
-
-If a device or board you want to use is not yet supported, you are welcome to join the effort and help creating a board definition and pin mapping for it!
 
 ## Supported Transceiver Modules
 The RNode Firmware supports all transceiver modules based on **Semtech SX1276** or **Semtech SX1278** chips, that have an **SPI interface** and expose the **DIO_0** interrupt pin from the chip.
