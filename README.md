@@ -22,6 +22,7 @@ The latest release, installable through `rnodeconf`, is version `1.64`. This rel
 - Added channel load and airtime statistics to display output
 - Added ability to configure airtime limits
 - Added channel statistics, CSMA paramter, live channel load and airtime statistics to host reporting over USB, serial and Bluetooth
+- Added ability to set custom OLED display address using `rnodeconf`
 - Updated the on-board RNode Bootstrap Console with the latest versions of information, software, guides and tools for replicating the RNode desing, creating more RNodes, and setting up networks
 
 You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.64`. Get it by updating the `rns` package to at least version `0.5.9`.
