@@ -1212,6 +1212,10 @@ void di_conf_save(uint8_t dint) {
 	eeprom_update(eeprom_addr(ADDR_CONF_DINT), dint);
 }
 
+void da_conf_save(uint8_t dadr) {
+	eeprom_update(eeprom_addr(ADDR_CONF_DADR), dadr);
+}
+
 bool eeprom_have_conf() {
 	if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
 		return true;

@@ -408,6 +408,7 @@
     float battery_percent = 0.0;
     uint8_t battery_state = 0x00;
     uint8_t display_intensity = 0xFF;
+    uint8_t display_addr = 0xFF;
     bool display_diagnostics = true;    
     bool device_init_done = false;
     bool eeprom_ok = false;

@@ -25,16 +25,20 @@
   #define DISP_ADDR 0x3C
 #elif BOARD_MODEL == BOARD_TBEAM
   #define DISP_RST 13
-  #define DISP_ADDR 0x3D
-  // #define DISP_ADDR 0x3C
+  #define DISP_ADDR 0x3C
+  #define DISP_CUSTOM_ADDR true
 #elif BOARD_MODEL == BOARD_HELTEC32_V2 || BOARD_MODEL == BOARD_LORA32_V1_0
   #define DISP_RST 16
   #define DISP_ADDR 0x3C
   #define SCL_OLED 15
   #define SDA_OLED 4
+#elif BOARD_MODEL == BOARD_RNODE_NG_21
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3C
 #else
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
+  #define DISP_CUSTOM_ADDR true
 #endif
 
 #define SMALL_FONT &Org_01
@@ -104,8 +108,16 @@ bool display_init() {
       digitalWrite(pin_display_en, HIGH);
       Wire.begin(SDA_OLED, SCL_OLED);
     #endif
+
+    #if DISP_CUSTOM_ADDR == true
+      uint8_t display_address = EEPROM.read(eeprom_addr(ADDR_CONF_DADR));
+      if (display_address == 0xFF) display_address = DISP_ADDR;
+    #else
+      uint8_t display_address = DISP_ADDR;
+    #endif
+
     
-    if(!display.begin(SSD1306_SWITCHCAPVCC, DISP_ADDR)) {
+    if(!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
       return false;
     } else {
       set_contrast(&display, display_contrast);

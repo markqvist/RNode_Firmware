@@ -63,6 +63,7 @@
 	#define ADDR_CONF_BT   0xB0
 	#define ADDR_CONF_DSET 0xB1
 	#define ADDR_CONF_DINT 0xB2
+	#define ADDR_CONF_DADR 0xB3
 
 	#define INFO_LOCK_BYTE 0x73
 	#define CONF_OK_BYTE   0x73

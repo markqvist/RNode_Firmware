@@ -52,6 +52,7 @@
   #define CMD_FB_WRITE    0x43
   #define CMD_FB_READL    0x44
   #define CMD_DISP_INT    0x45
+  #define CMD_DISP_ADDR   0x63
   #define CMD_BT_CTRL     0x46
   #define CMD_BT_PIN      0x62
 

@@ -899,6 +899,21 @@ void serialCallback(uint8_t sbyte) {
         }
 
       #endif
+    } else if (command == CMD_DISP_ADDR) {
+      #if HAS_DISPLAY
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            display_addr = sbyte;
+            da_conf_save(display_addr);
+        }
+
+      #endif
     }
   }
 }
