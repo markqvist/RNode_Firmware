@@ -14,11 +14,17 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.61`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.64`. This release brings the following changes:
 
-- Fixed a bug that caused display initialisation to fail on some boards
+- Implemented a new channel-adaptive CSMA scheme for better channel access in heavily utilised channels
+- Optimised preamble and LoRa PHY parameters according to configured channel parameters
+- Added channel utilisation and airtime accounting and statistics
+- Added channel load and airtime statistics to display output
+- Added ability to configure airtime limits
+- Added channel statistics, CSMA paramter, live channel load and airtime statistics to host reporting over USB, serial and Bluetooth
+- Updated the on-board RNode Bootstrap Console with the latest versions of information, software, guides and tools for replicating the RNode desing, creating more RNodes, and setting up networks
 
-You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.61`. Get it by updating the `rns` package to at least version `0.5.2`.
+You must have at least version `2.1.2` of `rnodeconf` installed to update the RNode Firmware to version `1.64`. Get it by updating the `rns` package to at least version `0.5.9`.
 
 ## A Self-Replicating System
 
