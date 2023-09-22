@@ -43,7 +43,7 @@ console-site:
 spiffs: console-site spiffs-image 
 
 spiffs-image:
-	python Release/esptool/spiffsgen.py 2031616 ./Console/build Release/console_image.bin
+	python Release/esptool/spiffsgen.py 1966080 ./Console/build Release/console_image.bin
 
 upload-spiffs:
 	@echo Deploying SPIFFS image...
