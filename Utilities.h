@@ -755,6 +755,16 @@ void kiss_indicate_phy_stats() {
 	#endif
 }
 
+void kiss_indicate_battery() {
+	#if MCU_VARIANT == MCU_ESP32
+		serial_write(FEND);
+		serial_write(CMD_STAT_BAT);
+		escaped_serial_write(battery_state);
+		escaped_serial_write((uint8_t)int(battery_percent));
+		serial_write(FEND);
+	#endif
+}
+
 void kiss_indicate_btpin() {
 	#if HAS_BLUETOOTH
 		serial_write(FEND);

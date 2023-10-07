@@ -32,6 +32,9 @@
 uint32_t last_pmu_update = 0;
 uint8_t pmu_target_pps = 1;
 int pmu_update_interval = 1000/pmu_target_pps;
+uint8_t pmu_rc = 0;
+#define PMU_R_INTERVAL 5
+void kiss_indicate_battery();
 
 void measure_battery() {
   #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1
@@ -81,6 +84,8 @@ void measure_battery() {
           battery_state = BATTERY_STATE_DISCHARGING;
         #endif
       }
+
+
 
       // if (bt_state == BT_STATE_CONNECTED) {
       //   SerialBT.printf("Bus voltage %.3fv. Unfiltered %.3fv.", battery_voltage, bat_v_samples[BAT_SAMPLES-1]);
@@ -154,6 +159,13 @@ void measure_battery() {
     //   SerialBT.println("");
     // }
   #endif
+
+  if (battery_ready) {
+    pmu_rc++;
+    if (pmu_rc%PMU_R_INTERVAL == 0) {
+      kiss_indicate_battery();
+    }
+  }
 }
 
 void update_pmu() {
