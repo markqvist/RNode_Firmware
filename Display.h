@@ -250,29 +250,32 @@ void draw_battery_bars(int px, int py) {
   }
 }
 
-#define Q_SNR_MIN -10.0
-#define Q_SNR_MAX 8.0
-#define Q_SNR_SPAN (Q_SNR_MAX-Q_SNR_MIN)
+#define Q_SNR_STEP 2.0
+#define Q_SNR_MIN_BASE -9.0
+#define Q_SNR_MAX 6.0
 void draw_quality_bars(int px, int py) {
   signed char t_snr = (signed int)last_snr_raw;
   int snr_int = (int)t_snr;
+  float snr_min = Q_SNR_MIN_BASE-(int)lora_sf*Q_SNR_STEP;
+  float snr_span = (Q_SNR_MAX-snr_min);
   float snr = ((int)snr_int) * 0.25;
-  float quality = ((snr-Q_SNR_MIN)/(Q_SNR_SPAN))*100;
+  float quality = ((snr-snr_min)/(snr_span))*100;
   if (quality > 100.0) quality = 100.0;
+  if (quality < 0.0) quality = 0.0;
 
   stat_area.fillRect(px, py, 13, 7, SSD1306_BLACK);
   // Serial.printf("Last SNR: %.2f\n, quality: %.2f\n", snr, quality);
-  if (quality > 7)  stat_area.drawLine(px+0*2, py+7, px+0*2, py+6, SSD1306_WHITE);
-  if (quality > 20) stat_area.drawLine(px+1*2, py+7, px+1*2, py+5, SSD1306_WHITE);
-  if (quality > 33) stat_area.drawLine(px+2*2, py+7, px+2*2, py+4, SSD1306_WHITE);
-  if (quality > 46) stat_area.drawLine(px+3*2, py+7, px+3*2, py+3, SSD1306_WHITE);
-  if (quality > 59) stat_area.drawLine(px+4*2, py+7, px+4*2, py+2, SSD1306_WHITE);
-  if (quality > 72) stat_area.drawLine(px+5*2, py+7, px+5*2, py+1, SSD1306_WHITE);
-  if (quality > 85) stat_area.drawLine(px+6*2, py+7, px+6*2, py+0, SSD1306_WHITE);
+  if (quality > 0)  stat_area.drawLine(px+0*2, py+7, px+0*2, py+6, SSD1306_WHITE);
+  if (quality > 15) stat_area.drawLine(px+1*2, py+7, px+1*2, py+5, SSD1306_WHITE);
+  if (quality > 30) stat_area.drawLine(px+2*2, py+7, px+2*2, py+4, SSD1306_WHITE);
+  if (quality > 45) stat_area.drawLine(px+3*2, py+7, px+3*2, py+3, SSD1306_WHITE);
+  if (quality > 60) stat_area.drawLine(px+4*2, py+7, px+4*2, py+2, SSD1306_WHITE);
+  if (quality > 75) stat_area.drawLine(px+5*2, py+7, px+5*2, py+1, SSD1306_WHITE);
+  if (quality > 90) stat_area.drawLine(px+6*2, py+7, px+6*2, py+0, SSD1306_WHITE);
 }
 
 #define S_RSSI_MIN -135.0
-#define S_RSSI_MAX -60.0
+#define S_RSSI_MAX -75.0
 #define S_RSSI_SPAN (S_RSSI_MAX-S_RSSI_MIN)
 void draw_signal_bars(int px, int py) {
   int rssi_val = last_rssi;
@@ -281,6 +284,7 @@ void draw_signal_bars(int px, int py) {
   int signal = ((rssi_val - S_RSSI_MIN)*(1.0/S_RSSI_SPAN))*100.0;
 
   if (signal > 100.0) signal = 100.0;
+  if (signal < 0.0) signal = 0.0;
 
   stat_area.fillRect(px, py, 13, 7, SSD1306_BLACK);
   // Serial.printf("Last SNR: %.2f\n, quality: %.2f\n", snr, quality);
