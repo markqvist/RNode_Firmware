@@ -14,12 +14,12 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.65`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.66`. This release brings the following changes:
 
-- Added battery status statistics to USB/serial/bluetooth output
+- Improved link quality calculation
 - Updated bootstrap console with latest packages
 
-You must have at least version `2.1.3` of `rnodeconf` installed to update the RNode Firmware to version `1.65`. Get it by updating the `rns` package to at least version `0.6.2`.
+You must have at least version `2.1.3` of `rnodeconf` installed to update the RNode Firmware to version `1.66`. Get it by updating the `rns` package to at least version `0.6.3`.
 
 ## A Self-Replicating System
 
