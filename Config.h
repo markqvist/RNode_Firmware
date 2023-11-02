@@ -299,7 +299,7 @@
 	const int lora_post_tx_yield_slots = 6;
 	uint32_t post_tx_yield_timeout = 0;
 	#define LORA_PREAMBLE_SYMBOLS_HW  4
-	#define LORA_PREAMBLE_SYMBOLS_MIN 6
+	#define LORA_PREAMBLE_SYMBOLS_MIN 18
 	#define LORA_PREAMBLE_TARGET_MS   15
 	#define LORA_CAD_SYMBOLS 3
 	int csma_slot_ms = 50;
