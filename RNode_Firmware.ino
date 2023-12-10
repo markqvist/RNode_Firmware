@@ -426,7 +426,7 @@ void add_airtime(uint16_t written) {
 void update_airtime() {
   #if MCU_VARIANT == MCU_ESP32
     uint16_t cb = current_airtime_bin();
-    uint16_t pb = cb-1; if (pb < 0) { pb = AIRTIME_BINS-1; }
+    uint16_t pb = cb-1; if (cb-1 < 0) { pb = AIRTIME_BINS-1; }
     uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
     airtime_bins[nb] = 0;
     airtime = (float)(airtime_bins[cb]+airtime_bins[pb])/(2.0*AIRTIME_BINLEN_MS);
@@ -868,7 +868,7 @@ void serialCallback(uint8_t sbyte) {
           }
 
           if (frame_len == DEV_HASH_LEN) {
-            memcpy(dev_firmware_hash_target, cmdbuf, DEV_SIG_LEN);
+            memcpy(dev_firmware_hash_target, cmdbuf, DEV_HASH_LEN);
             device_save_firmware_hash();
           }
       #endif
@@ -935,11 +935,12 @@ void updateModemStatus() {
     portEXIT_CRITICAL(&update_lock);
   #endif
 
-  if (status & SIG_DETECT == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
-  if (status & SIG_SYNCED == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
-  if (status & RX_ONGOING == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
+  if ((status & SIG_DETECT) == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
+  if ((status & SIG_SYNCED) == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
+  if ((status & RX_ONGOING) == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
 
-  if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
+  // if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
+  if (stat_signal_detected || stat_signal_synced) {
     if (stat_rx_ongoing) {
       if (dcd_count < dcd_threshold) {
         dcd_count++;
