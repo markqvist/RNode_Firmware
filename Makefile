@@ -30,7 +30,7 @@ prep-esp32:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install esp32:esp32
 	arduino-cli lib install "Adafruit SSD1306"
-	arduino-cli lib install "AXP202X_Library"
+	arduino-cli lib install "XPowersLib"
 	arduino-cli lib install "Crypto"
 
 prep-samd:
