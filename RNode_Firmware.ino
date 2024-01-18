@@ -72,6 +72,11 @@ void setup() {
     pinMode(pin_led_tx, OUTPUT);
   #endif
 
+  #if HAS_TCXO == true
+    pinMode(pin_tcxo_enable, OUTPUT);
+    digitalWrite(pin_tcxo_enable, HIGH);
+  #endif
+
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
   memset(cmdbuf, 0, sizeof(cmdbuf));

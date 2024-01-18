@@ -91,6 +91,10 @@
     #define HAS_PMU false
     #define HAS_NP false
 
+    #if defined(ENABLE_TCXO)
+        #define HAS_TCXO true
+    #endif
+
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
 		const int pin_reset = 3;
@@ -192,6 +196,9 @@
 			const int pin_cs = 18;
 			const int pin_reset = 23;
 			const int pin_dio = 26;
+			#if HAS_TCXO == true
+				const int pin_tcxo_enable = 33;
+			#endif
 			#if defined(EXTERNAL_LEDS)
 				const int pin_led_rx = 15;
 				const int pin_led_tx = 4;
