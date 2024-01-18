@@ -4,10 +4,10 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.6.9-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.4.2-py3-none-any.whl",
-    "lxmf": "lxmf-0.3.8-py3-none-any.whl",
-    "rnsh": "rnsh-0.1.2-py3-none-any.whl",
+    "rns": "rns-0.7.0-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.4.6-py3-none-any.whl",
+    "lxmf": "lxmf-0.3.9-py3-none-any.whl",
+    "rnsh": "rnsh-0.1.3-py3-none-any.whl",
 }
 
 DEFAULT_TITLE = "RNode Bootstrap Console"
@@ -174,7 +174,7 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
-    pm = 176
+    pm = 140
     scale_imgs = [
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
