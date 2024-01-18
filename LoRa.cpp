@@ -110,8 +110,16 @@ bool LoRaClass::preInit() {
   
   SPI.begin();
 
-  // check version
-  uint8_t version = readRegister(REG_VERSION);
+  // check version (retry for up to 2 seconds)
+  uint8_t version;
+  long start = millis();
+  while (((millis() - start) < 2000) && (millis() >= start)) {
+    version = readRegister(REG_VERSION);
+    if (version == 0x12) {
+      break;
+    }
+    delay(100);
+  }
   if (version != 0x12) {
     return false;
   }
