@@ -14,13 +14,18 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Ed25519.h>
+
+#if MCU_VARIANT == MCU_ESP32
 #include "mbedtls/md.h"
 #include "esp_ota_ops.h"
 #include "esp_flash_partitions.h"
 #include "esp_partition.h"
+#endif
+
 
 // Forward declaration from Utilities.h
 void eeprom_update(int mapped_addr, uint8_t byte);
+uint8_t eeprom_read(uint32_t addr);
 void hard_reset(void);
 
 const uint8_t dev_keys [] PROGMEM = {
@@ -86,13 +91,21 @@ void device_save_signature() {
 
 void device_load_signature() {
   for (uint8_t i = 0; i < DEV_SIG_LEN; i++) {
-    dev_sig[i] = EEPROM.read(dev_sig_addr(i));
+    #if HAS_EEPROM
+        dev_sig[i] = EEPROM.read(dev_sig_addr(i));
+    #elif MCU_VARIANT == MCU_NRF52
+        dev_sig[i] = eeprom_read(dev_sig_addr(i));
+    #endif
   }
 }
 
 void device_load_firmware_hash() {
   for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
-    dev_firmware_hash_target[i] = EEPROM.read(dev_fwhash_addr(i));
+    #if HAS_EEPROM
+        dev_firmware_hash_target[i] = EEPROM.read(dev_fwhash_addr(i));
+    #elif MCU_VARIANT == MCU_NRF52
+        dev_firmware_hash_target[i] = eeprom_read(dev_fwhash_addr(i));
+    #endif
   }
 }
 
@@ -103,6 +116,7 @@ void device_save_firmware_hash() {
   if (!fw_signature_validated) hard_reset();
 }
 
+#if MCU_VARIANT == MCU_ESP32
 void device_validate_partitions() {
   device_load_firmware_hash();
   esp_partition_t partition;
@@ -122,11 +136,13 @@ void device_validate_partitions() {
     }
   }
 }
+#endif
 
 bool device_firmware_ok() {
   return fw_signature_validated;
 }
 
+#if MCU_VARIANT == MCU_ESP32
 bool device_init() {
   if (bt_ready) {
     for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=EEPROM.read(eeprom_addr(ADDR_SIGNATURE+i));}
@@ -148,3 +164,4 @@ bool device_init() {
     return false;
   }
 }
+#endif

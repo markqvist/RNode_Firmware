@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "ROM.h"
+#include "Modem.h"
 
 #ifndef CONFIG_H
 	#define CONFIG_H
@@ -23,10 +24,12 @@
 
 	#define PLATFORM_AVR   0x90
   #define PLATFORM_ESP32 0x80
+    #define PLATFORM_NRF52 0x70
 
 	#define MCU_1284P 0x91
 	#define MCU_2560  0x92
 	#define MCU_ESP32 0x81
+	#define MCU_NRF52 0x71
 
 	#define BOARD_RNODE         0x31
 	#define BOARD_HMBRW         0x32
@@ -39,6 +42,8 @@
 	#define BOARD_HELTEC32_V2   0x38
 	#define BOARD_RNODE_NG_20   0x40
 	#define BOARD_RNODE_NG_21   0x41
+	#define BOARD_GENERIC_NRF52 0x50
+	#define BOARD_RAK4630       0x51
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
@@ -61,7 +66,7 @@
 	#define M_FRQ_S 27388122
 	#define M_FRQ_R 27388061
 	bool console_active = false;
-	bool sx1276_installed = false;
+	bool modem_installed = false;
 
 	#if defined(__AVR_ATmega1284P__)
 	    #define PLATFORM PLATFORM_AVR
@@ -72,6 +77,9 @@
 	#elif defined(ESP32)
 	    #define PLATFORM PLATFORM_ESP32
 	    #define MCU_VARIANT MCU_ESP32
+    #elif defined(nRF52)
+        #define PLATFORM PLATFORM_NRF52
+        #define MCU_VARIANT MCU_NRF52
 	#else
 	    #error "The firmware cannot be compiled for the selected MCU variant"
 	#endif
@@ -90,6 +98,7 @@
     #define HAS_TCXO false
     #define HAS_PMU false
     #define HAS_NP false
+    #define HAS_EEPROM false
 
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
@@ -99,6 +108,8 @@
 		const int pin_led_tx = 13;
 
 		#define BOARD_MODEL BOARD_RNODE
+
+        #define HAS_EEPROM true
 
 		#define CONFIG_UART_BUFFER_SIZE 6144
 		#define CONFIG_QUEUE_SIZE 6144
@@ -116,6 +127,8 @@
 
 		#define BOARD_MODEL BOARD_HMBRW
 
+        #define HAS_EEPROM true
+
 		#define CONFIG_UART_BUFFER_SIZE 768
 		#define CONFIG_QUEUE_SIZE 5120
 		#define CONFIG_QUEUE_MAX_LENGTH 24
@@ -131,6 +144,16 @@
 		// firmware, you can manually define model here.
 		//
 		// #define BOARD_MODEL BOARD_GENERIC_ESP32
+		#define CONFIG_UART_BUFFER_SIZE 6144
+		#define CONFIG_QUEUE_SIZE 6144
+		#define CONFIG_QUEUE_MAX_LENGTH 200
+
+		#define EEPROM_SIZE 1024
+		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+
+		#define GPS_BAUD_RATE 9600
+		#define PIN_GPS_TX 12
+		#define PIN_GPS_RX 34
 
 		#if BOARD_MODEL == BOARD_GENERIC_ESP32
 			const int pin_cs = 4;
@@ -140,6 +163,7 @@
 			const int pin_led_tx = 32;
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_TBEAM
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -152,6 +176,7 @@
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
             #define HAS_SD false
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_HUZZAH32
 			const int pin_cs = 4;
 			const int pin_reset = 36;
@@ -261,23 +286,42 @@
 					const int pin_led_tx = 25;
 				#endif
 			#endif
-		#else
-			#error An unsupported board was selected. Cannot compile RNode firmware.
-		#endif
+        #endif
+    #elif PLATFORM == PLATFORM_NRF52
+        #if BOARD_MODEL == BOARD_RAK4630
+            #define HAS_EEPROM false
+            #define HAS_DISPLAY false // set for debugging
+            #define HAS_BLUETOOTH false
+            #define HAS_CONSOLE false
+            #define HAS_PMU false
+            #define HAS_NP false
+            #define HAS_SD false
+            #define HAS_TCXO true
+            #define MODEM SX1262 
+            
+            #define CONFIG_UART_BUFFER_SIZE 6144
+            #define CONFIG_QUEUE_SIZE 6144
+            #define CONFIG_QUEUE_MAX_LENGTH 200
+            #define EEPROM_SIZE 4096
+            #define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
 
-        bool mw_radio_online = false;
-
-		#define CONFIG_UART_BUFFER_SIZE 6144
-		#define CONFIG_QUEUE_SIZE 6144
-		#define CONFIG_QUEUE_MAX_LENGTH 200
-
-		#define EEPROM_SIZE 1024
-		#define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
-
-		#define GPS_BAUD_RATE 9600
-		#define PIN_GPS_TX 12
-		#define PIN_GPS_RX 34
+            // following pins are for the sx1262
+            const int pin_rxen = 37;
+            const int pin_reset = 38;
+            const int pin_cs = 42;
+            const int pin_sclk = 43;
+            const int pin_mosi = 44;
+            const int pin_miso = 45;
+            const int pin_busy = 46;
+            const int pin_dio = 47;
+            const int pin_led_rx = LED_BLUE;
+            const int pin_led_tx = LED_GREEN;
+        #endif
+	#else
+		#error An unsupported board was selected. Cannot compile RNode firmware.
 	#endif
+
+    bool mw_radio_online = false;
 
 	#if BOARD_MODEL == BOARD_TBEAM
 		#define I2C_SDA 21
@@ -285,7 +329,14 @@
 		#define PMU_IRQ 35
 	#endif
 
+
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
+
+    #if MODEM == SX1276 || MODEM == SX1278
+        SPIClass spiModem(pin_miso, pin_sclk, pin_mosi);
+    #elif MODEM == SX1262
+        SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
+    #endif
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
@@ -354,7 +405,7 @@
 	uint32_t stat_tx		= 0;
 
 	#define STATUS_INTERVAL_MS 3
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	  #define DCD_SAMPLES 2500
 		#define UTIL_UPDATE_INTERVAL_MS 1000
 		#define UTIL_UPDATE_INTERVAL (UTIL_UPDATE_INTERVAL_MS/STATUS_INTERVAL_MS)

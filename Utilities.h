@@ -13,7 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include <EEPROM.h>
+#if HAS_EEPROM 
+    #include <EEPROM.h>
+#elif PLATFORM == PLATFORM_NRF52
+    #include "flash_nrf5x.h"
+    int written_bytes = 0;
+#endif
 #include <stddef.h>
 #include "Config.h"
 #include "LoRa.h"
@@ -34,8 +39,10 @@
   #include "Power.h"
 #endif
 
-#if MCU_VARIANT == MCU_ESP32
+#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#include "Device.h"
+#endif
+#if MCU_VARIANT == MCU_ESP32
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
 #else
@@ -57,6 +64,8 @@ uint8_t boot_vector = 0x00;
 	}
 #elif MCU_VARIANT == MCU_ESP32
 	// TODO: Get ESP32 boot flags
+#elif MCU_VARIANT == MCU_NRF52
+	// TODO: Get NRF52 boot flags
 #endif
 
 #if HAS_NP == true
@@ -175,6 +184,13 @@ uint8_t boot_vector = 0x00;
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 	#endif
+#elif MCU_VARIANT == MCU_NRF52
+    #if BOARD_MODEL == BOARD_RAK4630
+		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+    #endif
 #endif
 
 void hard_reset(void) {
@@ -185,6 +201,8 @@ void hard_reset(void) {
 		}
 	#elif MCU_VARIANT == MCU_ESP32
 		ESP.restart();
+	#elif MCU_VARIANT == MCU_NRF52
+        // currently not possible to restart on this platform
 	#endif
 }
 
@@ -285,7 +303,7 @@ void led_indicate_warning(int cycles) {
 	  }
 	  led_rx_off();
 	}
-#elif MCU_VARIANT == MCU_ESP32
+#elif MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#if HAS_NP == true
 		void led_indicate_info(int cycles) {
 			bool forever = (cycles == 0) ? true : false;
@@ -375,6 +393,17 @@ unsigned long led_standby_ticks = 0;
 		unsigned long led_standby_wait = 1768;
 		unsigned long led_notready_wait = 150;
 	#endif
+
+#elif MCU_VARIANT == MCU_NRF52
+		uint8_t led_standby_min = 200;
+		uint8_t led_standby_max = 255;
+		uint8_t led_notready_min = 0;
+		uint8_t led_notready_max = 255;
+		uint8_t led_notready_value = led_notready_min;
+		int8_t  led_notready_direction = 0;
+		unsigned long led_notready_ticks = 0;
+		unsigned long led_standby_wait = 1768;
+		unsigned long led_notready_wait = 150;
 #endif
 
 unsigned long led_standby_value = led_standby_min;
@@ -396,7 +425,7 @@ int8_t  led_standby_direction = 0;
 		}
 	}
 
-#elif MCU_VARIANT == MCU_ESP32
+#elif MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#if HAS_NP == true
 		void led_indicate_standby() {
 			led_standby_ticks++;
@@ -504,7 +533,7 @@ int8_t  led_standby_direction = 0;
 			led_rx_off();
 		}
 	}
-#elif MCU_VARIANT == MCU_ESP32
+#elif MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#if HAS_NP == true
     void led_indicate_not_ready() {
     	led_standby_ticks++;
@@ -625,7 +654,11 @@ void kiss_indicate_stat_tx() {
 }
 
 void kiss_indicate_stat_rssi() {
-	uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
+    #if MODEM == SX1276 || MODEM == SX1278
+        uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
+    #elif MODEM == SX1262
+        uint8_t packet_rssi_val = (uint8_t)(last_rssi);
+    #endif
 	serial_write(FEND);
 	serial_write(CMD_STAT_RSSI);
 	escaped_serial_write(packet_rssi_val);
@@ -799,7 +832,7 @@ void kiss_indicate_fbstate() {
 	serial_write(FEND);
 }
 
-#if MCU_VARIANT == MCU_ESP32
+#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	void kiss_indicate_device_hash() {
 	  serial_write(FEND);
 	  serial_write(CMD_DEV_HASH);
@@ -944,7 +977,7 @@ void setPreamble() {
 }
 
 void updateBitrate() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		if (radio_online) {
 			lora_symbol_rate = (float)lora_bw/(float)(pow(2, lora_sf));
 			lora_symbol_time_ms = (1.0/lora_symbol_rate)*1000.0;
@@ -1058,8 +1091,21 @@ void promisc_disable() {
 	promisc = false;
 }
 
+#if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+    uint8_t eeprom_read(uint32_t mapped_addr) {
+        uint8_t byte;
+        void* byte_ptr = &byte;
+        flash_nrf5x_read(byte_ptr, mapped_addr, 1);
+        return byte;
+    }
+#endif
+
 bool eeprom_info_locked() {
-	uint8_t lock_byte = EEPROM.read(eeprom_addr(ADDR_INFO_LOCK));
+    #if HAS_EEPROM
+	    uint8_t lock_byte = EEPROM.read(eeprom_addr(ADDR_INFO_LOCK));
+    #elif MCU_VARIANT == MCU_NRF52
+        uint8_t lock_byte = eeprom_read(eeprom_addr(ADDR_INFO_LOCK));
+    #endif
 	if (lock_byte == INFO_LOCK_BYTE) {
 		return true;
 	} else {
@@ -1069,21 +1115,33 @@ bool eeprom_info_locked() {
 
 void eeprom_dump_info() {
 	for (int addr = ADDR_PRODUCT; addr <= ADDR_INFO_LOCK; addr++) {
-		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+        #if HAS_EEPROM
+            uint8_t byte = EEPROM.read(eeprom_addr(addr));
+        #elif MCU_VARIANT == MCU_NRF52
+            uint8_t byte = eeprom_read(eeprom_addr(addr));
+        #endif
 		escaped_serial_write(byte);
 	}
 }
 
 void eeprom_dump_config() {
 	for (int addr = ADDR_CONF_SF; addr <= ADDR_CONF_OK; addr++) {
-		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+        #if HAS_EEPROM
+            uint8_t byte = EEPROM.read(eeprom_addr(addr));
+        #elif MCU_VARIANT == MCU_NRF52
+            uint8_t byte = eeprom_read(eeprom_addr(addr));
+        #endif
 		escaped_serial_write(byte);
 	}
 }
 
 void eeprom_dump_all() {
 	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-		uint8_t byte = EEPROM.read(eeprom_addr(addr));
+        #if HAS_EEPROM
+            uint8_t byte = EEPROM.read(eeprom_addr(addr));
+        #elif MCU_VARIANT == MCU_NRF52
+            uint8_t byte = eeprom_read(eeprom_addr(addr));
+        #endif
 		escaped_serial_write(byte);
 	}
 }
@@ -1103,6 +1161,22 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
 			EEPROM.write(mapped_addr, byte);
 			EEPROM.commit();
 		}
+    #elif !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+        uint8_t read_byte;
+        void* read_byte_ptr = &read_byte;
+        void const * byte_ptr = &byte;
+        flash_nrf5x_read(read_byte_ptr, mapped_addr, 1);
+        if (read_byte != byte) {
+            flash_nrf5x_write(mapped_addr, byte_ptr, 1);
+        }
+
+        written_bytes++;
+
+        // flush the cache every 4 bytes to make sure everything is synced
+        if (written_bytes == 4) {
+            written_bytes = 0;
+            flash_nrf5x_flush();
+        }
 	#endif
 
 }
@@ -1123,7 +1197,11 @@ void eeprom_erase() {
 }
 
 bool eeprom_lock_set() {
-	if (EEPROM.read(eeprom_addr(ADDR_INFO_LOCK)) == INFO_LOCK_BYTE) {
+    #if HAS_EEPROM
+	    if (EEPROM.read(eeprom_addr(ADDR_INFO_LOCK)) == INFO_LOCK_BYTE) {
+    #elif MCU_VARIANT == MCU_NRF52
+        if (eeprom_read(eeprom_addr(ADDR_INFO_LOCK)) == INFO_LOCK_BYTE) {
+    #endif
 		return true;
 	} else {
 		return false;
@@ -1131,12 +1209,18 @@ bool eeprom_lock_set() {
 }
 
 bool eeprom_product_valid() {
-	uint8_t rval = EEPROM.read(eeprom_addr(ADDR_PRODUCT));
+    #if HAS_EEPROM
+	    uint8_t rval = EEPROM.read(eeprom_addr(ADDR_PRODUCT));
+    #elif MCU_VARIANT == MCU_NRF52
+	    uint8_t rval = eeprom_read(eeprom_addr(ADDR_PRODUCT));
+    #endif
 
 	#if PLATFORM == PLATFORM_AVR
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
 	#elif PLATFORM == PLATFORM_ESP32
 	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2) {
+	#elif PLATFORM == PLATFORM_NRF52
+	if (rval == PRODUCT_HMBRW) {
 	#else
 	if (false) {
 	#endif
@@ -1147,7 +1231,11 @@ bool eeprom_product_valid() {
 }
 
 bool eeprom_model_valid() {
-	model = EEPROM.read(eeprom_addr(ADDR_MODEL));
+    #if HAS_EEPROM
+        model = EEPROM.read(eeprom_addr(ADDR_MODEL));
+    #elif MCU_VARIANT == MCU_NRF52
+        model = eeprom_read(eeprom_addr(ADDR_MODEL));
+    #endif
 	#if BOARD_MODEL == BOARD_RNODE
 	if (model == MODEL_A4 || model == MODEL_A9 || model == MODEL_FF || model == MODEL_FE) {
 	#elif BOARD_MODEL == BOARD_RNODE_NG_20
@@ -1166,6 +1254,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_B4 || model == MODEL_B9) {
 	#elif BOARD_MODEL == BOARD_HELTEC32_V2
 	if (model == MODEL_C4 || model == MODEL_C9) {
+    #elif BOARD_MODEL == BOARD_RAK4630
+    if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 	if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
@@ -1180,7 +1270,11 @@ bool eeprom_model_valid() {
 }
 
 bool eeprom_hwrev_valid() {
-	hwrev = EEPROM.read(eeprom_addr(ADDR_HW_REV));
+    #if HAS_EEPROM
+        hwrev = EEPROM.read(eeprom_addr(ADDR_HW_REV));
+    #elif MCU_VARIANT == MCU_NRF52
+        hwrev = eeprom_read(eeprom_addr(ADDR_HW_REV));
+    #endif
 	if (hwrev != 0x00 && hwrev != 0xFF) {
 		return true;
 	} else {
@@ -1191,14 +1285,22 @@ bool eeprom_hwrev_valid() {
 bool eeprom_checksum_valid() {
 	char *data = (char*)malloc(CHECKSUMMED_SIZE);
 	for (uint8_t  i = 0; i < CHECKSUMMED_SIZE; i++) {
-		char byte = EEPROM.read(eeprom_addr(i));
+        #if HAS_EEPROM
+            char byte = EEPROM.read(eeprom_addr(i));
+        #elif MCU_VARIANT == MCU_NRF52
+            char byte = eeprom_read(eeprom_addr(i));
+        #endif
 		data[i] = byte;
 	}
 	
 	unsigned char *hash = MD5::make_hash(data, CHECKSUMMED_SIZE);
 	bool checksum_valid = true;
 	for (uint8_t i = 0; i < 16; i++) {
-		uint8_t stored_chk_byte = EEPROM.read(eeprom_addr(ADDR_CHKSUM+i));
+        #if HAS_EEPROM
+            uint8_t stored_chk_byte = EEPROM.read(eeprom_addr(ADDR_CHKSUM+i));
+        #elif MCU_VARIANT == MCU_NRF52
+            uint8_t stored_chk_byte = eeprom_read(eeprom_addr(ADDR_CHKSUM+i));
+        #endif
 		uint8_t calced_chk_byte = (uint8_t)hash[i];
 		if (stored_chk_byte != calced_chk_byte) {
 			checksum_valid = false;
@@ -1227,7 +1329,11 @@ void da_conf_save(uint8_t dadr) {
 }
 
 bool eeprom_have_conf() {
-	if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
+    #if HAS_EEPROM
+	    if (EEPROM.read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
+    #elif MCU_VARIANT == MCU_NRF52
+        if (eeprom_read(eeprom_addr(ADDR_CONF_OK)) == CONF_OK_BYTE) {
+    #endif
 		return true;
 	} else {
 		return false;
@@ -1236,11 +1342,19 @@ bool eeprom_have_conf() {
 
 void eeprom_conf_load() {
 	if (eeprom_have_conf()) {
-		lora_sf = EEPROM.read(eeprom_addr(ADDR_CONF_SF));
-		lora_cr = EEPROM.read(eeprom_addr(ADDR_CONF_CR));
-		lora_txp = EEPROM.read(eeprom_addr(ADDR_CONF_TXP));
-		lora_freq = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x03);
-		lora_bw = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x03);
+        #if HAS_EEPROM
+            lora_sf = EEPROM.read(eeprom_addr(ADDR_CONF_SF));
+            lora_cr = EEPROM.read(eeprom_addr(ADDR_CONF_CR));
+            lora_txp = EEPROM.read(eeprom_addr(ADDR_CONF_TXP));
+            lora_freq = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_FREQ)+0x03);
+            lora_bw = (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x00) << 24 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x01) << 16 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x02) << 8 | (uint32_t)EEPROM.read(eeprom_addr(ADDR_CONF_BW)+0x03);
+        #elif MCU_VARIANT == MCU_NRF52
+            lora_sf = eeprom_read(eeprom_addr(ADDR_CONF_SF));
+            lora_cr = eeprom_read(eeprom_addr(ADDR_CONF_CR));
+            lora_txp = eeprom_read(eeprom_addr(ADDR_CONF_TXP));
+            lora_freq = (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_FREQ)+0x00) << 24 | (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_FREQ)+0x01) << 16 | (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_FREQ)+0x02) << 8 | (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_FREQ)+0x03);
+            lora_bw = (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_BW)+0x00) << 24 | (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_BW)+0x01) << 16 | (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_BW)+0x02) << 8 | (uint32_t)eeprom_read(eeprom_addr(ADDR_CONF_BW)+0x03);
+        #endif
 	}
 }
 
@@ -1327,7 +1441,7 @@ inline void fifo_flush(FIFOBuffer *f) {
   f->head = f->tail;
 }
 
-#if MCU_VARIANT != MCU_ESP32
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
 	static inline bool fifo_isempty_locked(const FIFOBuffer *f) {
 	  bool result;
 	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -1409,7 +1523,7 @@ inline void fifo16_flush(FIFOBuffer16 *f) {
   f->head = f->tail;
 }
 
-#if MCU_VARIANT != MCU_ESP32
+#if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
 	static inline bool fifo16_isempty_locked(const FIFOBuffer16 *f) {
 	  bool result;
 	  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
