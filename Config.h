@@ -99,6 +99,8 @@
     #define HAS_PMU false
     #define HAS_NP false
     #define HAS_EEPROM false
+    const int pin_rxen = -1;
+    const int pin_busy = -1;
 
 	#if MCU_VARIANT == MCU_1284P
 		const int pin_cs = 4;
@@ -306,13 +308,13 @@
             #define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
 
             // following pins are for the sx1262
-            const int pin_rxen = 37;
+            pin_rxen = 37;
             const int pin_reset = 38;
             const int pin_cs = 42;
             const int pin_sclk = 43;
             const int pin_mosi = 44;
             const int pin_miso = 45;
-            const int pin_busy = 46;
+            pin_busy = 46;
             const int pin_dio = 47;
             const int pin_led_rx = LED_BLUE;
             const int pin_led_tx = LED_GREEN;
@@ -333,7 +335,7 @@
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
 
     #if MODEM == SX1276 || MODEM == SX1278
-        SPIClass spiModem(pin_miso, pin_sclk, pin_mosi);
+        SPIClass spiModem();
     #elif MODEM == SX1262
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
     #endif

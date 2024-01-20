@@ -86,7 +86,11 @@ void setup() {
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module
-  LoRa.setPins(pin_cs, pin_reset, pin_dio, pin_rxen, pin_busy);
+  if ((pin_rxen != -1) && (pin_busy != -1)) {
+      LoRa.setPins(pin_cs, pin_reset, pin_dio, pin_rxen, pin_busy);
+  } else {
+      LoRa.setPins(pin_cs, pin_reset, pin_dio);
+  }
   
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     init_channel_stats();
