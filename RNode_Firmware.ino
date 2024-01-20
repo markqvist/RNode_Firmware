@@ -1305,10 +1305,10 @@ void buffer_serial() {
         if (!fifo_isfull_locked(&serialFIFO)) {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
-      #else
-        if (HAS_BLUETOOTH && bt_state == BT_STATE_CONNECTED) {
+      #elif HAS_BLUETOOTH
+        if (bt_state == BT_STATE_CONNECTED) {
           if (!fifo_isfull(&serialFIFO)) {
-            //fifo_push(&serialFIFO, SerialBT.read());
+            fifo_push(&serialFIFO, SerialBT.read());
           }
         } else {
           if (!fifo_isfull(&serialFIFO)) {
