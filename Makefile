@@ -37,6 +37,10 @@ prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:samd
 
+prep-nrf:
+	arduino-cli core update-index --config-file arduino-cli.yaml
+	arduino-cli core install rakwireless:nrf52
+
 console-site:
 	make -C Console clean site
 
