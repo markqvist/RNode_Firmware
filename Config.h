@@ -316,7 +316,6 @@
             const int pin_dio = 47;
             const int pin_led_rx = LED_BLUE;
             const int pin_led_tx = LED_GREEN;
-            #define RXEN_BUSY_PINS
         #endif
 	#else
 		#error An unsupported board was selected. Cannot compile RNode firmware.
@@ -334,17 +333,12 @@
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
 
     #if MODEM == SX1276 || MODEM == SX1278
-        SPIClass spiModem();
+        SPIClass spiModem(pin_miso, pin_sclk, pin_mosi);
     #elif MODEM == SX1262
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
     #endif
 
 	// MCU independent configuration parameters
-    #ifndef RXEN_BUSY_PINS
-    const int pin_rxen = -1;
-    const int pin_busy = -1;
-    #endif
-
 	const long serial_baudrate  = 115200;
 
 	// SX1276 RSSI offset to get dBm value from

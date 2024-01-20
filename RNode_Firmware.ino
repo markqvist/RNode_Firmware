@@ -86,11 +86,7 @@ void setup() {
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module
-  if ((pin_rxen != -1) && (pin_busy != -1)) {
-      LoRa.setPins(pin_cs, pin_reset, pin_dio, pin_rxen, pin_busy);
-  } else {
-      LoRa.setPins(pin_cs, pin_reset, pin_dio);
-  }
+  LoRa.setPins(pin_cs, pin_reset, pin_dio, pin_rxen, pin_busy);
   
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     init_channel_stats();
@@ -1305,10 +1301,10 @@ void buffer_serial() {
         if (!fifo_isfull_locked(&serialFIFO)) {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
-      #elif HAS_BLUETOOTH
-        if (bt_state == BT_STATE_CONNECTED) {
+      #else
+        if (HAS_BLUETOOTH && bt_state == BT_STATE_CONNECTED) {
           if (!fifo_isfull(&serialFIFO)) {
-            fifo_push(&serialFIFO, SerialBT.read());
+            //fifo_push(&serialFIFO, SerialBT.read());
           }
         } else {
           if (!fifo_isfull(&serialFIFO)) {

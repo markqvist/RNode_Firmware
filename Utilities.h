@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-#include "Config.h"
-
 #if HAS_EEPROM 
     #include <EEPROM.h>
 #elif PLATFORM == PLATFORM_NRF52
@@ -22,6 +20,7 @@
     int written_bytes = 0;
 #endif
 #include <stddef.h>
+#include "Config.h"
 #include "LoRa.h"
 #include "ROM.h"
 #include "Framing.h"
