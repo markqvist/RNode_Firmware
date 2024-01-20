@@ -89,6 +89,8 @@
     int fifo_tx_addr_ptr = 0;
     int fifo_rx_addr_ptr = 0;
     uint8_t packet[256] = {0};
+    extern SPIClass spiModem;
+    #define SPI spiModem
 
 
 #elif MODEM == SX1276 || MODEM == SX1278
@@ -150,7 +152,7 @@
 
 #define MAX_PKT_LENGTH           255
 
-extern SPIClass spiModem;
+extern SPIClass SPI;
 
 bool lora_preinit_done = false;
 
@@ -180,7 +182,7 @@ bool LoRaClass::preInit() {
   // set SS high
   digitalWrite(_ss, HIGH);
   
-  spiModem.begin();
+  SPI.begin();
 
   // check version (retry for up to 2 seconds)
   #if MODEM == SX1276 || MODEM == SX1278
@@ -239,10 +241,10 @@ bool LoRaClass::preInit() {
 
       digitalWrite(_ss, LOW);
 
-      spiModem.beginTransaction(_spiSettings);
-      spiModem.transfer(address);
-      response = spiModem.transfer(value);
-      spiModem.endTransaction();
+      SPI.beginTransaction(_spiSettings);
+      SPI.transfer(address);
+      response = SPI.transfer(value);
+      SPI.endTransaction();
 
       digitalWrite(_ss, HIGH);
 
@@ -267,15 +269,15 @@ bool LoRaClass::preInit() {
 
         digitalWrite(_ss, LOW);
 
-        spiModem.beginTransaction(_spiSettings);
-        spiModem.transfer(opcode);
-        spiModem.transfer((address & 0xFF00) >> 8);
-        spiModem.transfer(address & 0x00FF);
+        SPI.beginTransaction(_spiSettings);
+        SPI.transfer(opcode);
+        SPI.transfer((address & 0xFF00) >> 8);
+        SPI.transfer(address & 0x00FF);
         if (opcode == OP_READ_REGISTER) {
-            spiModem.transfer(0x00);
+            SPI.transfer(0x00);
         }
-        response = spiModem.transfer(value);
-        spiModem.endTransaction();
+        response = SPI.transfer(value);
+        SPI.endTransaction();
 
         digitalWrite(_ss, HIGH);
 
@@ -316,15 +318,15 @@ bool LoRaClass::preInit() {
 
         digitalWrite(_ss, LOW);
 
-        spiModem.beginTransaction(_spiSettings);
-        spiModem.transfer(opcode);
+        SPI.beginTransaction(_spiSettings);
+        SPI.transfer(opcode);
 
         for (int i = 0; i < size; i++)
         {
-            spiModem.transfer(buffer[i]);
+            SPI.transfer(buffer[i]);
         }
 
-        spiModem.endTransaction();
+        SPI.endTransaction();
 
         digitalWrite(_ss, HIGH);
     }
@@ -335,16 +337,16 @@ bool LoRaClass::preInit() {
 
         digitalWrite(_ss, LOW);
 
-        spiModem.beginTransaction(_spiSettings);
-        spiModem.transfer(opcode);
-        spiModem.transfer(0x00);
+        SPI.beginTransaction(_spiSettings);
+        SPI.transfer(opcode);
+        SPI.transfer(0x00);
 
         for (int i = 0; i < size; i++)
         {
-            buffer[i] = spiModem.transfer(0x00);
+            buffer[i] = SPI.transfer(0x00);
         }
 
-        spiModem.endTransaction();
+        SPI.endTransaction();
 
         digitalWrite(_ss, HIGH);
     }
@@ -355,17 +357,17 @@ bool LoRaClass::preInit() {
 
         digitalWrite(_ss, LOW);
 
-        spiModem.beginTransaction(_spiSettings);
-        spiModem.transfer(OP_FIFO_WRITE);
-        spiModem.transfer(fifo_tx_addr_ptr);
+        SPI.beginTransaction(_spiSettings);
+        SPI.transfer(OP_FIFO_WRITE);
+        SPI.transfer(fifo_tx_addr_ptr);
 
         for (int i = 0; i < size; i++)
         {
-            spiModem.transfer(buffer[i]);
+            SPI.transfer(buffer[i]);
             fifo_tx_addr_ptr++;
         }
 
-        spiModem.endTransaction();
+        SPI.endTransaction();
 
         digitalWrite(_ss, HIGH);
     }
@@ -376,17 +378,17 @@ bool LoRaClass::preInit() {
 
         digitalWrite(_ss, LOW);
 
-        spiModem.beginTransaction(_spiSettings);
-        spiModem.transfer(OP_FIFO_READ);
-        spiModem.transfer(fifo_rx_addr_ptr);
-        spiModem.transfer(0x00);
+        SPI.beginTransaction(_spiSettings);
+        SPI.transfer(OP_FIFO_READ);
+        SPI.transfer(fifo_rx_addr_ptr);
+        SPI.transfer(0x00);
 
         for (int i = 0; i < size; i++)
         {
-            buffer[i] = spiModem.transfer(0x00);
+            buffer[i] = SPI.transfer(0x00);
         }
 
-        spiModem.endTransaction();
+        SPI.endTransaction();
 
         digitalWrite(_ss, HIGH);
     }
@@ -516,8 +518,8 @@ void LoRaClass::end()
   // put in sleep mode
   sleep();
 
-  // stop spiModem
-  spiModem.end();
+  // stop SPI
+  SPI.end();
 
   lora_preinit_done = false;
 }
@@ -964,13 +966,13 @@ void LoRaClass::onReceive(void(*callback)(int))
       executeOpcode(OP_SET_IRQ_FLAGS, buf, 8);
     #endif
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
-    spiModem.usingInterrupt(digitalPinToInterrupt(_dio0));
+    SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
   } else {
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
-    spiModem.notUsingInterrupt(digitalPinToInterrupt(_dio0));
+    SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
   }
 }
