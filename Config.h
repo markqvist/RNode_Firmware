@@ -77,7 +77,7 @@
 	#elif defined(ESP32)
 	    #define PLATFORM PLATFORM_ESP32
 	    #define MCU_VARIANT MCU_ESP32
-    #elif defined(nRF52)
+    #elif defined(NRF52840_XXAA)
         #define PLATFORM PLATFORM_NRF52
         #define MCU_VARIANT MCU_NRF52
 	#else

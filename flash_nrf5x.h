@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#ifdef NRF52840_XXAA
 #ifndef FLASH_NRF52_H_
 #define FLASH_NRF52_H_
 
@@ -86,4 +86,4 @@ static inline uint16_t flash_nrf5x_read32 (uint32_t src)
 #endif
 
 #endif /* FLASH_NRF52_H_ */
-
+#endif

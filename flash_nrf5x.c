@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#ifdef NRF52840_XXAA
 #include "flash_nrf5x.h"
 #include "flash_cache.h"
 #include "nrf_sdm.h"
@@ -176,4 +176,4 @@ static bool fal_verify (uint32_t addr, void const * buf, uint32_t len)
 {
   return 0 == memcmp((void*) addr, buf, len);
 }
-
+#endif

@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#ifdef NRF52840_XXAA
 #include <string.h>
 #include "flash_cache.h"
 #include "common_func.h"
@@ -201,4 +201,4 @@ int flash_cache_read (flash_cache_t* fc, void* dst, uint32_t addr, uint32_t coun
 
   return (int) count;
 }
-
+#endif
