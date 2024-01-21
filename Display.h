@@ -452,7 +452,7 @@ void draw_disp_area() {
         if (!device_firmware_ok()) {
           disp_area.drawBitmap(0, 37, bm_fw_corrupt, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
         } else {
-          if (!sx1276_installed) {
+          if (!modem_installed) {
             disp_area.drawBitmap(0, 37, bm_no_radio, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           } else {
             disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
