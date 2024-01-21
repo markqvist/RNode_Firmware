@@ -73,8 +73,10 @@ void setup() {
   #endif
 
   #if HAS_TCXO == true
-    pinMode(pin_tcxo_enable, OUTPUT);
-    digitalWrite(pin_tcxo_enable, HIGH);
+    if (pin_tcxo_enable != -1) {
+        pinMode(pin_tcxo_enable, OUTPUT);
+        digitalWrite(pin_tcxo_enable, HIGH);
+    }
   #endif
 
   // Initialise buffers

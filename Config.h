@@ -330,6 +330,7 @@
             const int pin_dio = 47;
             const int pin_led_rx = LED_BLUE;
             const int pin_led_tx = LED_GREEN;
+            const int pin_tcxo_enable = -1;
         #endif
 	#else
 		#error An unsupported board was selected. Cannot compile RNode firmware.
