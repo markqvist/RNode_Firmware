@@ -37,6 +37,10 @@ prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:samd
 
+prep-nrf:
+	arduino-cli core update-index --config-file arduino-cli.yaml
+	arduino-cli core install rakwireless:nrf52
+
 console-site:
 	make -C Console clean site
 
@@ -89,8 +93,10 @@ firmware-featheresp32:
 	arduino-cli compile --fqbn esp32:esp32:featheresp32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x34\""
 
 firmware-genericesp32:
-	arduino-cli compile --fqbn esp32:esp32:esp32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\""
+	arduino-cli compile --fqbn esp32:esp32:esp32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x35\" \"-DMODEM=0x01\""
 
+firmware-rak4630:
+	arduino-cli compile --fqbn rakwireless:nrf52:WisCoreRAK4631Board -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x51\" \"-DMODEM=0x03\""
 
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
@@ -153,6 +159,10 @@ upload-featheresp32:
 	rnodeconf /dev/ttyUSB0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.featheresp32/RNode_Firmware.ino.bin)
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
+
+upload-rak4630:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn rakwireless:nrf52:WisCoreRAK4631Board
+
 
 
 release: release-all

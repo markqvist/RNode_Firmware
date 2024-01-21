@@ -9,10 +9,13 @@
 
 #include <Arduino.h>
 #include <SPI.h>
+#include "Modem.h"
 
 #define LORA_DEFAULT_SS_PIN    10
 #define LORA_DEFAULT_RESET_PIN 9
 #define LORA_DEFAULT_DIO0_PIN  2
+#define LORA_DEFAULT_RXEN_PIN  -1
+#define LORA_DEFAULT_BUSY_PIN  -1
 
 #define PA_OUTPUT_RFO_PIN      0
 #define PA_OUTPUT_PA_BOOST_PIN 1
@@ -71,13 +74,26 @@ public:
   void enableTCXO();
   void disableTCXO();
 
+  #if MODEM == SX1262
+      void enableAntenna();
+      void disableAntenna();
+      void loraMode();
+      void waitOnBusy();
+      void executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size);
+      void executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size);
+      void writeBuffer(const uint8_t* buffer, size_t size);
+      void readBuffer(uint8_t* buffer, size_t size);
+      void setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, int ldro);
+      void setPacketParams(long preamble, uint8_t headermode, uint8_t length, uint8_t crc);
+  #endif
+
   // deprecated
   void crc() { enableCrc(); }
   void noCrc() { disableCrc(); }
 
   byte random();
 
-  void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN);
+  void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN, int rxen = LORA_DEFAULT_RXEN_PIN, int busy = LORA_DEFAULT_BUSY_PIN);
   void setSPIFrequency(uint32_t frequency);
 
   void dumpRegisters(Stream& out);
@@ -88,9 +104,15 @@ private:
 
   void handleDio0Rise();
 
-  uint8_t readRegister(uint8_t address);
-  void writeRegister(uint8_t address, uint8_t value);
-  uint8_t singleTransfer(uint8_t address, uint8_t value);
+  #if MODEM == SX1276 || MODEM == SX1278
+      uint8_t readRegister(uint8_t address);
+      void writeRegister(uint8_t address, uint8_t value);
+      uint8_t singleTransfer(uint8_t address, uint8_t value);
+  #elif MODEM == SX1262
+      uint8_t readRegister(uint16_t address);
+      void writeRegister(uint16_t address, uint8_t value);
+      uint8_t singleTransfer(uint8_t opcode, uint16_t address, uint8_t value);
+  #endif
 
   static void onDio0Rise();
 
@@ -102,9 +124,19 @@ private:
   int _ss;
   int _reset;
   int _dio0;
+  int _rxen;
+  int _busy;
   long _frequency;
+  int _txp;
+  uint8_t _sf;
+  uint8_t _bw;
+  uint8_t _cr;
+  uint8_t _ldro;
   int _packetIndex;
+  int _preambleLength;
   int _implicitHeaderMode;
+  int _payloadLength;
+  int _crcMode;
   void (*_onReceive)(int);
 };
 
