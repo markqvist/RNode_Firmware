@@ -23,7 +23,7 @@
 	#define MIN_VERS  0x46
 
 	#define PLATFORM_AVR   0x90
-  #define PLATFORM_ESP32 0x80
+  	#define PLATFORM_ESP32 0x80
     #define PLATFORM_NRF52 0x70
 
 	#define MCU_1284P 0x91
@@ -373,10 +373,10 @@
         const int pin_busy = -1;
     #endif
 
-    #if MODEM == SX1262
+    /*#if MODEM == SX1262
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
-    #endif
-
+    #endif*/
+	
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
 

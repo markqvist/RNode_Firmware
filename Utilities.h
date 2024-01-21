@@ -43,7 +43,7 @@
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#include "Device.h"
 #endif
-#if MCU_VARIANT == MCU_ESP32
+#if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
 #else
