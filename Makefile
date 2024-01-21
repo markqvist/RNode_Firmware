@@ -23,23 +23,23 @@ prep: prep-avr prep-esp32 prep-samd
 
 prep-avr:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install arduino:avr
-	arduino-cli core install unsignedio:avr
+	arduino-cli core install arduino:avr --config-file arduino-cli.yaml
+	arduino-cli core install unsignedio:avr --config-file arduino-cli.yaml
 
 prep-esp32:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install esp32:esp32
+	arduino-cli core install esp32:esp32 --config-file arduino-cli.yaml
 	arduino-cli lib install "Adafruit SSD1306"
 	arduino-cli lib install "XPowersLib"
 	arduino-cli lib install "Crypto"
 
 prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install adafruit:samd
+	arduino-cli core install adafruit:samd --config-file arduino-cli.yaml
 
 prep-nrf:
 	arduino-cli core update-index --config-file arduino-cli.yaml
-	arduino-cli core install rakwireless:nrf52
+	arduino-cli core install rakwireless:nrf52 --config-file arduino-cli.yaml
 
 console-site:
 	make -C Console clean site
