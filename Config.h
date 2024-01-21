@@ -40,6 +40,7 @@
 	#define BOARD_LORA32_V2_1   0x37
 	#define BOARD_LORA32_V1_0   0x39
 	#define BOARD_HELTEC32_V2   0x38
+	#define BOARD_HELTEC32_V3   0x42
 	#define BOARD_RNODE_NG_20   0x40
 	#define BOARD_RNODE_NG_21   0x41
 	#define BOARD_GENERIC_NRF52 0x50
@@ -253,6 +254,28 @@
 			#define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
             #define HAS_EEPROM true
+		#elif BOARD_MODEL == BOARD_HELTEC32_V3
+            #define HAS_EEPROM false
+            #define HAS_DISPLAY false // set for debugging
+            #define HAS_BLUETOOTH false
+            #define HAS_CONSOLE false
+            #define HAS_PMU false
+            #define HAS_NP false
+            #define HAS_SD false
+            #define HAS_TCXO false
+            #define HAS_RXEN_BUSY true
+            #define MODEM SX1262
+            // following pins are for the sx1262
+            const int pin_rxen = -1;
+            const int pin_reset = 12;
+            const int pin_cs = 8;
+            const int pin_sclk = 9;
+            const int pin_mosi = 10;
+            const int pin_miso = 11;
+            const int pin_busy = 13;
+            const int pin_dio = 14;
+            const int pin_led_rx = 35;
+            const int pin_led_tx = pin_led_rx;
 		#elif BOARD_MODEL == BOARD_RNODE_NG_20
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
