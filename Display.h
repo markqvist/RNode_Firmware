@@ -107,6 +107,9 @@ bool display_init() {
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC32_V3
+      int pin_display_pwr = 37;
+      digitalWrite(pin_display_pwr, HIGH);
+      delay(500); //half a second should be enough
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
       int pin_display_en = 16;

@@ -256,7 +256,7 @@
             #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_HELTEC32_V3
             #define HAS_EEPROM true
-            #define HAS_DISPLAY true // set for debugging
+            #define HAS_DISPLAY true
             #define HAS_BLUETOOTH false
             #define HAS_CONSOLE false
             #define HAS_PMU false
