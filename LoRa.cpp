@@ -89,8 +89,10 @@
     int fifo_tx_addr_ptr = 0;
     int fifo_rx_addr_ptr = 0;
     uint8_t packet[256] = {0};
-    extern SPIClass spiModem;
-    #define SPI spiModem
+    #if defined(NRF52840_XXAA)
+      extern SPIClass spiModem;
+      #define SPI spiModem
+    #endif
 
 
 #elif MODEM == SX1276 || MODEM == SX1278

@@ -373,9 +373,9 @@
         const int pin_busy = -1;
     #endif
 
-    /*#if MODEM == SX1262
+    #if MODEM == SX1262 and defined(NRF52840_XXAA)
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
-    #endif*/
+    #endif
 
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
