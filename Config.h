@@ -316,8 +316,9 @@
             #define CONFIG_UART_BUFFER_SIZE 6144
             #define CONFIG_QUEUE_SIZE 6144
             #define CONFIG_QUEUE_MAX_LENGTH 200
-            #define EEPROM_SIZE 4096
-            #define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
+            #define EEPROM_SIZE 200
+            //#define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
+            #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 
             // following pins are for the sx1262
             const int pin_rxen = 37;

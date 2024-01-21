@@ -54,6 +54,12 @@ void setup() {
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
   #endif
 
+  #if MCU_VARIANT == MCU_NRF52
+    if (!eeprom_begin()) {
+        Serial.write("EEPROM initialisation failed.\r\n");
+    }
+  #endif
+
   // Seed the PRNG
   randomSeed(analogRead(0));
 
