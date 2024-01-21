@@ -255,7 +255,7 @@
             #define HAS_CONSOLE true
             #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_HELTEC32_V3
-            #define HAS_EEPROM false
+            #define HAS_EEPROM true
             #define HAS_DISPLAY false // set for debugging
             #define HAS_BLUETOOTH false
             #define HAS_CONSOLE false
@@ -376,7 +376,7 @@
     /*#if MODEM == SX1262
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
     #endif*/
-	
+
 	// MCU independent configuration parameters
 	const long serial_baudrate  = 115200;
 

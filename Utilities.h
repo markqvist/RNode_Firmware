@@ -1268,7 +1268,7 @@ bool eeprom_model_valid() {
 	#elif BOARD_MODEL == BOARD_HELTEC32_V2
 	if (model == MODEL_C4 || model == MODEL_C9) {
 	#elif BOARD_MODEL == BOARD_HELTEC32_V3
-	if true { //debug
+	if (true) { //debug
     #elif BOARD_MODEL == BOARD_RAK4630
     if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
