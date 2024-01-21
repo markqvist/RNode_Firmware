@@ -29,7 +29,7 @@ data:
 	@cp assets/gfx/* build/gfx/
 	@cp assets/images/* build/images/
 	@cp assets/stl/* build/3d/
-	@cp assets/pkg/* build/pkg/
+	#@cp assets/pkg/* build/pkg/
 	# @cp assets/scripts/* build/scripts/
 	# @cp -r ../../Reticulum/docs/manual/* build/reticulum_manual/
 	# @cp -r ../../Reticulum/docs/Reticulum\ Manual.pdf build/reticulum_manual/

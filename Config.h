@@ -20,7 +20,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x45
+	#define MIN_VERS  0x46
 
 	#define PLATFORM_AVR   0x90
   #define PLATFORM_ESP32 0x80
@@ -176,7 +176,6 @@
 			const int pin_led_tx = 4;
             #define HAS_DISPLAY true
             #define HAS_PMU true
-            #define HAS_TCXO true
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
             #define HAS_SD false
@@ -189,6 +188,7 @@
 			const int pin_led_tx = 32;
 			#define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_LORA32_V1_0
 			const int pin_cs = 18;
 			const int pin_reset = 14;
@@ -203,6 +203,7 @@
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_0
 			const int pin_cs = 18;
 			const int pin_reset = 12;
@@ -217,6 +218,7 @@
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_LORA32_V2_1
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -235,6 +237,7 @@
             #define HAS_BLUETOOTH true
             #define HAS_PMU true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_HELTEC32_V2
 			const int pin_cs = 18;
 			const int pin_reset = 23;
@@ -249,11 +252,13 @@
             #define HAS_DISPLAY true
 			#define HAS_BLUETOOTH true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 		#elif BOARD_MODEL == BOARD_RNODE_NG_20
             #define HAS_DISPLAY true
             #define HAS_BLUETOOTH true
 			#define HAS_NP true
             #define HAS_CONSOLE true
+            #define HAS_EEPROM true
 			const int pin_cs = 18;
 			const int pin_reset = 12;
 			const int pin_dio = 26;
@@ -274,6 +279,7 @@
             #define HAS_PMU true
 			#define HAS_NP true
 			#define HAS_SD false
+            #define HAS_EEPROM true
 			const int pin_cs = 18;
 			const int pin_reset = 23;
 			const int pin_dio = 26;

@@ -20,5 +20,4 @@ You can also download the copy of the [RNode Firmware source-code]({ASSET_PATH}p
 <a href="./s_nn.html"><button type="button" id="task-rns">Nomad Network</button></a>
 <a href="./s_rnsh.html"><button type="button" id="task-rns">RN Shell</button></a>
 <a href="./s_sideband.html"><button type="button" id="task-rns">Sideband</button></a>
-<a href="./pkg/tncattach.zip"><button type="button" id="task-rns">TNC Attach</button></a>
 </center>
