@@ -140,7 +140,7 @@ void setup() {
     update_display();
   #endif
 
-  #if MCU_VARIANT == MCU_ESP32
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     #if HAS_PMU == true
       pmu_ready = init_pmu();
     #endif

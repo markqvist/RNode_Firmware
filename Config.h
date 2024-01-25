@@ -304,7 +304,7 @@
         #if BOARD_MODEL == BOARD_RAK4630
             #define HAS_EEPROM false
             #define HAS_DISPLAY false // set for debugging
-            #define HAS_BLUETOOTH false
+            #define HAS_BLUETOOTH true
             #define HAS_CONSOLE false
             #define HAS_PMU false
             #define HAS_NP false

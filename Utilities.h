@@ -1207,8 +1207,16 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
             written_bytes = 0;
         }
 	#endif
-
 }
+
+#if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+void eeprom_flush() {
+    // sync file contents to flash
+    file.close();
+    file.open(EEPROM_FILE, FILE_O_WRITE);
+    written_bytes = 0;
+}
+#endif
 
 void eeprom_write(uint8_t addr, uint8_t byte) {
 	if (!eeprom_info_locked() && addr >= 0 && addr < EEPROM_RESERVED) {
@@ -1344,8 +1352,16 @@ bool eeprom_checksum_valid() {
 void bt_conf_save(bool is_enabled) {
 	if (is_enabled) {
 		eeprom_update(eeprom_addr(ADDR_CONF_BT), BT_ENABLE_BYTE);
+        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+            // have to do a flush because we're only writing 1 byte and it syncs after 8
+            eeprom_flush();
+        #endif
 	} else {
 		eeprom_update(eeprom_addr(ADDR_CONF_BT), 0x00);
+        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+            // have to do a flush because we're only writing 1 byte and it syncs after 8
+            eeprom_flush();
+        #endif
 	}
 }
 
