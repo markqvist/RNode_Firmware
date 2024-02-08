@@ -28,8 +28,8 @@
 #ifndef MCU_VARIANT
   #error No MCU variant defined, cannot compile
 #endif
-
-#if MCU_VARIANT == MCU_ESP32
+//heltec32 v3 is not compatible with rtc_wdt.h
+#if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
   #include "soc/rtc_wdt.h"
   #define ISR_VECT IRAM_ATTR
 #else
@@ -89,8 +89,10 @@
     int fifo_tx_addr_ptr = 0;
     int fifo_rx_addr_ptr = 0;
     uint8_t packet[256] = {0};
-    extern SPIClass spiModem;
-    #define SPI spiModem
+    #if defined(NRF52840_XXAA)
+      extern SPIClass spiModem;
+      #define SPI spiModem
+    #endif
 
 
 #elif MODEM == SX1276 || MODEM == SX1278
