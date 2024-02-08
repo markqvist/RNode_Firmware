@@ -660,7 +660,7 @@ void kiss_indicate_stat_rssi() {
     #if MODEM == SX1276 || MODEM == SX1278
         uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
     #elif MODEM == SX1262
-        uint8_t packet_rssi_val = (uint8_t)(last_rssi);
+        int8_t packet_rssi_val = (int8_t)(last_rssi+rssi_offset);
     #endif
 	serial_write(FEND);
 	serial_write(CMD_STAT_RSSI);

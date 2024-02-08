@@ -786,7 +786,7 @@ int ISR_VECT LoRaClass::packetRssi() {
     // may need more calculations here
     uint8_t buf[3] = {0};
     executeOpcodeRead(OP_PACKET_STATUS, buf, 3);
-    int pkt_rssi = -(int(buf[2])) / 2;
+    int pkt_rssi = -buf[0] / 2;
     return pkt_rssi;
   #endif
 }
@@ -807,7 +807,7 @@ float ISR_VECT LoRaClass::packetSnr() {
   #elif MODEM == SX1262
     uint8_t buf[3] = {0};
     executeOpcodeRead(OP_PACKET_STATUS, buf, 3);
-    return float(buf[1]) / 4.0;
+    return float(buf[1]) * 0.25;
   #endif
 }
 
