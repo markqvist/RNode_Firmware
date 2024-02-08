@@ -42,6 +42,7 @@
 	#define BOARD_HELTEC32_V2   0x38
 	#define BOARD_RNODE_NG_20   0x40
 	#define BOARD_RNODE_NG_21   0x41
+	#define BOARD_RNODE_NG_22   0x42
 	#define BOARD_GENERIC_NRF52 0x50
 	#define BOARD_RAK4630       0x51
 
@@ -299,6 +300,36 @@
 					const int pin_led_tx = 25;
 				#endif
 			#endif
+        #elif BOARD_MODEL == BOARD_RNODE_NG_22
+            #define HAS_DISPLAY true
+            #define HAS_BLUETOOTH false // TODO: Implement
+			#define HAS_CONSOLE false   // TODO: Implement
+            #define HAS_PMU true
+			#define HAS_NP true
+			#define HAS_SD false
+            #define HAS_EEPROM true
+			#define MODEM_MISO 3
+			#define MODEM_MOSI 6
+			#define MODEM_CLK 5
+			const int pin_cs = 7;
+			const int pin_reset = 8;
+			const int pin_dio = 33;
+			const int pin_np = 38;
+			const int pin_dac = 25;
+			const int pin_adc = 1;
+			const int SD_MISO = 2;
+			const int SD_MOSI = 11;
+			const int SD_CLK = 14;
+			const int SD_CS = 13;
+			#if HAS_NP == false
+				#if defined(EXTERNAL_LEDS)
+					const int pin_led_rx = 37;
+					const int pin_led_tx = 37;
+				#else
+					const int pin_led_rx = 37;
+					const int pin_led_tx = 37;
+				#endif
+			#endif
         #endif
     #elif PLATFORM == PLATFORM_NRF52
         #if BOARD_MODEL == BOARD_RAK4630
@@ -351,7 +382,7 @@
         const int pin_busy = -1;
     #endif
 
-    #if MODEM == SX1262
+    #if MODEM == SX1262 && defined(NRF52840_XXAA)
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
     #endif
 

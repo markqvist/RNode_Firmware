@@ -30,7 +30,9 @@
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
-  #include "soc/rtc_wdt.h"
+  #if BOARD_MODEL != BOARD_RNODE_NG_22
+    #include "soc/rtc_wdt.h"
+  #endif
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
@@ -89,9 +91,11 @@
     int fifo_tx_addr_ptr = 0;
     int fifo_rx_addr_ptr = 0;
     uint8_t packet[256] = {0};
-    extern SPIClass spiModem;
-    #define SPI spiModem
 
+    #if defined(NRF52840_XXAA)
+      extern SPIClass spiModem;
+      #define SPI spiModem
+    #endif
 
 #elif MODEM == SX1276 || MODEM == SX1278
     // Registers
@@ -182,7 +186,11 @@ bool LoRaClass::preInit() {
   // set SS high
   digitalWrite(_ss, HIGH);
   
-  SPI.begin();
+  #if BOARD_MODEL == BOARD_RNODE_NG_22
+    SPI.begin(MODEM_CLK, MODEM_MISO, MODEM_MOSI);
+  #else
+    SPI.begin();
+  #endif
 
   // check version (retry for up to 2 seconds)
   #if MODEM == SX1276 || MODEM == SX1278
@@ -201,6 +209,7 @@ bool LoRaClass::preInit() {
   
     lora_preinit_done = true;
     return true;
+
   #elif MODEM == SX1262
     long start = millis();
     uint8_t syncmsb;
@@ -213,12 +222,14 @@ bool LoRaClass::preInit() {
       }
       delay(100);
     }
+
     if ( uint16_t(syncmsb << 8 | synclsb) != 0x1424 && uint16_t(syncmsb << 8 | synclsb) != 0x4434) {
         return false;
     }
 
     lora_preinit_done = true;
     return true;
+
   #else
     return false;
   #endif

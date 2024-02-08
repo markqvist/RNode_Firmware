@@ -151,7 +151,12 @@ bool device_init() {
     mbedtls_md_init(&ctx);
     mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(md_type), 0);
     mbedtls_md_starts(&ctx);
-    mbedtls_md_update(&ctx, dev_bt_mac, BT_DEV_ADDR_LEN);
+    #if HAS_BLUETOOTH == true
+      mbedtls_md_update(&ctx, dev_bt_mac, BT_DEV_ADDR_LEN);
+    #else
+      // TODO: Get from BLE stack instead
+      // mbedtls_md_update(&ctx, dev_bt_mac, BT_DEV_ADDR_LEN);
+    #endif
     mbedtls_md_update(&ctx, dev_eeprom_signature, EEPROM_SIG_LEN);
     mbedtls_md_finish(&ctx, dev_hash);
     mbedtls_md_free(&ctx);

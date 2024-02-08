@@ -44,7 +44,9 @@
 	#include "Device.h"
 #endif
 #if MCU_VARIANT == MCU_ESP32
-  #include "soc/rtc_wdt.h"
+	#if BOARD_MODEL != BOARD_RNODE_NG_22
+	  #include "soc/rtc_wdt.h"
+	#endif
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
