@@ -22,7 +22,18 @@
     int written_bytes = 0;
 #endif
 #include <stddef.h>
-#include "LoRa.h"
+
+#if MODEM == SX1262
+#include "sx126x.h"
+sx126x *LoRa = &sx126x_modem;
+#elif MODEM == SX1276 || MODEM == SX1278
+#include "sx127x.h"
+sx127x *LoRa = &sx127x_modem;
+#elif MODEM == SX1280
+#include "sx128x.h"
+sx128x *LoRa = &sx128x_modem;
+#endif
+
 #include "ROM.h"
 #include "Framing.h"
 #include "MD5.h"
@@ -657,11 +668,7 @@ void kiss_indicate_stat_tx() {
 }
 
 void kiss_indicate_stat_rssi() {
-    #if MODEM == SX1276 || MODEM == SX1278
-        uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
-    #elif MODEM == SX1262
-        int8_t packet_rssi_val = (int8_t)(last_rssi+rssi_offset);
-    #endif
+    uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
 	serial_write(FEND);
 	serial_write(CMD_STAT_RSSI);
 	escaped_serial_write(packet_rssi_val);
@@ -975,7 +982,7 @@ inline uint8_t packetSequence(uint8_t header) {
 }
 
 void setPreamble() {
-	if (radio_online) LoRa.setPreambleLength(lora_preamble_symbols);
+	if (radio_online) LoRa->setPreambleLength(lora_preamble_symbols);
 	kiss_indicate_phy_stats();
 }
 
@@ -1002,12 +1009,12 @@ void updateBitrate() {
 }
 
 void setSpreadingFactor() {
-	if (radio_online) LoRa.setSpreadingFactor(lora_sf);
+	if (radio_online) LoRa->setSpreadingFactor(lora_sf);
 	updateBitrate();
 }
 
 void setCodingRate() {
-	if (radio_online) LoRa.setCodingRate4(lora_cr);
+	if (radio_online) LoRa->setCodingRate4(lora_cr);
 	updateBitrate();
 }
 
@@ -1021,66 +1028,66 @@ void set_implicit_length(uint8_t len) {
 }
 
 int getTxPower() {
-	uint8_t txp = LoRa.getTxPower();
+	uint8_t txp = LoRa->getTxPower();
 	return (int)txp;
 }
 
 void setTXPower() {
 	if (radio_online) {
-		if (model == MODEL_A2) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A3) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-		if (model == MODEL_A4) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-		if (model == MODEL_A7) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A8) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A2) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A3) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A4) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A7) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A8) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_B3) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B4) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B8) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B3) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B8) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_C4) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_C9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_E4) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_E9) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_E4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_E9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_FE) LoRa.setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_FF) LoRa.setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_FE) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_FF) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
 	}
 }
 
 
 void getBandwidth() {
 	if (radio_online) {
-			lora_bw = LoRa.getSignalBandwidth();
+			lora_bw = LoRa->getSignalBandwidth();
 	}
 	updateBitrate();
 }
 
 void setBandwidth() {
 	if (radio_online) {
-		LoRa.setSignalBandwidth(lora_bw);
+		LoRa->setSignalBandwidth(lora_bw);
 		getBandwidth();
 	}
 }
 
 void getFrequency() {
 	if (radio_online) {
-		lora_freq = LoRa.getFrequency();
+		lora_freq = LoRa->getFrequency();
 	}
 }
 
 void setFrequency() {
 	if (radio_online) {
-		LoRa.setFrequency(lora_freq);
+		LoRa->setFrequency(lora_freq);
 		getFrequency();
 	}
 }
 
 uint8_t getRandom() {
 	if (radio_online) {
-		return LoRa.random();
+		return LoRa->random();
 	} else {
 		return 0x00;
 	}
