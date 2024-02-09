@@ -317,8 +317,6 @@
             #define HAS_TCXO true
             #define HAS_RF_SWITCH_RX_TX true
             #define HAS_BUSY true
-            #define MODEM SX1280
-            
             #define CONFIG_UART_BUFFER_SIZE 6144
             #define CONFIG_QUEUE_SIZE 6144
             #define CONFIG_QUEUE_MAX_LENGTH 200
@@ -326,14 +324,14 @@
             #define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
 
             // following pins are for the sx1262
-            /*const int pin_rxen = 37;
+            const int pin_rxen = 37;
             const int pin_reset = 38;
             const int pin_cs = 42;
             const int pin_sclk = 43;
             const int pin_mosi = 44;
             const int pin_miso = 45;
             const int pin_busy = 46;
-            const int pin_dio = 47;*/
+            const int pin_dio = 47;
             const int pin_led_rx = LED_BLUE;
             const int pin_led_tx = LED_GREEN;
             const int pin_tcxo_enable = -1;
