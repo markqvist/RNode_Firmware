@@ -4,6 +4,7 @@
 // Modifications and additions copyright 2023 by Mark Qvist
 // Obviously still under the MIT license.
 
+#include "Boards.h"
 #include "LoRa.h"
 #include "Modem.h"
 
@@ -36,6 +37,12 @@
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
+#endif
+
+#if BOARD_MODEL == BOARD_RNODE_NG_22
+  #define MODEM_MISO 3
+  #define MODEM_MOSI 6
+  #define MODEM_CLK  5
 #endif
 
 #if MODEM == SX1262

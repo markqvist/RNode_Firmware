@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "ROM.h"
+#include "Boards.h"
 #include "Modem.h"
 
 #ifndef CONFIG_H
@@ -21,30 +22,6 @@
 
 	#define MAJ_VERS  0x01
 	#define MIN_VERS  0x46
-
-	#define PLATFORM_AVR   0x90
-  #define PLATFORM_ESP32 0x80
-    #define PLATFORM_NRF52 0x70
-
-	#define MCU_1284P 0x91
-	#define MCU_2560  0x92
-	#define MCU_ESP32 0x81
-	#define MCU_NRF52 0x71
-
-	#define BOARD_RNODE         0x31
-	#define BOARD_HMBRW         0x32
-	#define BOARD_TBEAM         0x33
-	#define BOARD_HUZZAH32      0x34
-	#define BOARD_GENERIC_ESP32 0x35
-	#define BOARD_LORA32_V2_0   0x36
-	#define BOARD_LORA32_V2_1   0x37
-	#define BOARD_LORA32_V1_0   0x39
-	#define BOARD_HELTEC32_V2   0x38
-	#define BOARD_RNODE_NG_20   0x40
-	#define BOARD_RNODE_NG_21   0x41
-	#define BOARD_RNODE_NG_22   0x42
-	#define BOARD_GENERIC_NRF52 0x50
-	#define BOARD_RAK4630       0x51
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
@@ -308,9 +285,6 @@
 			#define HAS_NP true
 			#define HAS_SD false
             #define HAS_EEPROM true
-			#define MODEM_MISO 3
-			#define MODEM_MOSI 6
-			#define MODEM_CLK 5
 			const int pin_cs = 7;
 			const int pin_reset = 8;
 			const int pin_dio = 33;
