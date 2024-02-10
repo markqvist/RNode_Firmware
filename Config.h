@@ -313,7 +313,7 @@
         #if BOARD_MODEL == BOARD_RAK4630
             #define HAS_EEPROM false
             #define HAS_DISPLAY false // set for debugging
-            #define HAS_BLUETOOTH false
+            #define HAS_BLUETOOTH true
             #define HAS_CONSOLE false
             #define HAS_PMU false
             #define HAS_NP false
@@ -324,8 +324,9 @@
             #define CONFIG_UART_BUFFER_SIZE 6144
             #define CONFIG_QUEUE_SIZE 6144
             #define CONFIG_QUEUE_MAX_LENGTH 200
-            #define EEPROM_SIZE 4096
-            #define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
+            #define EEPROM_SIZE 200
+            //#define EEPROM_OFFSET EEPROM_SIZE+0xED000-EEPROM_RESERVED
+            #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
 
             // following pins are for the sx1262
             const int pin_rxen = 37;

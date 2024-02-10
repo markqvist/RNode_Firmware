@@ -13,11 +13,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#if MCU_VARIANT == MCU_ESP32
 #include "BluetoothSerial.h"
 #include "esp_bt_main.h"
 #include "esp_bt_device.h"
 
+#elif MCU_VARIANT == MCU_NRF52
+#include <bluefruit.h>
+#include <math.h>
+#endif
+
+#if MCU_VARIANT == MCU_ESP32
 BluetoothSerial SerialBT;
+#elif MCU_VARIANT == MCU_NRF52
+BLEUart SerialBT;
+BLEDis  bledis;
+BLEBas  blebas;
+#endif
+
 #define BT_PAIRING_TIMEOUT 35000
 uint32_t bt_pairing_started = 0;
 
@@ -138,4 +151,145 @@ char bt_devname[11];
     }
   }
 
+#elif MCU_VARIANT == MCU_NRF52
+uint8_t eeprom_read(uint32_t mapped_addr);
+
+void bt_stop() {
+  if (bt_state != BT_STATE_OFF) {
+    bt_allow_pairing = false;
+    bt_state = BT_STATE_OFF;
+  }
+}
+
+void bt_disable_pairing() {
+  bt_allow_pairing = false;
+  bt_ssp_pin = 0;
+  bt_state = BT_STATE_ON;
+}
+
+void bt_pairing_complete(uint16_t conn_handle, uint8_t auth_status) {
+    if (auth_status == BLE_GAP_SEC_STATUS_SUCCESS) {
+      bt_disable_pairing();
+    } else {
+      bt_ssp_pin = 0;
+    }
+}
+
+bool bt_passkey_callback(uint16_t conn_handle, uint8_t const passkey[6], bool match_request) {
+    for (int i = 0; i < 6; i++) {
+        // multiply by tens however many times needed to make numbers appear in order
+        bt_ssp_pin += ((int)passkey[i] - 48) * pow(10, 5-i);
+    }
+    kiss_indicate_btpin();
+    if (match_request) {
+        if (bt_allow_pairing) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void bt_connect_callback(uint16_t conn_handle) {
+    bt_state = BT_STATE_CONNECTED;
+    cable_state = CABLE_STATE_DISCONNECTED;
+}
+
+void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason) {
+    bt_state = BT_STATE_ON;
+}
+
+bool bt_setup_hw() {
+  if (!bt_ready) {
+    #if HAS_EEPROM 
+        if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+    #else
+        if (eeprom_read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+    #endif
+      bt_enabled = true;
+    } else {
+      bt_enabled = false;
+    }
+    Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
+    Bluefruit.autoConnLed(false);
+    if (Bluefruit.begin()) {
+      Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
+      Bluefruit.Security.setIOCaps(true, true, false);
+      Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
+      Bluefruit.Periph.setConnectCallback(bt_connect_callback);
+      Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
+      Bluefruit.Security.setIOCaps(true, true, false);
+      Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
+      const ble_gap_addr_t gap_addr = Bluefruit.getAddr();
+      char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
+      for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
+          data[i] = gap_addr.addr[i];
+      }
+      #if HAS_EEPROM 
+          data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
+      #else
+          data[BT_DEV_ADDR_LEN] = eeprom_read(eeprom_addr(ADDR_SIGNATURE));
+      #endif
+      unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
+      memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
+      sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+      free(data);
+
+      bt_ready = true;
+      return true;
+
+    } else { return false; }
+  } else { return false; }
+}
+
+void bt_start() {
+  if (bt_state == BT_STATE_OFF) {
+    Bluefruit.setName(bt_devname);
+    bledis.setManufacturer("Adafruit Industries");
+    bledis.setModel("Bluefruit Feather52");
+    // start device information service
+    bledis.begin();
+
+    SerialBT.begin();
+
+    blebas.begin();
+
+    // non-connectable advertising
+    Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
+    Bluefruit.Advertising.addTxPower();
+
+    // Include bleuart 128-bit uuid
+    Bluefruit.Advertising.addService(SerialBT);
+
+    // There is no room for Name in Advertising packet
+    // Use Scan response for Name
+    Bluefruit.ScanResponse.addName();
+
+    Bluefruit.Advertising.start(0);
+
+    bt_state = BT_STATE_ON;
+   }
+}
+
+bool bt_init() {
+    bt_state = BT_STATE_OFF;
+    if (bt_setup_hw()) {
+      if (bt_enabled && !console_active) bt_start();
+      return true;
+    } else {
+      return false;
+    }
+}
+
+void bt_enable_pairing() {
+  if (bt_state == BT_STATE_OFF) bt_start();
+  bt_allow_pairing = true;
+  bt_pairing_started = millis();
+  bt_state = BT_STATE_PAIRING;
+}
+
+void update_bt() {
+  if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
+    bt_disable_pairing();
+  }
+}
 #endif

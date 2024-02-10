@@ -18,8 +18,13 @@
 #if HAS_EEPROM 
     #include <EEPROM.h>
 #elif PLATFORM == PLATFORM_NRF52
-    #include "flash_nrf5x.h"
-    int written_bytes = 0;
+    #include <Adafruit_LittleFS.h>
+    #include <InternalFileSystem.h>
+    using namespace Adafruit_LittleFS_Namespace;
+    #define EEPROM_FILE "eeprom"
+    bool file_exists = false;
+    int written_bytes = 4;
+    File file(InternalFS);
 #endif
 #include <stddef.h>
 
@@ -1104,10 +1109,33 @@ void promisc_disable() {
 }
 
 #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+    bool eeprom_begin() {
+        InternalFS.begin();
+
+        file.open(EEPROM_FILE, FILE_O_READ);
+
+        // if file doesn't exist
+        if (!file) {
+            if (file.open(EEPROM_FILE, FILE_O_WRITE)) {
+                // initialise the file with empty content
+                uint8_t empty_content[EEPROM_SIZE] = {0};
+                file.write(empty_content, EEPROM_SIZE);
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            file.close();
+            file.open(EEPROM_FILE, FILE_O_WRITE);
+            return true;
+        }
+    }
+
     uint8_t eeprom_read(uint32_t mapped_addr) {
         uint8_t byte;
         void* byte_ptr = &byte;
-        flash_nrf5x_read(byte_ptr, mapped_addr, 1);
+        file.seek(mapped_addr);
+        file.read(byte_ptr, 1);
         return byte;
     }
 #endif
@@ -1176,22 +1204,30 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
     #elif !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
         uint8_t read_byte;
         void* read_byte_ptr = &read_byte;
-        void const * byte_ptr = &byte;
-        flash_nrf5x_read(read_byte_ptr, mapped_addr, 1);
+        file.seek(mapped_addr);
+        file.read(read_byte_ptr, 1);
+        file.seek(mapped_addr);
         if (read_byte != byte) {
-            flash_nrf5x_write(mapped_addr, byte_ptr, 1);
+            file.write(byte);
         }
-
         written_bytes++;
 
-        // flush the cache every 4 bytes to make sure everything is synced
-        if (written_bytes == 4) {
+        if (written_bytes >= 8) {
+            file.close();
+            file.open(EEPROM_FILE, FILE_O_WRITE);
             written_bytes = 0;
-            flash_nrf5x_flush();
         }
 	#endif
-
 }
+
+#if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+void eeprom_flush() {
+    // sync file contents to flash
+    file.close();
+    file.open(EEPROM_FILE, FILE_O_WRITE);
+    written_bytes = 0;
+}
+#endif
 
 void eeprom_write(uint8_t addr, uint8_t byte) {
 	if (!eeprom_info_locked() && addr >= 0 && addr < EEPROM_RESERVED) {
@@ -1329,8 +1365,16 @@ bool eeprom_checksum_valid() {
 void bt_conf_save(bool is_enabled) {
 	if (is_enabled) {
 		eeprom_update(eeprom_addr(ADDR_CONF_BT), BT_ENABLE_BYTE);
+        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+            // have to do a flush because we're only writing 1 byte and it syncs after 8
+            eeprom_flush();
+        #endif
 	} else {
 		eeprom_update(eeprom_addr(ADDR_CONF_BT), 0x00);
+        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+            // have to do a flush because we're only writing 1 byte and it syncs after 8
+            eeprom_flush();
+        #endif
 	}
 }
 
