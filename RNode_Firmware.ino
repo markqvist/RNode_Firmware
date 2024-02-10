@@ -93,16 +93,22 @@ void setup() {
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module
-  LoRa.setPins(pin_cs, pin_reset, pin_dio, pin_rxen, pin_busy);
+  #if MODEM == SX1276 || MODEM == SX1278
+  LoRa->setPins(pin_cs, pin_reset, pin_dio, pin_busy);
+  #elif MODEM == SX1262
+  LoRa->setPins(pin_cs, pin_reset, pin_dio, pin_busy, pin_rxen);
+  #elif MODEM == SX1280
+  LoRa->setPins(pin_cs, pin_reset, pin_dio, pin_busy, pin_rxen, pin_txen);
+  #endif
   
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     init_channel_stats();
 
     // Check installed transceiver chip and
     // probe boot parameters.
-    if (LoRa.preInit()) {
+    if (LoRa->preInit()) {
       modem_installed = true;
-      uint32_t lfr = LoRa.getFrequency();
+      uint32_t lfr = LoRa->getFrequency();
       if (lfr == 0) {
         // Normal boot
       } else if (lfr == M_FRQ_R) {
@@ -115,7 +121,7 @@ void setup() {
       } else {
         // Unknown boot
       }
-      LoRa.setFrequency(M_FRQ_S);
+      LoRa->setFrequency(M_FRQ_S);
     } else {
       modem_installed = false;
     }
@@ -158,14 +164,14 @@ void setup() {
   // Validate board health, EEPROM and config
   validate_status();
 
-  if (op_mode != MODE_TNC) LoRa.setFrequency(0);
+  if (op_mode != MODE_TNC) LoRa->setFrequency(0);
 }
 
 void lora_receive() {
   if (!implicit) {
-    LoRa.receive();
+    LoRa->receive();
   } else {
-    LoRa.receive(implicit_l);
+    LoRa->receive(implicit_l);
   }
 }
 
@@ -187,7 +193,7 @@ inline void kiss_write_packet() {
 
 inline void getPacketData(uint16_t len) {
   while (len-- && read_len < MTU) {
-    pbuf[read_len++] = LoRa.read();
+    pbuf[read_len++] = LoRa->read();
   }
 }
 
@@ -198,7 +204,7 @@ void ISR_VECT receive_callback(int packet_size) {
     // by combining two raw LoRa packets.
     // We read the 1-byte header and extract
     // packet sequence number and split flags
-    uint8_t header   = LoRa.read(); packet_size--;
+    uint8_t header   = LoRa->read(); packet_size--;
     uint8_t sequence = packetSequence(header);
     bool    ready    = false;
 
@@ -210,8 +216,8 @@ void ISR_VECT receive_callback(int packet_size) {
       seq = sequence;
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa.packetRssi();
-        last_snr_raw = LoRa.packetSnrRaw();
+        last_rssi = LoRa->packetRssi();
+        last_snr_raw = LoRa->packetSnrRaw();
       #endif
 
       getPacketData(packet_size);
@@ -223,8 +229,8 @@ void ISR_VECT receive_callback(int packet_size) {
       
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = (last_rssi+LoRa.packetRssi())/2;
-        last_snr_raw = (last_snr_raw+LoRa.packetSnrRaw())/2;
+        last_rssi = (last_rssi+LoRa->packetRssi())/2;
+        last_snr_raw = (last_snr_raw+LoRa->packetSnrRaw())/2;
       #endif
 
       getPacketData(packet_size);
@@ -241,8 +247,8 @@ void ISR_VECT receive_callback(int packet_size) {
       seq = sequence;
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa.packetRssi();
-        last_snr_raw = LoRa.packetSnrRaw();
+        last_rssi = LoRa->packetRssi();
+        last_snr_raw = LoRa->packetSnrRaw();
       #endif
 
       getPacketData(packet_size);
@@ -260,8 +266,8 @@ void ISR_VECT receive_callback(int packet_size) {
       }
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        last_rssi = LoRa.packetRssi();
-        last_snr_raw = LoRa.packetSnrRaw();
+        last_rssi = LoRa->packetRssi();
+        last_snr_raw = LoRa->packetSnrRaw();
       #endif
 
       getPacketData(packet_size);
@@ -287,8 +293,8 @@ void ISR_VECT receive_callback(int packet_size) {
     read_len = 0;
 
     #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-      last_rssi = LoRa.packetRssi();
-      last_snr_raw = LoRa.packetSnrRaw();
+      last_rssi = LoRa->packetRssi();
+      last_snr_raw = LoRa->packetSnrRaw();
       getPacketData(packet_size);
 
       // We first signal the RSSI of the
@@ -310,7 +316,7 @@ bool startRadio() {
   update_radio_lock();
   if (!radio_online && !console_active) {
     if (!radio_locked && hw_ready) {
-      if (!LoRa.begin(lora_freq)) {
+      if (!LoRa->begin(lora_freq)) {
         // The radio could not be started.
         // Indicate this failure over both the
         // serial port and with the onboard LEDs
@@ -329,9 +335,9 @@ bool startRadio() {
         setCodingRate();
         getFrequency();
 
-        LoRa.enableCrc();
+        LoRa->enableCrc();
 
-        LoRa.onReceive(receive_callback);
+        LoRa->onReceive(receive_callback);
 
         lora_receive();
 
@@ -360,7 +366,7 @@ bool startRadio() {
 }
 
 void stopRadio() {
-  LoRa.end();
+  LoRa->end();
   radio_online = false;
 }
 
@@ -469,23 +475,23 @@ void transmit(uint16_t size) {
         header = header | FLAG_SPLIT;
       }
 
-      LoRa.beginPacket();
-      LoRa.write(header); written++;
+      LoRa->beginPacket();
+      LoRa->write(header); written++;
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa.write(tbuf[i]);
+        LoRa->write(tbuf[i]);
 
         written++;
 
         if (written == 255) {
-          LoRa.endPacket(); add_airtime(written);
-          LoRa.beginPacket();
-          LoRa.write(header);
+          LoRa->endPacket(); add_airtime(written);
+          LoRa->beginPacket();
+          LoRa->write(header);
           written = 1;
         }
       }
 
-      LoRa.endPacket(); add_airtime(written);
+      LoRa->endPacket(); add_airtime(written);
     } else {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
@@ -501,17 +507,17 @@ void transmit(uint16_t size) {
       // If implicit header mode has been set,
       // set packet length to payload data length
       if (!implicit) {
-        LoRa.beginPacket();
+        LoRa->beginPacket();
       } else {
-        LoRa.beginPacket(size);
+        LoRa->beginPacket(size);
       }
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa.write(tbuf[i]);
+        LoRa->write(tbuf[i]);
 
         written++;
       }
-      LoRa.endPacket(); add_airtime(written);
+      LoRa->endPacket(); add_airtime(written);
     }
   } else {
     kiss_indicate_error(ERROR_TXFAILED);
@@ -631,7 +637,7 @@ void serialCallback(uint8_t sbyte) {
         kiss_indicate_spreadingfactor();
       } else {
         int sf = sbyte;
-        if (sf < 6) sf = 6;
+        if (sf < 5) sf = 5;
         if (sf > 12) sf = 12;
 
         lora_sf = sf;
@@ -938,8 +944,8 @@ void updateModemStatus() {
     portENTER_CRITICAL();
   #endif
 
-  uint8_t status = LoRa.modemStatus();
-  current_rssi = LoRa.currentRssi();
+  uint8_t status = LoRa->modemStatus();
+  current_rssi = LoRa->currentRssi();
   last_status_update = millis();
 
   #if MCU_VARIANT == MCU_ESP32
@@ -1158,8 +1164,8 @@ void loop() {
     #if MCU_VARIANT == MCU_ESP32
       if (packet_ready) {
         portENTER_CRITICAL(&update_lock);
-        last_rssi = LoRa.packetRssi();
-        last_snr_raw = LoRa.packetSnrRaw();
+        last_rssi = LoRa->packetRssi();
+        last_snr_raw = LoRa->packetSnrRaw();
         portEXIT_CRITICAL(&update_lock);
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
@@ -1173,8 +1179,8 @@ void loop() {
     #elif MCU_VARIANT == MCU_NRF52
       if (packet_ready) {
         portENTER_CRITICAL();
-        last_rssi = LoRa.packetRssi();
-        last_snr_raw = LoRa.packetSnrRaw();
+        last_rssi = LoRa->packetRssi();
+        last_snr_raw = LoRa->packetSnrRaw();
         portEXIT_CRITICAL();
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
@@ -1199,7 +1205,7 @@ void loop() {
               }
 
               if (!dcd) {
-                uint8_t csma_r = (uint8_t)random(256);
+                uint8_t csma_r = (uint8_t)random(20); // updated to increase bitrate: todo check
                 if (csma_p >= csma_r) {
                   flushQueue();
                 } else {
