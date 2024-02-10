@@ -315,9 +315,8 @@
             #define HAS_NP false
             #define HAS_SD false
             #define HAS_TCXO true
-            #define HAS_RXEN_BUSY true
-            #define MODEM SX1262 
-            
+            #define HAS_RF_SWITCH_RX_TX true
+            #define HAS_BUSY true
             #define CONFIG_UART_BUFFER_SIZE 6144
             #define CONFIG_QUEUE_SIZE 6144
             #define CONFIG_QUEUE_MAX_LENGTH 200
@@ -351,12 +350,16 @@
 
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
 
-    #ifndef HAS_RXEN_BUSY
+    #ifndef HAS_RF_SWITCH_RX_TX
         const int pin_rxen = -1;
+        const int pin_txen = -1;
+    #endif
+
+    #ifndef HAS_BUSY
         const int pin_busy = -1;
     #endif
 
-    #if MODEM == SX1262 && defined(NRF52840_XXAA)
+    #if (MODEM == SX1262 || MODEM == SX1280) && defined(NRF52840_XXAA)
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);
     #endif
 

@@ -4,8 +4,8 @@
 // Modifications and additions copyright 2023 by Mark Qvist
 // Obviously still under the MIT license.
 
-#ifndef LORA_H
-#define LORA_H
+#ifndef SX128X_H
+#define SX128X_H
 
 #include <Arduino.h>
 #include <SPI.h>
@@ -15,6 +15,7 @@
 #define LORA_DEFAULT_RESET_PIN 9
 #define LORA_DEFAULT_DIO0_PIN  2
 #define LORA_DEFAULT_RXEN_PIN  -1
+#define LORA_DEFAULT_TXEN_PIN  -1
 #define LORA_DEFAULT_BUSY_PIN  -1
 
 #define PA_OUTPUT_RFO_PIN      0
@@ -22,11 +23,11 @@
 
 #define RSSI_OFFSET 157
 
-class LoRaClass : public Stream {
+class sx128x : public Stream {
 public:
-  LoRaClass();
+  sx128x();
 
-  int begin(long frequency);
+  int begin(unsigned long frequency);
   void end();
 
   int beginPacket(int implicitHeader = false);
@@ -61,7 +62,7 @@ public:
   uint8_t getTxPower();
   void setTxPower(int level, int outputPin = PA_OUTPUT_PA_BOOST_PIN);
   uint32_t getFrequency();
-  void setFrequency(long frequency);
+  void setFrequency(unsigned long frequency);
   void setSpreadingFactor(int sf);
   long getSignalBandwidth();
   void setSignalBandwidth(long sbw);
@@ -74,18 +75,16 @@ public:
   void enableTCXO();
   void disableTCXO();
 
-  #if MODEM == SX1262
-      void enableAntenna();
-      void disableAntenna();
-      void loraMode();
-      void waitOnBusy();
-      void executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size);
-      void executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size);
-      void writeBuffer(const uint8_t* buffer, size_t size);
-      void readBuffer(uint8_t* buffer, size_t size);
-      void setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, int ldro);
-      void setPacketParams(long preamble, uint8_t headermode, uint8_t length, uint8_t crc);
-  #endif
+  void txAntEnable();
+  void rxAntEnable();
+  void loraMode();
+  void waitOnBusy();
+  void executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size);
+  void executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size);
+  void writeBuffer(const uint8_t* buffer, size_t size);
+  void readBuffer(uint8_t* buffer, size_t size);
+  void setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t length, uint8_t crc);
+  void setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr);
 
   // deprecated
   void crc() { enableCrc(); }
@@ -93,7 +92,7 @@ public:
 
   byte random();
 
-  void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN, int rxen = LORA_DEFAULT_RXEN_PIN, int busy = LORA_DEFAULT_BUSY_PIN);
+  void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN, int busy = LORA_DEFAULT_BUSY_PIN, int rxen = LORA_DEFAULT_RXEN_PIN, int txen = LORA_DEFAULT_TXEN_PIN);
   void setSPIFrequency(uint32_t frequency);
 
   void dumpRegisters(Stream& out);
@@ -104,15 +103,9 @@ private:
 
   void handleDio0Rise();
 
-  #if MODEM == SX1276 || MODEM == SX1278
-      uint8_t readRegister(uint8_t address);
-      void writeRegister(uint8_t address, uint8_t value);
-      uint8_t singleTransfer(uint8_t address, uint8_t value);
-  #elif MODEM == SX1262
-      uint8_t readRegister(uint16_t address);
-      void writeRegister(uint16_t address, uint8_t value);
-      uint8_t singleTransfer(uint8_t opcode, uint16_t address, uint8_t value);
-  #endif
+  uint8_t readRegister(uint16_t address);
+  void writeRegister(uint16_t address, uint8_t value);
+  uint8_t singleTransfer(uint8_t opcode, uint16_t address, uint8_t value);
 
   static void onDio0Rise();
 
@@ -125,21 +118,27 @@ private:
   int _reset;
   int _dio0;
   int _rxen;
+  int _txen;
   int _busy;
-  long _frequency;
+  int _modem;
+  unsigned long _frequency;
   int _txp;
   uint8_t _sf;
   uint8_t _bw;
   uint8_t _cr;
-  uint8_t _ldro;
   int _packetIndex;
-  int _preambleLength;
+  uint32_t _preambleLength;
   int _implicitHeaderMode;
   int _payloadLength;
   int _crcMode;
+  int _fifo_tx_addr_ptr;
+  int _fifo_rx_addr_ptr;
+  uint8_t _packet[256];
+  bool _preinit_done;
+  int _rxPacketLength;
   void (*_onReceive)(int);
 };
 
-extern LoRaClass LoRa;
+extern sx128x sx128x_modem;
 
 #endif
