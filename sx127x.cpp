@@ -5,6 +5,7 @@
 // Obviously still under the MIT license.
 
 #include "sx127x.h"
+#include "Boards.h"
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
@@ -29,7 +30,9 @@
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
-  #include "soc/rtc_wdt.h"
+  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
+    #include "soc/rtc_wdt.h"
+  #endif
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT

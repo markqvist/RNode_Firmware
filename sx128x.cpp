@@ -5,6 +5,7 @@
 // Obviously still under the MIT license.
 
 #include "sx128x.h"
+#include "Boards.h"
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
@@ -29,7 +30,9 @@
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
-  #include "soc/rtc_wdt.h"
+  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
+    #include "soc/rtc_wdt.h"
+  #endif
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
@@ -77,8 +80,10 @@
 #define FREQ_DIV_8X (double)pow(2.0, 18.0)
 #define FREQ_STEP_8X (double)(XTAL_FREQ_8X / FREQ_DIV_8X)
 
-extern SPIClass spiModem;
-#define SPI spiModem
+#if defined(NRF52840_XXAA)
+  extern SPIClass spiModem;
+  #define SPI spiModem
+#endif
 
 extern SPIClass SPI;
 

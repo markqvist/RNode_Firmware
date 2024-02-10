@@ -285,9 +285,13 @@
 			#define HAS_NP true
 			#define HAS_SD false
             #define HAS_EEPROM true
-			const int pin_cs = 7;
+            #define HAS_RF_SWITCH_RX_TX true
+            #define HAS_BUSY true
 			const int pin_reset = 8;
+            const int pin_rxen = 21;
 			const int pin_dio = 33;
+			const int pin_busy = 34;
+
 			const int pin_np = 38;
 			const int pin_dac = 25;
 			const int pin_adc = 1;

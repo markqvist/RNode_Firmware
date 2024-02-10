@@ -47,6 +47,10 @@
         #define MODEM SX1262
       #elif BOARD_MODEL == BOARD_RNODE_NG_22
         #define MODEM SX1262
+        const int pin_cs = 7;
+        const int pin_sclk = 5;
+        const int pin_mosi = 6;
+        const int pin_miso = 3;
       #elif BOARD_MODEL == BOARD_GENERIC_NRF52
         #define MODEM SX1262
       #else

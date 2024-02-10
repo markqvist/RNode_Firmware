@@ -5,6 +5,7 @@
 // Obviously still under the MIT license.
 
 #include "sx126x.h"
+#include "Boards.h"
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
@@ -29,7 +30,9 @@
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
-  #include "soc/rtc_wdt.h"
+  #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
+    #include "soc/rtc_wdt.h"
+  #endif
   #define ISR_VECT IRAM_ATTR
 #else
   #define ISR_VECT
@@ -83,8 +86,11 @@
 #define XTAL_FREQ_6X (double)32000000
 #define FREQ_DIV_6X (double)pow(2.0, 25.0)
 #define FREQ_STEP_6X (double)(XTAL_FREQ_6X / FREQ_DIV_6X)
-extern SPIClass spiModem;
-#define SPI spiModem
+
+#if defined(NRF52840_XXAA)
+  extern SPIClass spiModem;
+  #define SPI spiModem
+#endif
 
 extern SPIClass SPI;
 
@@ -120,24 +126,34 @@ bool sx126x::preInit() {
   // set SS high
   digitalWrite(_ss, HIGH);
   
-  SPI.begin();
+  Serial.println("SPI INIT");
+  #if BOARD_MODEL == BOARD_RNODE_NG_22
+    SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
+  #else
+    SPI.begin();
+  #endif
+  Serial.println("DONE");
 
   // check version (retry for up to 2 seconds)
   long start = millis();
   uint8_t syncmsb;
   uint8_t synclsb;
+  Serial.println("TRYING REGISTER READ");
   while (((millis() - start) < 2000) && (millis() >= start)) {
       syncmsb = readRegister(REG_SYNC_WORD_MSB_6X);
       synclsb = readRegister(REG_SYNC_WORD_LSB_6X);
       if ( uint16_t(syncmsb << 8 | synclsb) == 0x1424 || uint16_t(syncmsb << 8 | synclsb) == 0x4434) {
+          Serial.println("CORRECT VALUE RETURNED");
           break;
       }
       delay(100);
   }
   if ( uint16_t(syncmsb << 8 | synclsb) != 0x1424 && uint16_t(syncmsb << 8 | synclsb) != 0x4434) {
+      Serial.println("REG READ FAILED");
       return false;
   }
 
+  Serial.println("MODEM PREINIT SUCCESS");
   _preinit_done = true;
   return true;
 }
