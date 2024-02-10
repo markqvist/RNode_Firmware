@@ -204,9 +204,7 @@ void sx128x::waitOnBusy() {
     if (_busy != -1) {
         while (digitalRead(_busy) == HIGH)
         {
-            if (millis() >= (time + 300)) {
-                pinMode(LED_BLUE, OUTPUT);
-                digitalWrite(LED_BLUE, HIGH);
+            if (millis() >= (time + 100)) {
                 break;
             }
             // do nothing
@@ -458,7 +456,6 @@ uint8_t sx128x::modemStatus() {
     // imitate the register status from the sx1276 / 78
     uint8_t buf[2] = {0};
 
-    // debug
     executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
 
     uint8_t clearbuf[2] = {0};
@@ -468,18 +465,15 @@ uint8_t sx128x::modemStatus() {
     if (buf[0] & IRQ_PREAMBLE_DET_MASK_8X != 0) {
         byte = byte | 0x01 | 0x04;
         // clear register after reading
-        //clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X; 
         clearbuf[0] = 0xFF;
     }
 
     if (buf[1] & IRQ_HEADER_DET_MASK_8X != 0) {
         byte = byte | 0x02 | 0x04;
         // clear register after reading
-        //clearbuf[1] = IRQ_HEADER_DET_MASK_8X; 
         clearbuf[1] = 0xFF;
     }
 
-    // debug
     executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
 
     return byte;
