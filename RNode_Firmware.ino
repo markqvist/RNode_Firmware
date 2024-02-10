@@ -154,6 +154,9 @@ void setup() {
     #if HAS_BLUETOOTH
       bt_init();
       bt_init_ran = true;
+    #elif HAS_BLE
+      // TODO: Implement BLE on ESP32S3 instead of this hack
+      bt_ready = true;
     #endif
 
     if (console_active) {

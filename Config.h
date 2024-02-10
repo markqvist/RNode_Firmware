@@ -158,6 +158,13 @@
             #define HAS_CONSOLE true
             #define HAS_SD false
             #define HAS_EEPROM true
+            #if MODEM == SX1262
+            	// TODO: Figure out how on earth the SX1262 T-Beams are actually connected
+            	// #define HAS_RF_SWITCH_RX_TX true
+	            // const int pin_rxen = 32;
+            	#define HAS_BUSY true
+				const int pin_busy = 32;
+            #endif
 		#elif BOARD_MODEL == BOARD_HUZZAH32
 			const int pin_cs = 4;
 			const int pin_reset = 36;
@@ -278,7 +285,9 @@
 				#endif
 			#endif
         #elif BOARD_MODEL == BOARD_RNODE_NG_22
+			#define IS_ESP32S3 true
             #define HAS_DISPLAY true
+			#define HAS_BLE true
             #define HAS_BLUETOOTH false // TODO: Implement
 			#define HAS_CONSOLE false   // TODO: Implement
             #define HAS_PMU true
