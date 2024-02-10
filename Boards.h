@@ -42,14 +42,16 @@
     #define BOARD_GENERIC_NRF52 0x50
     #define BOARD_RAK4630       0x51
 
-    #if BOARD_MODEL == BOARD_RAK4630
-      #define MODEM SX1262
-    #elif BOARD_MODEL == BOARD_RNODE_NG_22
-      #define MODEM SX1262
-    #elif BOARD_MODEL == BOARD_GENERIC_NRF52
-      #define MODEM SX1262
-    #else
-      #define MODEM SX1276
+    #ifndef MODEM
+      #if BOARD_MODEL == BOARD_RAK4630
+        #define MODEM SX1262
+      #elif BOARD_MODEL == BOARD_RNODE_NG_22
+        #define MODEM SX1262
+      #elif BOARD_MODEL == BOARD_GENERIC_NRF52
+        #define MODEM SX1262
+      #else
+        #define MODEM SX1276
+      #endif
     #endif
 
 #endif
