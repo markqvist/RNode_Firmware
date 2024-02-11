@@ -365,17 +365,27 @@ int sx126x::begin(long frequency)
     }
   }
 
-  loraMode();
-  // cannot access registers in sleep mode on sx1262, set to idle instead
-  idle();
+  if (_rxen != -1) {
+      pinMode(_rxen, OUTPUT);
+  }
+
+  // Put in STDBY_RC mode before calibration
+  uint8_t mode_byte = 0x00;
+  executeOpcode(OP_STANDBY_6X, &mode_byte, 1); 
+
+  // calibrate RC64k, RC13M, PLL, ADC and image
+  uint8_t calibrate = 0x7F; 
+  executeOpcode(OP_CALIBRATE_6X, &calibrate, 1);
 
   #if HAS_TCXO
     enableTCXO();
   #endif
 
-  if (_rxen != -1) {
-      pinMode(_rxen, OUTPUT);
-  }
+  loraMode();
+  idle();
+
+  // Set sync word
+  setSyncWord(SYNC_WORD_6X);
 
   #if DIO2_AS_RF_SWITCH
     // enable dio2 rf switch
@@ -384,13 +394,6 @@ int sx126x::begin(long frequency)
   #endif
 
   rxAntEnable();
-
-  // Set sync word
-  setSyncWord(SYNC_WORD_6X);
-
-  // calibrate RC64k, RC13M, PLL, ADC and image
-  uint8_t calibrate = 0x7F; 
-  executeOpcode(OP_CALIBRATE_6X, &calibrate, 1);
 
   setFrequency(frequency);
 
