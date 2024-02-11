@@ -1214,7 +1214,7 @@ void loop() {
               }
 
               if (!dcd) {
-                uint8_t csma_r = (uint8_t)random(20); // updated to increase bitrate: todo check
+                uint8_t csma_r = (uint8_t)random(256);
                 if (csma_p >= csma_r) {
                   flushQueue();
                 } else {
