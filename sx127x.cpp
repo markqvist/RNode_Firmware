@@ -4,30 +4,10 @@
 // Modifications and additions copyright 2023 by Mark Qvist
 // Obviously still under the MIT license.
 
-#include "sx127x.h"
 #include "Boards.h"
 
-#define MCU_1284P 0x91
-#define MCU_2560  0x92
-#define MCU_ESP32 0x81
-#define MCU_NRF52 0x71
-#if defined(__AVR_ATmega1284P__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_1284P
-#elif defined(__AVR_ATmega2560__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_2560
-#elif defined(ESP32)
-  #define PLATFORM PLATFORM_ESP32
-  #define MCU_VARIANT MCU_ESP32
-#elif defined(NRF52840_XXAA)
-  #define PLATFORM PLATFORM_NRF52
-  #define MCU_VARIANT MCU_NRF52
-#endif
-
-#ifndef MCU_VARIANT
-  #error No MCU variant defined, cannot compile
-#endif
+#if MODEM == SX1276
+#include "sx127x.h"
 
 #if MCU_VARIANT == MCU_ESP32
   #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -96,6 +76,7 @@
 extern SPIClass SPI;
 
 #define MAX_PKT_LENGTH           255
+#define SYNC_WORD_7X            0x12
 
 sx127x::sx127x() :
   _spiSettings(8E6, MSBFIRST, SPI_MODE0),
@@ -200,10 +181,10 @@ int sx127x::begin(long frequency)
   // set auto AGC
   writeRegister(REG_MODEM_CONFIG_3_7X, 0x04);
 
-  // set output power to 2 dBm
+  setSyncWord(SYNC_WORD_7X);
+  enableCrc();
   setTxPower(2);
 
-  // put in standby mode
   idle();
 
   return 1;
@@ -602,7 +583,7 @@ void sx127x::setPreambleLength(long length)
   writeRegister(REG_PREAMBLE_LSB_7X, (uint8_t)(length >> 0));
 }
 
-void sx127x::setSyncWord(int sw)
+void sx127x::setSyncWord(uint8_t sw)
 {
     writeRegister(REG_SYNC_WORD_7X, sw);
 }
@@ -692,3 +673,5 @@ void ISR_VECT sx127x::onDio0Rise()
 }
 
 sx127x sx127x_modem;
+
+#endif

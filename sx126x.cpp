@@ -4,8 +4,10 @@
 // Modifications and additions copyright 2023 by Mark Qvist
 // Obviously still under the MIT license.
 
-#include "sx126x.h"
 #include "Boards.h"
+
+#if MODEM == SX1262
+#include "sx126x.h"
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
@@ -67,6 +69,7 @@
 #define IRQ_TX_DONE_MASK_6X         0x01
 #define IRQ_RX_DONE_MASK_6X         0x02
 #define IRQ_HEADER_DET_MASK_6X      0x10
+#define IRQ_PREAMBLE_DET_MASK_6X    0x04
 #define IRQ_PAYLOAD_CRC_ERROR_MASK_6X 0x40
 
 #define MODE_LONG_RANGE_MODE_6X     0x01
@@ -81,8 +84,16 @@
 #define REG_RANDOM_GEN_6X         0x0819
 
 #define MODE_TCXO_3_3V_6X           0x07
+#define MODE_TCXO_3_0V_6X           0x06
+#define MODE_TCXO_2_7V_6X           0x06
+#define MODE_TCXO_2_4V_6X           0x06
+#define MODE_TCXO_2_2V_6X           0x03
+#define MODE_TCXO_1_8V_6X           0x02
+#define MODE_TCXO_1_7V_6X           0x01
+#define MODE_TCXO_1_6V_6X           0x00
 
-#define IRQ_PREAMBLE_DET_MASK_6X    0x04
+#define SYNC_WORD_6X              0x1424
+
 #define XTAL_FREQ_6X (double)32000000
 #define FREQ_DIV_6X (double)pow(2.0, 25.0)
 #define FREQ_STEP_6X (double)(XTAL_FREQ_6X / FREQ_DIV_6X)
@@ -126,34 +137,28 @@ bool sx126x::preInit() {
   // set SS high
   digitalWrite(_ss, HIGH);
   
-  Serial.println("SPI INIT");
   #if BOARD_MODEL == BOARD_RNODE_NG_22
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
   #else
     SPI.begin();
   #endif
-  Serial.println("DONE");
 
   // check version (retry for up to 2 seconds)
   long start = millis();
   uint8_t syncmsb;
   uint8_t synclsb;
-  Serial.println("TRYING REGISTER READ");
   while (((millis() - start) < 2000) && (millis() >= start)) {
       syncmsb = readRegister(REG_SYNC_WORD_MSB_6X);
       synclsb = readRegister(REG_SYNC_WORD_LSB_6X);
       if ( uint16_t(syncmsb << 8 | synclsb) == 0x1424 || uint16_t(syncmsb << 8 | synclsb) == 0x4434) {
-          Serial.println("CORRECT VALUE RETURNED");
           break;
       }
       delay(100);
   }
   if ( uint16_t(syncmsb << 8 | synclsb) != 0x1424 && uint16_t(syncmsb << 8 | synclsb) != 0x4434) {
-      Serial.println("REG READ FAILED");
       return false;
   }
 
-  Serial.println("MODEM PREINIT SUCCESS");
   _preinit_done = true;
   return true;
 }
@@ -193,10 +198,9 @@ uint8_t ISR_VECT sx126x::singleTransfer(uint8_t opcode, uint16_t address, uint8_
 
 void sx126x::rxAntEnable()
 {
-        uint8_t byte = 0x01;
-        // enable dio2 rf switch
-        executeOpcode(OP_DIO2_RF_CTRL_6X, &byte, 1); 
-        digitalWrite(_rxen, HIGH);
+  if (_rxen != -1) {
+    digitalWrite(_rxen, HIGH);
+  }
 }
 
 void sx126x::loraMode() {
@@ -361,35 +365,48 @@ int sx126x::begin(long frequency)
     }
   }
 
-      //#if HAS_TCXO
-          // turn TCXO on
-          enableTCXO();
-      //#endif
-      loraMode();
-      idle();
-      // cannot access registers in sleep mode on sx1262, set to idle instead
-      if (_rxen != -1) {
-          pinMode(_rxen, OUTPUT);
-          rxAntEnable();
-      }
-      // calibrate RC64k, RC13M, PLL, ADC and image
-      uint8_t calibrate = 0x7F; 
-      executeOpcode(OP_CALIBRATE_6X, &calibrate, 1);
+  loraMode();
+  // cannot access registers in sleep mode on sx1262, set to idle instead
+  idle();
 
-      setFrequency(frequency);
+  #if HAS_TCXO
+    enableTCXO();
+  #endif
 
-      // set output power to 2 dBm
-      setTxPower(2);
+  if (_rxen != -1) {
+      pinMode(_rxen, OUTPUT);
+  }
 
-      // set LNA boost
-      writeRegister(REG_LNA_6X, 0x96);
+  #if DIO2_AS_RF_SWITCH
+    // enable dio2 rf switch
+    uint8_t byte = 0x01;
+    executeOpcode(OP_DIO2_RF_CTRL_6X, &byte, 1);
+  #endif
 
-      // set base addresses
-      uint8_t basebuf[2] = {0};
-      executeOpcode(OP_BUFFER_BASE_ADDR_6X, basebuf, 2);
+  rxAntEnable();
 
-      setModulationParams(_sf, _bw, _cr, _ldro);
-      setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+  // Set sync word
+  setSyncWord(SYNC_WORD_6X);
+
+  // calibrate RC64k, RC13M, PLL, ADC and image
+  uint8_t calibrate = 0x7F; 
+  executeOpcode(OP_CALIBRATE_6X, &calibrate, 1);
+
+  setFrequency(frequency);
+
+  // set output power to 2 dBm
+  setTxPower(2);
+  enableCrc();
+
+  // set LNA boost
+  writeRegister(REG_LNA_6X, 0x96);
+
+  // set base addresses
+  uint8_t basebuf[2] = {0};
+  executeOpcode(OP_BUFFER_BASE_ADDR_6X, basebuf, 2);
+
+  setModulationParams(_sf, _bw, _cr, _ldro);
+  setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
   return 1;
 }
@@ -416,9 +433,9 @@ int sx126x::beginPacket(int implicitHeader)
     explicitHeaderMode();
   }
 
-      _payloadLength = 0;
-      _fifo_tx_addr_ptr = 0;
-      setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+  _payloadLength = 0;
+  _fifo_tx_addr_ptr = 0;
+  setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
   return 1;
 }
@@ -459,23 +476,18 @@ uint8_t sx126x::modemStatus() {
     // imitate the register status from the sx1276 / 78
     uint8_t buf[2] = {0};
 
-
     executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
-
     uint8_t clearbuf[2] = {0};
-
     uint8_t byte = 0x00;
 
-    if (buf[1] & IRQ_PREAMBLE_DET_MASK_6X != 0) {
-        byte = byte | 0x01 | 0x04;
-        // clear register after reading
-        clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X; 
+    if ((buf[1] & IRQ_PREAMBLE_DET_MASK_6X) != 0) {
+      byte = byte | 0x01 | 0x04;
+      // clear register after reading
+      clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X;
     }
 
-    if (buf[1] & IRQ_HEADER_DET_MASK_6X != 0) {
-        byte = byte | 0x02 | 0x04;
-        // clear register after reading
-        clearbuf[1] = clearbuf[1] | IRQ_HEADER_DET_MASK_6X; 
+    if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) {
+      byte = byte | 0x02 | 0x04;
     }
 
     executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
@@ -494,7 +506,7 @@ int ISR_VECT sx126x::currentRssi() {
     uint8_t byte = 0;
     executeOpcodeRead(OP_CURRENT_RSSI_6X, &byte, 1);
     int rssi = -(int(byte)) / 2;
-    return rssi - RSSI_OFFSET;
+    return rssi;
 }
 
 uint8_t sx126x::packetRssiRaw() {
@@ -508,7 +520,7 @@ int ISR_VECT sx126x::packetRssi() {
     uint8_t buf[3] = {0};
     executeOpcodeRead(OP_PACKET_STATUS_6X, buf, 3);
     int pkt_rssi = -buf[0] / 2;
-    return pkt_rssi - RSSI_OFFSET;
+    return pkt_rssi;
 }
 
 uint8_t ISR_VECT sx126x::packetSnrRaw() {
@@ -653,20 +665,18 @@ void sx126x::receive(int size)
     if (_rxen != -1) {
         rxAntEnable();
     }
+
     uint8_t mode[3] = {0xFF, 0xFF, 0xFF}; // continuous mode
     executeOpcode(OP_RX_6X, mode, 3);
 }
 
 void sx126x::idle()
 {
-      //#if HAS_TCXO
-          // STDBY_XOSC
-          uint8_t byte = 0x01;
-      //#else
-      //    // STDBY_RC
-      //    uint8_t byte = 0x00;
-      //#endif
-      executeOpcode(OP_STANDBY_6X, &byte, 1); 
+  // STDBY_XOSC
+  uint8_t byte = 0x01;
+  // STDBY_RC
+  // uint8_t byte = 0x00;
+  executeOpcode(OP_STANDBY_6X, &byte, 1); 
 }
 
 void sx126x::sleep()
@@ -677,7 +687,12 @@ void sx126x::sleep()
 
 void sx126x::enableTCXO() {
     // only tested for RAK4630, voltage may be different on other platforms
-    uint8_t buf[4] = {MODE_TCXO_3_3V_6X, 0x00, 0x00, 0xFF};
+    #if BOARD_MODEL == BOARD_RAK4630
+      uint8_t buf[4] = {MODE_TCXO_3_3V_6X, 0x00, 0x00, 0xFF};
+    #elif BOARD_MODEL == BOARD_TBEAM
+      uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
+    #endif
+
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);
 }
 
@@ -756,7 +771,7 @@ void sx126x::setSpreadingFactor(int sf)
 
   _sf = sf;
 
-      setModulationParams(sf, _bw, _cr, _ldro);
+  setModulationParams(sf, _bw, _cr, _ldro);
   handleLowDataRate();
 }
 
@@ -834,13 +849,17 @@ void sx126x::setCodingRate4(int denominator)
 
 void sx126x::setPreambleLength(long length)
 {
-    setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
+  _preambleLength = length;
+  setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
 }
 
-void sx126x::setSyncWord(int sw)
+void sx126x::setSyncWord(uint16_t sw)
 {
-    writeRegister(REG_SYNC_WORD_MSB_6X, sw & 0xFF00);
-    writeRegister(REG_SYNC_WORD_LSB_6X, sw & 0x00FF);
+  // TODO: Fix
+    // writeRegister(REG_SYNC_WORD_MSB_6X, (sw & 0xFF00) >> 8);
+    // writeRegister(REG_SYNC_WORD_LSB_6X, sw & 0x00FF);
+    writeRegister(REG_SYNC_WORD_MSB_6X, 0x14);
+    writeRegister(REG_SYNC_WORD_LSB_6X, 0x24);
 }
 
 void sx126x::enableCrc()
@@ -921,6 +940,11 @@ void ISR_VECT sx126x::handleDio0Rise()
             _onReceive(packetLength);
         }
     }
+    // else {
+    //   Serial.println("CRCE");
+    //   Serial.println(buf[0]);
+    //   Serial.println(buf[1]);
+    // }
 }
 
 void ISR_VECT sx126x::onDio0Rise()
@@ -929,3 +953,5 @@ void ISR_VECT sx126x::onDio0Rise()
 }
 
 sx126x sx126x_modem;
+
+#endif

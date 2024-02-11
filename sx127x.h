@@ -66,16 +66,12 @@ public:
   void setSignalBandwidth(long sbw);
   void setCodingRate4(int denominator);
   void setPreambleLength(long length);
-  void setSyncWord(int sw);
+  void setSyncWord(uint8_t sw);
   uint8_t modemStatus();
   void enableCrc();
   void disableCrc();
   void enableTCXO();
   void disableTCXO();
-
-  // deprecated
-  void crc() { enableCrc(); }
-  void noCrc() { disableCrc(); }
 
   byte random();
 

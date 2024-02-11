@@ -72,4 +72,5 @@
 	#define BT_ENABLE_BYTE 0x73
 
 	#define EEPROM_RESERVED 200
+
 #endif

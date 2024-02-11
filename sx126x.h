@@ -68,7 +68,7 @@ public:
   void setSignalBandwidth(long sbw);
   void setCodingRate4(int denominator);
   void setPreambleLength(long length);
-  void setSyncWord(int sw);
+  void setSyncWord(uint16_t sw);
   uint8_t modemStatus();
   void enableCrc();
   void disableCrc();
