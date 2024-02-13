@@ -293,27 +293,33 @@
     #elif BOARD_MODEL == BOARD_RNODE_NG_22
       #define IS_ESP32S3 true
       #define MODEM SX1262
+      #define DIO2_AS_RF_SWITCH true
+      #define HAS_BUSY true
+      #define HAS_TCXO true
+
       #define HAS_DISPLAY true
       #define HAS_BLE true
       #define HAS_BLUETOOTH false // TODO: Implement
       #define HAS_CONSOLE false   // TODO: Implement
       #define HAS_PMU true
-      #define HAS_NP true
+      #define HAS_NP false
       #define HAS_SD false
       #define HAS_EEPROM true
-      #define HAS_RF_SWITCH_RX_TX true
-      #define HAS_BUSY true
+
       const int pin_cs = 7;
+      const int pin_reset = 8;
       const int pin_sclk = 5;
       const int pin_mosi = 6;
       const int pin_miso = 3;
-      const int pin_reset = 8;
-      const int pin_rxen = 21;
+      const int pin_tcxo_enable = -1;
+
       const int pin_dio = 33;
       const int pin_busy = 34;
+      
       const int pin_np = 38;
       const int pin_dac = 25;
       const int pin_adc = 1;
+
       const int SD_MISO = 2;
       const int SD_MOSI = 11;
       const int SD_CLK = 14;

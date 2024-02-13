@@ -43,6 +43,8 @@
 	#define MODEL_C9 0xC9
 	#define MODEL_E4 0xE4
 	#define MODEL_E9 0xE9
+	#define MODEL_E3 0xE3
+	#define MODEL_E8 0xE8
 	#define MODEL_FE 0xFE
 	#define MODEL_FF 0xFF
 
