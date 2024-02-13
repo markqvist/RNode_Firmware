@@ -53,7 +53,7 @@ public:
   void onReceive(void(*callback)(int));
 
   void receive(int size = 0);
-  void idle();
+  void standby();
   void sleep();
 
   bool preInit();

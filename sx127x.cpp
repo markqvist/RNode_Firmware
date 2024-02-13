@@ -90,7 +90,7 @@ void sx127x::setSPIFrequency(uint32_t frequency) { _spiSettings = SPISettings(fr
 void sx127x::setPins(int ss, int reset, int dio0, int busy) { _ss = ss; _reset = reset; _dio0 = dio0; _busy = busy; }
 uint8_t ISR_VECT sx127x::readRegister(uint8_t address) { return singleTransfer(address & 0x7f, 0x00); }
 void sx127x::writeRegister(uint8_t address, uint8_t value) { singleTransfer(address | 0x80, value); }
-void sx127x::idle() { writeRegister(REG_OP_MODE_7X, MODE_LONG_RANGE_MODE_7X | MODE_STDBY_7X); }
+void sx127x::standby() { writeRegister(REG_OP_MODE_7X, MODE_LONG_RANGE_MODE_7X | MODE_STDBY_7X); }
 void sx127x::sleep() { writeRegister(REG_OP_MODE_7X, MODE_LONG_RANGE_MODE_7X | MODE_SLEEP_7X); }
 uint8_t sx127x::modemStatus() { return readRegister(REG_MODEM_STAT_7X); }
 void sx127x::setSyncWord(uint8_t sw) { writeRegister(REG_SYNC_WORD_7X, sw); }
@@ -168,7 +168,7 @@ int sx127x::begin(long frequency) {
   enableCrc();
   setTxPower(2);
 
-  idle();
+  standby();
 
   return 1;
 }
@@ -180,7 +180,7 @@ void sx127x::end() {
 }
 
 int sx127x::beginPacket(int implicitHeader) {
-  idle();
+  standby();
 
   if (implicitHeader) {
     implicitHeaderMode();

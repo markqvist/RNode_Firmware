@@ -43,12 +43,20 @@
 #define OP_WRITE_REGISTER_6X        0x0D
 #define OP_DIO3_TCXO_CTRL_6X        0x97
 #define OP_DIO2_RF_CTRL_6X          0x9D
+#define OP_CAD_PARAMS               0x88
 #define OP_CALIBRATE_6X             0x89
+#define OP_RX_TX_FALLBACK_MODE_6X   0x93
+#define OP_REGULATOR_MODE_6X        0x96
+#define OP_CALIBRATE_IMAGE_6X       0x98
+
+#define MASK_CALIBRATE_ALL          0x7f
+
 #define IRQ_TX_DONE_MASK_6X         0x01
 #define IRQ_RX_DONE_MASK_6X         0x02
 #define IRQ_HEADER_DET_MASK_6X      0x10
 #define IRQ_PREAMBLE_DET_MASK_6X    0x04
 #define IRQ_PAYLOAD_CRC_ERROR_MASK_6X 0x40
+#define IRQ_ALL_MASK_6X             0b0100001111111111
 
 #define MODE_LONG_RANGE_MODE_6X     0x01
 
@@ -69,6 +77,12 @@
 #define MODE_TCXO_1_8V_6X           0x02
 #define MODE_TCXO_1_7V_6X           0x01
 #define MODE_TCXO_1_6V_6X           0x00
+
+#define MODE_STDBY_RC_6X            0x00
+#define MODE_STDBY_XOSC_6X          0x01
+#define MODE_FALLBACK_STDBY_RC_6X   0x20
+#define MODE_IMPLICIT_HEADER        0x01
+#define MODE_EXPLICIT_HEADER        0x00
 
 #define SYNC_WORD_6X              0x1424
 
@@ -331,6 +345,46 @@ void sx126x::reset(void) {
   }
 }
 
+void sx126x::calibrate(void) {
+  // Put in STDBY_RC mode before calibration
+  uint8_t mode_byte = MODE_STDBY_RC_6X;
+  executeOpcode(OP_STANDBY_6X, &mode_byte, 1);
+
+  // calibrate RC64k, RC13M, PLL, ADC and image
+  uint8_t calibrate = MASK_CALIBRATE_ALL;
+  executeOpcode(OP_CALIBRATE_6X, &calibrate, 1);
+
+  delay(5);
+  waitOnBusy();
+}
+
+void sx126x::calibrate_image(long frequency) {
+  uint8_t image_freq[2] = {0};
+
+  if (frequency >= 430E6 && frequency <= 440E6) {
+    image_freq[0] = 0x6B;
+    image_freq[1] = 0x6F;
+  }
+  else if (frequency >= 470E6 && frequency <= 510E6) {
+    image_freq[0] = 0x75;
+    image_freq[1] = 0x81;
+  }
+  else if (frequency >= 779E6 && frequency <= 787E6) {
+    image_freq[0] = 0xC1;
+    image_freq[1] = 0xC5;
+  }
+  else if (frequency >= 863E6 && frequency <= 870E6) {
+    image_freq[0] = 0xD7;
+    image_freq[1] = 0xDB;
+  }
+  else if (frequency >= 902E6 && frequency <= 928E6) {
+    image_freq[0] = 0xE1;
+    image_freq[1] = 0xE9;
+  }
+
+  executeOpcode(OP_CALIBRATE_IMAGE_6X, image_freq, 2);
+  waitOnBusy();
+}
 
 int sx126x::begin(long frequency)
 {
@@ -350,20 +404,13 @@ int sx126x::begin(long frequency)
       pinMode(_rxen, OUTPUT);
   }
 
-  // Put in STDBY_RC mode before calibration
-  uint8_t mode_byte = 0x00;
-  executeOpcode(OP_STANDBY_6X, &mode_byte, 1); 
+  calibrate();
+  calibrate_image(frequency);
 
-  // calibrate RC64k, RC13M, PLL, ADC and image
-  uint8_t calibrate = 0x7F; 
-  executeOpcode(OP_CALIBRATE_6X, &calibrate, 1);
-
-  #if HAS_TCXO
-    enableTCXO();
-  #endif
+  enableTCXO();
 
   loraMode();
-  idle();
+  standby();
 
   // Set sync word
   setSyncWord(SYNC_WORD_6X);
@@ -408,8 +455,7 @@ void sx126x::end()
 
 int sx126x::beginPacket(int implicitHeader)
 {
-  // put in standby mode
-  idle();
+  standby();
 
   if (implicitHeader) {
     implicitHeaderMode();
@@ -654,12 +700,12 @@ void sx126x::receive(int size)
     executeOpcode(OP_RX_6X, mode, 3);
 }
 
-void sx126x::idle()
+void sx126x::standby()
 {
   // STDBY_XOSC
-  uint8_t byte = 0x01;
+  uint8_t byte = MODE_STDBY_XOSC_6X;
   // STDBY_RC
-  // uint8_t byte = 0x00;
+  // uint8_t byte = MODE_STDBY_RC_6X;
   executeOpcode(OP_STANDBY_6X, &byte, 1); 
 }
 
@@ -670,19 +716,18 @@ void sx126x::sleep()
 }
 
 void sx126x::enableTCXO() {
-    // only tested for RAK4630, voltage may be different on other platforms
+  #if HAS_TCXO
     #if BOARD_MODEL == BOARD_RAK4630
       uint8_t buf[4] = {MODE_TCXO_3_3V_6X, 0x00, 0x00, 0xFF};
     #elif BOARD_MODEL == BOARD_TBEAM
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #endif
-
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);
+  #endif
 }
 
-void sx126x::disableTCXO() {
-    // currently cannot disable on SX1262?
-}
+// TODO: Once enabled, SX1262 needs a complete reset to disable TCXO
+void sx126x::disableTCXO() { }
 
 void sx126x::setTxPower(int level, int outputPin) {
     // currently no low power mode for SX1262 implemented, assuming PA boost
@@ -693,26 +738,22 @@ void sx126x::setTxPower(int level, int outputPin) {
 
     uint8_t pa_buf[4];
 
-    pa_buf[0] = 0x04;
-    pa_buf[1] = 0x07;
-    pa_buf[2] = 0x00;
-    pa_buf[3] = 0x01;
+    pa_buf[0] = 0x04; // PADutyCycle needs to be 0x04 to achieve 22dBm output, but can be lowered for better efficiency at lower outputs
+    pa_buf[1] = 0x07; // HPMax at 0x07 is maximum supported for SX1262
+    pa_buf[2] = 0x00; // DeviceSel 0x00 for SX1262 (0x01 for SX1261)
+    pa_buf[3] = 0x01; // PALut always 0x01 (reserved according to datasheet)
 
     executeOpcode(OP_PA_CONFIG_6X, pa_buf, 4); // set pa_config for high power
 
-    if (level > 22) {
-        level = 22;
-    }
-    else if (level < -9) {
-        level = -9;
-    }
+    if (level > 22) { level = 22; }
+    else if (level < -9) { level = -9; }
 
     writeRegister(REG_OCP_6X, 0x38); // 160mA limit, overcurrent protection
 
     uint8_t tx_buf[2];
 
     tx_buf[0] = level;
-    tx_buf[1] = 0x02; // ramping time - 40 microseconds
+    tx_buf[1] = 0x02; // PA ramping time - 40 microseconds
     
     executeOpcode(OP_TX_PARAMS_6X, tx_buf, 2);
 
