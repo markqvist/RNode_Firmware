@@ -467,13 +467,13 @@ uint8_t sx128x::modemStatus() {
 
     uint8_t byte = 0x00;
 
-    if (buf[0] & IRQ_PREAMBLE_DET_MASK_8X != 0) {
+    if ((buf[0] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
         byte = byte | 0x01 | 0x04;
         // clear register after reading
         clearbuf[0] = 0xFF;
     }
 
-    if (buf[1] & IRQ_HEADER_DET_MASK_8X != 0) {
+    if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) {
         byte = byte | 0x02 | 0x04;
         // clear register after reading
         clearbuf[1] = 0xFF;
