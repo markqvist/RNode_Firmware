@@ -755,8 +755,8 @@ void sx126x::setSpreadingFactor(int sf)
 
   _sf = sf;
 
-  setModulationParams(sf, _bw, _cr, _ldro);
   handleLowDataRate();
+  setModulationParams(sf, _bw, _cr, _ldro);
 }
 
 long sx126x::getSignalBandwidth()
@@ -778,9 +778,11 @@ long sx126x::getSignalBandwidth()
 }
 
 void sx126x::handleLowDataRate(){
-  // TODO: Why was this enabled without any logic to check LDRO conditions?
-  //_ldro = 1;
-  //setModulationParams(_sf, _bw, _cr, _ldro);
+  if ( long( (1<<_sf) / (getSignalBandwidth()/1000)) > 16) {
+    _ldro = 0x01;
+  } else {
+    _ldro = 0x00;
+  }
 }
 
 void sx126x::optimizeModemSensitivity(){
@@ -789,31 +791,31 @@ void sx126x::optimizeModemSensitivity(){
 
 void sx126x::setSignalBandwidth(long sbw)
 {
-    if (sbw <= 7.8E3) {
-        _bw = 0x00;
-    } else if (sbw <= 10.4E3) {
-        _bw = 0x08;
-    } else if (sbw <= 15.6E3) {
-        _bw = 0x01;
-    } else if (sbw <= 20.8E3) {
-        _bw = 0x09;
-    } else if (sbw <= 31.25E3) {
-        _bw = 0x02;
-    } else if (sbw <= 41.7E3) {
-        _bw = 0x0A;
-    } else if (sbw <= 62.5E3) {
-        _bw = 0x03;
-    } else if (sbw <= 125E3) {
-        _bw = 0x04;
-    } else if (sbw <= 250E3) {
-        _bw = 0x05;
-    } else /*if (sbw <= 250E3)*/ {
-        _bw = 0x06;
-    }
+  if (sbw <= 7.8E3) {
+      _bw = 0x00;
+  } else if (sbw <= 10.4E3) {
+      _bw = 0x08;
+  } else if (sbw <= 15.6E3) {
+      _bw = 0x01;
+  } else if (sbw <= 20.8E3) {
+      _bw = 0x09;
+  } else if (sbw <= 31.25E3) {
+      _bw = 0x02;
+  } else if (sbw <= 41.7E3) {
+      _bw = 0x0A;
+  } else if (sbw <= 62.5E3) {
+      _bw = 0x03;
+  } else if (sbw <= 125E3) {
+      _bw = 0x04;
+  } else if (sbw <= 250E3) {
+      _bw = 0x05;
+  } else /*if (sbw <= 250E3)*/ {
+      _bw = 0x06;
+  }
 
-    setModulationParams(_sf, _bw, _cr, _ldro);
+  handleLowDataRate();
+  setModulationParams(_sf, _bw, _cr, _ldro);
 
-    handleLowDataRate();
   optimizeModemSensitivity();
 }
 
