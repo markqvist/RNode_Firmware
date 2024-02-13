@@ -635,7 +635,11 @@ void serialCallback(uint8_t sbyte) {
         kiss_indicate_txpower();
       } else {
         int txp = sbyte;
-        if (txp > 22) txp = 22;
+        #if MODEM == SX1262
+          if (txp > 22) txp = 22;
+        #else
+          if (txp > 17) txp = 17;
+        #endif
 
         lora_txp = txp;
         if (op_mode == MODE_HOST) setTXPower();
