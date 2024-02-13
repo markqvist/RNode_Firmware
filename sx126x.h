@@ -112,6 +112,8 @@ private:
   void handleLowDataRate();
   void optimizeModemSensitivity();
 
+  void reset(void);
+
 private:
   SPISettings _spiSettings;
   int _ss;

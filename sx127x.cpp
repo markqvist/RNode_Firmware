@@ -73,8 +73,8 @@
 #define IRQ_RX_DONE_MASK_7X           0x40
 #define IRQ_PAYLOAD_CRC_ERROR_MASK_7X 0x20
 
-#define MAX_PKT_LENGTH           255
-#define SYNC_WORD_7X            0x12
+#define SYNC_WORD_7X                  0x12
+#define MAX_PKT_LENGTH                255
 
 extern SPIClass SPI;
 

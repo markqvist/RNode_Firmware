@@ -9,28 +9,6 @@
 #if MODEM == SX1262
 #include "sx126x.h"
 
-#define MCU_1284P 0x91
-#define MCU_2560  0x92
-#define MCU_ESP32 0x81
-#define MCU_NRF52 0x71
-#if defined(__AVR_ATmega1284P__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_1284P
-#elif defined(__AVR_ATmega2560__)
-  #define PLATFORM PLATFORM_AVR
-  #define MCU_VARIANT MCU_2560
-#elif defined(ESP32)
-  #define PLATFORM PLATFORM_ESP32
-  #define MCU_VARIANT MCU_ESP32
-#elif defined(NRF52840_XXAA)
-  #define PLATFORM PLATFORM_NRF52
-  #define MCU_VARIANT MCU_NRF52
-#endif
-
-#ifndef MCU_VARIANT
-  #error No MCU variant defined, cannot compile
-#endif
-
 #if MCU_VARIANT == MCU_ESP32
   #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
     #include "soc/rtc_wdt.h"
@@ -132,9 +110,7 @@ sx126x::sx126x() :
 }
 
 bool sx126x::preInit() {
-  // setup pins
   pinMode(_ss, OUTPUT);
-  // set SS high
   digitalWrite(_ss, HIGH);
   
   #if BOARD_MODEL == BOARD_RNODE_NG_22
@@ -144,6 +120,7 @@ bool sx126x::preInit() {
   #endif
 
   // check version (retry for up to 2 seconds)
+  // TODO: Actually read version registers, not syncwords
   long start = millis();
   uint8_t syncmsb;
   uint8_t synclsb;
@@ -342,9 +319,7 @@ void sx126x::setPacketParams(long preamble, uint8_t headermode, uint8_t length, 
   executeOpcode(OP_PACKET_PARAMS_6X, buf, 9);
 }
 
-
-int sx126x::begin(long frequency)
-{
+void sx126x::reset(void) {
   if (_reset != -1) {
     pinMode(_reset, OUTPUT);
 
@@ -354,6 +329,12 @@ int sx126x::begin(long frequency)
     digitalWrite(_reset, HIGH);
     delay(10);
   }
+}
+
+
+int sx126x::begin(long frequency)
+{
+  reset();
 
   if (_busy != -1) {
       pinMode(_busy, INPUT);
@@ -797,8 +778,9 @@ long sx126x::getSignalBandwidth()
 }
 
 void sx126x::handleLowDataRate(){
-    _ldro = 1;
-    setModulationParams(_sf, _bw, _cr, _ldro);
+  // TODO: Why was this enabled without any logic to check LDRO conditions?
+  //_ldro = 1;
+  //setModulationParams(_sf, _bw, _cr, _ldro);
 }
 
 void sx126x::optimizeModemSensitivity(){
