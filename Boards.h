@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Modem.h"
-#include <variant.h>
 
 #ifndef BOARDS_H
   #define BOARDS_H
@@ -53,6 +52,7 @@
     #define PLATFORM PLATFORM_ESP32
     #define MCU_VARIANT MCU_ESP32
   #elif defined(NRF52840_XXAA)
+    #include <variant.h>
     #define PLATFORM PLATFORM_NRF52
     #define MCU_VARIANT MCU_NRF52
   #else
