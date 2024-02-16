@@ -9,12 +9,12 @@ Please take part in keeping the continued development, maintenance and distribut
   <br/><br/>
 - Ethereum<br/>
   ```
-  0x81F7B979fEa6134bA9FD5c701b3501A2e61E897a
+  0xFDabC71AC4c0C78C95aDDDe3B4FA19d6273c5E73
   ```
   <br/><br/>
 - Bitcoin<br/>
   ```
-  3CPmacGm34qYvR6XWLVEJmi2aNe3PZqUuq
+  35G9uWVzrpJJibzUwpNUQGQNFzLirhrYAH
   ```
   <br/><br/>
 - Ko-Fi<br/>
