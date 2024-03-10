@@ -22,6 +22,7 @@
 #include "esp_partition.h"
 #endif
 
+#define VALIDATE_FIRMWARE true
 
 // Forward declaration from Utilities.h
 void eeprom_update(int mapped_addr, uint8_t byte);
@@ -129,12 +130,14 @@ void device_validate_partitions() {
   partition.type      = ESP_PARTITION_TYPE_APP;
   esp_partition_get_sha256(&partition, dev_bootloader_hash);
   esp_partition_get_sha256(esp_ota_get_running_partition(), dev_firmware_hash);
-  for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
-    if (dev_firmware_hash_target[i] != dev_firmware_hash[i]) {
-      fw_signature_validated = false;
-      break;
+  #if VALIDATE_FIRMWARE
+    for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
+      if (dev_firmware_hash_target[i] != dev_firmware_hash[i]) {
+        fw_signature_validated = false;
+        break;
+      }
     }
-  }
+  #endif
 }
 #endif
 
