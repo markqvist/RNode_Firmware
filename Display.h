@@ -32,6 +32,12 @@
   #define DISP_ADDR 0x3C
   #define SCL_OLED 15
   #define SDA_OLED 4
+#elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+  #define DISP_RST 21
+  //#define DISP_RST -1
+  #define DISP_ADDR 0x3C
+  #define SCL_OLED 18
+  #define SDA_OLED 17
 #elif BOARD_MODEL == BOARD_RNODE_NG_21
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
@@ -108,6 +114,29 @@ bool display_init() {
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
+    #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+      Serial.println("display - 1 ");
+      // vext
+      pinMode(Vext, OUTPUT);
+      //digitalWrite(36, LOW);
+      digitalWrite(Vext, LOW);
+      delay(500);
+      Serial.println("display - 2 ");
+      //Serial.print("vext ");
+      //Serial.println(Vext);
+      int pin_display_en = 21;
+      //digitalWrite(pin_display_en, HIGH);
+      //delay(50);
+      pinMode(pin_display_en, OUTPUT);
+      digitalWrite(pin_display_en, LOW);
+      delay(50);
+      digitalWrite(pin_display_en, HIGH);
+      delay(50);
+      Wire.begin(SDA_OLED, SCL_OLED);
+      // ble debug
+      //Serial.println("Setup display pins LORA32 V3");
+      Serial.println("vext ");
+      Serial.println(Vext);
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
       int pin_display_en = 16;
       digitalWrite(pin_display_en, LOW);
@@ -149,6 +178,10 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_HELTEC32_V2
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(1);
+      #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+        disp_mode = DISP_MODE_PORTRAIT;
+        display.setRotation(1);
+        //display.setRotation(3);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
@@ -165,7 +198,14 @@ bool display_init() {
       disp_area.cp437(true);
       display.cp437(true);
 
+      Serial.print("(1)display int= ");
+      Serial.println(display_intensity);
       display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
+      Serial.print("(2)display int= ");
+      Serial.println(display_intensity);
+      display_intensity = 100;
+      Serial.print("(2)display int= ");
+      Serial.println(display_intensity);
 
       return true;
     }
@@ -349,7 +389,9 @@ void draw_stat_area() {
 }
 
 void update_stat_area() {
-  if (eeprom_ok && !firmware_update_mode && !console_active) {
+  // override eeprom check for BLE
+  //if (eeprom_ok && !firmware_update_mode && !console_active) {
+  if ( !firmware_update_mode && !console_active) {
     
     draw_stat_area();
     if (disp_mode == DISP_MODE_PORTRAIT) {
@@ -524,6 +566,8 @@ void draw_disp_area() {
 }
 
 void update_disp_area() {
+  // ble debug
+  Serial.println("...update disp area...");
   draw_disp_area();
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   if (disp_mode == DISP_MODE_LANDSCAPE) {

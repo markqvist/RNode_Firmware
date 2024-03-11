@@ -143,6 +143,9 @@ void setup() {
       eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
     }
     disp_ready = display_init();
+      // ble debug
+    Serial.print("disp ready = ");
+    Serial.println(disp_ready);
     update_display();
   #endif
 
@@ -380,6 +383,10 @@ void stopRadio() {
 }
 
 void update_radio_lock() {
+      // ble debug
+    //static char lock[40];
+    //sprintf(lock, "lock chk %d %d %x %d", lora_freq, lora_bw, lora_txp, lora_sf);
+    //Serial.println(lock);
   if (lora_freq != 0 && lora_bw != 0 && lora_txp != 0xFF && lora_sf != 0) {
     radio_locked = false;
   } else {
@@ -605,6 +612,9 @@ void serialCallback(uint8_t sbyte) {
             lora_freq = freq;
             if (op_mode == MODE_HOST) setFrequency();
             kiss_indicate_frequency();
+      // ble debug
+            //Serial.print("freq ");
+            //Serial.println(lora_freq);
           }
         }
     } else if (command == CMD_BANDWIDTH) {
@@ -690,6 +700,8 @@ void serialCallback(uint8_t sbyte) {
       } else if (sbyte == 0x01) {
         startRadio();
         kiss_indicate_radiostate();
+      // ble debug
+        //Serial.println("start radio");
       }
     } else if (command == CMD_ST_ALOCK) {
       if (sbyte == FESC) {
@@ -1063,6 +1075,11 @@ void validate_status() {
       uint8_t F_WDR = 0x01;
   #endif
 
+        // ble debug
+        Serial.print("hw_ready ");
+        Serial.print(hw_ready);
+        Serial.print(" device init done ");
+        Serial.println(device_init_done);
   if (hw_ready || device_init_done) {
     hw_ready = false;
     Serial.write("Error, invalid hardware check state\r\n");
@@ -1093,22 +1110,31 @@ void validate_status() {
   }
 
   if (boot_vector == START_FROM_BOOTLOADER || boot_vector == START_FROM_POWERON) {
-    if (eeprom_lock_set()) {
+    //if (eeprom_lock_set()) {
+    if (1) {
       if (eeprom_product_valid() && eeprom_model_valid() && eeprom_hwrev_valid()) {
         if (eeprom_checksum_valid()) {
           eeprom_ok = true;
           if (modem_installed) {
             #if PLATFORM == PLATFORM_ESP32
               if (device_init()) {
+                // ble debug
+                Serial.println("hw ready 1");
                 hw_ready = true;
               } else {
                 hw_ready = false;
+                // ble debug
+                Serial.println("hw ! ready 1");
               }
             #else
               hw_ready = true;
+                // ble debug
+                Serial.println("hw ready 2");
             #endif
           } else {
             hw_ready = false;
+            // ble debug
+            Serial.println("hw ! ready 3");
             Serial.write("No valid radio module found\r\n");
             #if HAS_DISPLAY
               if (disp_ready) {
@@ -1122,9 +1148,14 @@ void validate_status() {
             eeprom_conf_load();
             op_mode = MODE_TNC;
             startRadio();
+            // ble debug
+            Serial.println("hw ready - start radio");
+
           }
         } else {
           hw_ready = false;
+          // ble debug
+          Serial.println("hw ! ready 4");
           #if HAS_DISPLAY
             if (disp_ready) {
               device_init_done = true;
@@ -1134,15 +1165,26 @@ void validate_status() {
         }
       } else {
         hw_ready = false;
+        // ble debug
+        Serial.println("hw ! ready 5  - override  - TODO");
+        
+        //  override eeprom flags - ble debug
+        hw_ready = true;
+        //
+
         #if HAS_DISPLAY
           if (disp_ready) {
             device_init_done = true;
             update_display();
+          // ble debug
+            Serial.println("update display called");
           }
         #endif
       }
     } else {
       hw_ready = false;
+      // ble debug
+      Serial.println("hw ! ready 6");
       #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
@@ -1152,6 +1194,8 @@ void validate_status() {
     }
   } else {
     hw_ready = false;
+      // ble debug
+    Serial.println("hw ! ready 7 - bad boot vector");
     Serial.write("Error, incorrect boot vector\r\n");
     #if HAS_DISPLAY
       if (disp_ready) {

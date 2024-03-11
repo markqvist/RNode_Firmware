@@ -36,11 +36,20 @@
   #define BOARD_LORA32_V2_1   0x37
   #define BOARD_LORA32_V1_0   0x39
   #define BOARD_HELTEC32_V2   0x38
+  #define BOARD_HELTEC_LORA32_V3 0x3a
   #define BOARD_RNODE_NG_20   0x40
   #define BOARD_RNODE_NG_21   0x41
   #define BOARD_RNODE_NG_22   0x42
   #define BOARD_GENERIC_NRF52 0x50
   #define BOARD_RAK4630       0x51
+
+
+  // -----------------------------------
+  // override for local compile
+  //#define BOARD_MODEL  BOARD_LORA32_V1_0
+  #define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
+  // -----------------------------------
+
 
   #if defined(__AVR_ATmega1284P__)
     #define PLATFORM PLATFORM_AVR
@@ -71,6 +80,7 @@
 
   #define HAS_DISPLAY false
   #define HAS_BLUETOOTH false
+  #define HAS_BLE false
   #define HAS_TCXO false
   #define HAS_PMU false
   #define HAS_NP false
@@ -143,6 +153,7 @@
       #define HAS_DISPLAY true
       #define HAS_PMU true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_SD false
       #define HAS_EEPROM true
@@ -178,6 +189,7 @@
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 18;
@@ -194,6 +206,7 @@
     #elif BOARD_MODEL == BOARD_LORA32_V2_0
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 18;
@@ -210,6 +223,7 @@
     #elif BOARD_MODEL == BOARD_LORA32_V2_1
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH true
+      #define HAS_BLE true
       #define HAS_PMU true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
@@ -242,6 +256,44 @@
         const int pin_led_rx = 25;
         const int pin_led_tx = 25;
       #endif
+
+    #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+      #define IS_ESP32S3 true
+      #define HAS_DISPLAY true
+      //ESP32-S3 no bluetooth classic
+      //#define HAS_BLUETOOTH true
+      #define HAS_BLUETOOTH false
+      //#define HAS_BLE true
+      // TODO BLE
+      #define HAS_BLE false
+      // Cannot run wifi and BLE at same time?
+      #define HAS_CONSOLE false
+      #define HAS_EEPROM true
+      #if defined(EXTERNAL_LEDS)
+        const int pin_led_rx = 35;
+        const int pin_led_tx = 2;
+      #else
+        const int pin_led_rx = 2;
+        const int pin_led_tx = 2;
+      #endif
+
+      #define MODEM SX1262
+      //#define HAS_TCXO true
+      #define HAS_TCXO false
+      #define HAS_BUSY true
+      #define DIO2_AS_RF_SWITCH true
+      const int pin_tcxo_enable = -1;
+
+      // following pins are for the sx1262
+      const int pin_cs = 8;
+      const int pin_busy = 13;
+      const int pin_dio = 14;
+      const int pin_reset = 12;
+      const int pin_mosi = 10;
+      const int pin_miso = 11;
+      const int pin_sclk = 9;
+
+
 
     #elif BOARD_MODEL == BOARD_RNODE_NG_20
       #define HAS_DISPLAY true
