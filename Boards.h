@@ -43,14 +43,6 @@
   #define BOARD_GENERIC_NRF52 0x50
   #define BOARD_RAK4630       0x51
 
-
-  // -----------------------------------
-  // override for local compile
-  //#define BOARD_MODEL  BOARD_LORA32_V1_0
-  #define BOARD_MODEL  BOARD_HELTEC_LORA32_V3
-  // -----------------------------------
-
-
   #if defined(__AVR_ATmega1284P__)
     #define PLATFORM PLATFORM_AVR
     #define MCU_VARIANT MCU_1284P

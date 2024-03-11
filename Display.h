@@ -372,9 +372,7 @@ void draw_stat_area() {
 }
 
 void update_stat_area() {
-  // override eeprom check for BLE
-  //if (eeprom_ok && !firmware_update_mode && !console_active) {
-  if ( !firmware_update_mode && !console_active) {
+  if (eeprom_ok && !firmware_update_mode && !console_active) {
     
     draw_stat_area();
     if (disp_mode == DISP_MODE_PORTRAIT) {

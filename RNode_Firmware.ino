@@ -1109,6 +1109,7 @@ void validate_status() {
             #endif
           } else {
             hw_ready = false;
+            Serial.write("No valid radio module found\r\n");
             #if HAS_DISPLAY
               if (disp_ready) {
                 device_init_done = true;
@@ -1151,6 +1152,7 @@ void validate_status() {
     }
   } else {
     hw_ready = false;
+    Serial.write("Error, incorrect boot vector\r\n");
     #if HAS_DISPLAY
       if (disp_ready) {
         device_init_done = true;
