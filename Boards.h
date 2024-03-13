@@ -269,9 +269,7 @@
       #endif
 
       #define MODEM SX1262
-      // TODO TCXO?
-      //#define HAS_TCXO true
-      #define HAS_TCXO false
+      #define HAS_TCXO true
       const int pin_tcxo_enable = -1;
       #define HAS_BUSY true
       #define DIO2_AS_RF_SWITCH true
