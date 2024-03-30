@@ -60,8 +60,17 @@ void setup() {
     }
   #endif
 
-  // Seed the PRNG
-  randomSeed(analogRead(0));
+  // Seed the PRNG for CSMA R-value selection
+  # if MCU_VARIANT == MCU_ESP32
+    // On ESP32, get the seed value from the
+    // hardware RNG
+    int seed_val = (int)esp_random();
+  #else
+    // Otherwise, get a pseudo-random seed
+    // value from an unconnected analog pin
+    int seed_val = analogRead(0);
+  #endif
+  randomSeed(seed_val);
 
   // Initialise serial communication
   memset(serialBuffer, 0, sizeof(serialBuffer));
