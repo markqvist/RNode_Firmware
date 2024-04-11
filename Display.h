@@ -32,7 +32,7 @@
   #define DISP_ADDR 0x3C
   #define SCL_OLED 15
   #define SDA_OLED 4
-#elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+#elif BOARD_MODEL == BOARD_HELTEC32_V3
   #define DISP_RST 21
   #define DISP_ADDR 0x3C
   #define SCL_OLED 18
@@ -113,7 +113,7 @@ bool display_init() {
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
-    #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+    #elif BOARD_MODEL == BOARD_HELTEC32_V3
       // enable vext / pin 36
       pinMode(Vext, OUTPUT);
       digitalWrite(Vext, LOW);
@@ -166,12 +166,12 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_HELTEC32_V2
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(1);
-      #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+      #elif BOARD_MODEL == BOARD_HELTEC32_V3
         disp_mode = DISP_MODE_PORTRAIT;
         // Antenna conx up
-        display.setRotation(1);
+        //display.setRotation(1);
         // USB-C up
-        //display.setRotation(3);
+        display.setRotation(3);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);

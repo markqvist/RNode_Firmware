@@ -1102,7 +1102,15 @@ void validate_status() {
               if (device_init()) {
                 hw_ready = true;
               } else {
-                hw_ready = false;
+                #if !HAS_BLUETOOTH && !HAS_BLE
+                  // Without bluetooth, bt_ready and device_init_done 
+                  // are not set
+                  // and neither is hw_ready (see device_init())
+                  hw_ready = true;
+                  device_init_done = true;
+                #else
+                  hw_ready = false;
+                #endif
               }
             #else
               hw_ready = true;

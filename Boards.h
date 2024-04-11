@@ -36,7 +36,7 @@
   #define BOARD_LORA32_V2_1   0x37
   #define BOARD_LORA32_V1_0   0x39
   #define BOARD_HELTEC32_V2   0x38
-  #define BOARD_HELTEC_LORA32_V3 0x3a
+  #define BOARD_HELTEC32_V3   0x3A
   #define BOARD_RNODE_NG_20   0x40
   #define BOARD_RNODE_NG_21   0x41
   #define BOARD_RNODE_NG_22   0x42
@@ -249,7 +249,7 @@
         const int pin_led_tx = 25;
       #endif
 
-    #elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+    #elif BOARD_MODEL == BOARD_HELTEC32_V3
       #define IS_ESP32S3 true
       #define HAS_DISPLAY true
       //ESP32-S3 no bluetooth classic

@@ -60,7 +60,7 @@ sx128x *LoRa = &sx128x_modem;
 	#include "Device.h"
 #endif
 #if MCU_VARIANT == MCU_ESP32
-  #if BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+  #if BOARD_MODEL == BOARD_HELTEC32_V3
     //https://github.com/espressif/esp-idf/issues/8855
     #include "hal/wdt_hal.h"
   #elif BOARD_MODEL != BOARD_RNODE_NG_22
@@ -195,7 +195,7 @@ uint8_t boot_vector = 0x00;
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
 		#endif
-	#elif BOARD_MODEL == BOARD_HELTEC_LORA32_V3
+	#elif BOARD_MODEL == BOARD_HELTEC32_V3
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
@@ -1281,7 +1281,7 @@ bool eeprom_product_valid() {
 	#if PLATFORM == PLATFORM_AVR
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
 	#elif PLATFORM == PLATFORM_ESP32
-	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2) {
+	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3) {
 	#elif PLATFORM == PLATFORM_NRF52
 	if (rval == PRODUCT_HMBRW) {
 	#else
@@ -1319,6 +1319,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_B4 || model == MODEL_B9) {
 	#elif BOARD_MODEL == BOARD_HELTEC32_V2
 	if (model == MODEL_C4 || model == MODEL_C9) {
+	#elif BOARD_MODEL == BOARD_HELTEC32_V3
+	if (model == MODEL_C5 || model == MODEL_CA) {
     #elif BOARD_MODEL == BOARD_RAK4630
     if (model == MODEL_FF) {
 	#elif BOARD_MODEL == BOARD_HUZZAH32
