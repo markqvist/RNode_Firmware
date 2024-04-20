@@ -63,7 +63,9 @@ sx128x *LoRa = &sx128x_modem;
   #if BOARD_MODEL == BOARD_HELTEC32_V3
     //https://github.com/espressif/esp-idf/issues/8855
     #include "hal/wdt_hal.h"
-  #elif BOARD_MODEL != BOARD_RNODE_NG_22
+	#elif BOARD_MODEL == BOARD_RNODE_NG_22
+		#include "hal/wdt_hal.h"
+  #else BOARD_MODEL != BOARD_RNODE_NG_22
 	  #include "soc/rtc_wdt.h"
 	#endif
   #define ISR_VECT IRAM_ATTR
