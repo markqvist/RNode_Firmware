@@ -169,9 +169,9 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_HELTEC32_V3
         disp_mode = DISP_MODE_PORTRAIT;
         // Antenna conx up
-        //display.setRotation(1);
+        display.setRotation(1);
         // USB-C up
-        display.setRotation(3);
+        // display.setRotation(3);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
