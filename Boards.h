@@ -261,11 +261,11 @@
       #define HAS_EEPROM true
       // Only one LED on pin 35
       #if defined(EXTERNAL_LEDS)
-        const int pin_led_rx = 35;
-        const int pin_led_tx = 2;
+        const int pin_led_rx = 13;
+        const int pin_led_tx = 14;
       #else
-        const int pin_led_rx = 2;
-        const int pin_led_tx = 2;
+        const int pin_led_rx = 35;
+        const int pin_led_tx = 35;
       #endif
 
       #define MODEM SX1262
