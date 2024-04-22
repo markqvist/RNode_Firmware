@@ -33,7 +33,7 @@ volatile uint16_t queued_bytes = 0;
 volatile uint16_t queue_cursor = 0;
 volatile uint16_t current_packet_start = 0;
 volatile bool serial_buffering = false;
-#if HAS_BLUETOOTH
+#if HAS_BLUETOOTH || HAS_BLE == true
   bool bt_init_ran = false;
 #endif
 
@@ -160,12 +160,9 @@ void setup() {
       pmu_ready = init_pmu();
     #endif
 
-    #if HAS_BLUETOOTH
+    #if HAS_BLUETOOTH || HAS_BLE == true
       bt_init();
       bt_init_ran = true;
-    #elif HAS_BLE
-      // TODO: Implement BLE on ESP32S3 instead of this hack
-      bt_ready = true;
     #endif
 
     if (console_active) {
@@ -910,7 +907,7 @@ void serialCallback(uint8_t sbyte) {
           }
       #endif
     } else if (command == CMD_BT_CTRL) {
-      #if HAS_BLUETOOTH
+      #if HAS_BLUETOOTH || HAS_BLE
         if (sbyte == 0x00) {
           bt_stop();
           bt_conf_save(false);
@@ -1111,15 +1108,7 @@ void validate_status() {
               if (device_init()) {
                 hw_ready = true;
               } else {
-                #if !HAS_BLUETOOTH && !HAS_BLE
-                  // Without bluetooth, bt_ready and device_init_done 
-                  // are not set
-                  // and neither is hw_ready (see device_init())
-                  hw_ready = true;
-                  device_init_done = true;
-                #else
-                  hw_ready = false;
-                #endif
+                hw_ready = false;
               }
             #else
               hw_ready = true;
@@ -1297,7 +1286,7 @@ void loop() {
     if (pmu_ready) update_pmu();
   #endif
 
-  #if HAS_BLUETOOTH
+  #if HAS_BLUETOOTH || HAS_BLE == true
     if (!console_active && bt_ready) update_bt();
   #endif
 }
@@ -1329,7 +1318,7 @@ void buffer_serial() {
 
     uint8_t c = 0;
 
-    #if HAS_BLUETOOTH
+    #if HAS_BLUETOOTH || HAS_BLE == true
     while (
       c < MAX_CYCLES &&
       ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) )
@@ -1344,7 +1333,7 @@ void buffer_serial() {
         if (!fifo_isfull_locked(&serialFIFO)) {
           fifo_push_locked(&serialFIFO, Serial.read());
         }
-      #elif HAS_BLUETOOTH
+      #elif HAS_BLUETOOTH || HAS_BLE == true
         if (bt_state == BT_STATE_CONNECTED) {
           if (!fifo_isfull(&serialFIFO)) {
             fifo_push(&serialFIFO, SerialBT.read());

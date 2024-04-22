@@ -47,7 +47,7 @@ sx128x *LoRa = &sx128x_modem;
   #include "Display.h"
 #endif
 
-#if HAS_BLUETOOTH == true
+#if HAS_BLUETOOTH == true || HAS_BLE == true
 	void kiss_indicate_btpin();
   #include "Bluetooth.h"
 #endif
@@ -629,7 +629,7 @@ int8_t  led_standby_direction = 0;
 #endif
 
 void serial_write(uint8_t byte) {
-	#if HAS_BLUETOOTH
+	#if HAS_BLUETOOTH || HAS_BLE == true
 		if (bt_state != BT_STATE_CONNECTED) {
 			Serial.write(byte);
 		} else {
@@ -829,7 +829,7 @@ void kiss_indicate_battery() {
 }
 
 void kiss_indicate_btpin() {
-	#if HAS_BLUETOOTH
+	#if HAS_BLUETOOTH || HAS_BLE == true
 		serial_write(FEND);
 		serial_write(CMD_BT_PIN);
 		escaped_serial_write(bt_ssp_pin>>24);

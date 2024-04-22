@@ -18,14 +18,14 @@
 #ifndef BOARDS_H
   #define BOARDS_H
 
-  #define PLATFORM_AVR   0x90
-  #define PLATFORM_ESP32 0x80
-  #define PLATFORM_NRF52 0x70
+  #define PLATFORM_AVR        0x90
+  #define PLATFORM_ESP32      0x80
+  #define PLATFORM_NRF52      0x70
 
-  #define MCU_1284P 0x91
-  #define MCU_2560  0x92
-  #define MCU_ESP32 0x81
-  #define MCU_NRF52 0x71
+  #define MCU_1284P           0x91
+  #define MCU_2560            0x92
+  #define MCU_ESP32           0x81
+  #define MCU_NRF52           0x71
 
   #define BOARD_RNODE         0x31
   #define BOARD_HMBRW         0x32
@@ -252,14 +252,11 @@
     #elif BOARD_MODEL == BOARD_HELTEC32_V3
       #define IS_ESP32S3 true
       #define HAS_DISPLAY true
-      //ESP32-S3 no bluetooth classic
       #define HAS_BLUETOOTH false
-      // TODO BLE
-      #define HAS_BLE false
+      #define HAS_BLE true
       // Cannot run wifi and BLE at same time?
       #define HAS_CONSOLE false
       #define HAS_EEPROM true
-      // Only one LED on pin 35
       #if defined(EXTERNAL_LEDS)
         const int pin_led_rx = 13;
         const int pin_led_tx = 14;
@@ -282,8 +279,6 @@
       const int pin_mosi = 10;
       const int pin_miso = 11;
       const int pin_sclk = 9;
-
-
 
     #elif BOARD_MODEL == BOARD_RNODE_NG_20
       #define HAS_DISPLAY true
@@ -341,9 +336,9 @@
       #define HAS_TCXO true
 
       #define HAS_DISPLAY true
+      #define HAS_CONSOLE false
+      #define HAS_BLUETOOTH false
       #define HAS_BLE true
-      #define HAS_BLUETOOTH false // TODO: Implement
-      #define HAS_CONSOLE false   // TODO: Implement
       #define HAS_PMU true
       #define HAS_NP false
       #define HAS_SD false
@@ -384,8 +379,9 @@
   #elif MCU_VARIANT == MCU_NRF52
     #if BOARD_MODEL == BOARD_RAK4630
       #define HAS_EEPROM false
-      #define HAS_DISPLAY false // set for debugging
-      #define HAS_BLUETOOTH true
+      #define HAS_DISPLAY true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
       #define HAS_CONSOLE false
       #define HAS_PMU false
       #define HAS_NP false
@@ -398,8 +394,10 @@
       #define CONFIG_QUEUE_MAX_LENGTH 200
       #define EEPROM_SIZE 200
       #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+      #define BLE_MANUFACTURER "RAK Wireless"
+      #define BLE_MODEL "RAK4640"
 
-      // following pins are for the sx1262
+      // Following pins are for the sx1262
       const int pin_rxen = 37;
       const int pin_reset = 38;
       const int pin_cs = 42;

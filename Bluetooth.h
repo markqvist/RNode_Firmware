@@ -14,21 +14,30 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #if MCU_VARIANT == MCU_ESP32
-#include "BluetoothSerial.h"
-#include "esp_bt_main.h"
-#include "esp_bt_device.h"
+  
 
 #elif MCU_VARIANT == MCU_NRF52
-#include <bluefruit.h>
-#include <math.h>
 #endif
 
 #if MCU_VARIANT == MCU_ESP32
-BluetoothSerial SerialBT;
+  #if HAS_BLUETOOTH == true
+    #include "BluetoothSerial.h"
+    #include "esp_bt_main.h"
+    #include "esp_bt_device.h"
+    BluetoothSerial SerialBT;
+  #elif HAS_BLE == true
+    #include "esp_bt_main.h"
+    #include "esp_bt_device.h"
+    // TODO: Remove
+    #define SerialBT Serial
+  #endif
+
 #elif MCU_VARIANT == MCU_NRF52
-BLEUart SerialBT;
-BLEDis  bledis;
-BLEBas  blebas;
+  #include <bluefruit.h>
+  #include <math.h>
+  BLEUart SerialBT;
+  BLEDis  bledis;
+  BLEBas  blebas;
 #endif
 
 #define BT_PAIRING_TIMEOUT 35000
@@ -42,114 +51,201 @@ char bt_dh[BT_DEV_HASH_LEN];
 char bt_devname[11];
 
 #if MCU_VARIANT == MCU_ESP32
+  #if HAS_BLUETOOTH == true
 
-  void bt_confirm_pairing(uint32_t numVal) {
-    bt_ssp_pin = numVal;
-    kiss_indicate_btpin();
-    if (bt_allow_pairing) {
-      SerialBT.confirmReply(true);
-    } else {
-      SerialBT.confirmReply(false);
-    }
-  }
-
-  void bt_stop() {
-    if (bt_state != BT_STATE_OFF) {
-      SerialBT.end();
-      bt_allow_pairing = false;
-      bt_state = BT_STATE_OFF;
-    }
-  }
-
-  void bt_start() {
-    if (bt_state == BT_STATE_OFF) {
-      SerialBT.begin(bt_devname);
-      bt_state = BT_STATE_ON;
-     }
-  }
-
-  void bt_enable_pairing() {
-    if (bt_state == BT_STATE_OFF) bt_start();
-    bt_allow_pairing = true;
-    bt_pairing_started = millis();
-    bt_state = BT_STATE_PAIRING;
-  }
-
-  void bt_disable_pairing() {
-    bt_allow_pairing = false;
-    bt_ssp_pin = 0;
-    bt_state = BT_STATE_ON;
-  }
-
-  void bt_pairing_complete(boolean success) {
-    if (success) {
-      bt_disable_pairing();
-    } else {
-      bt_ssp_pin = 0;
-    }
-  }
-
-  void bt_connection_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
-    if(event == ESP_SPP_SRV_OPEN_EVT) {
-      bt_state = BT_STATE_CONNECTED;
-      cable_state = CABLE_STATE_DISCONNECTED;
-    }
-     
-    if(event == ESP_SPP_CLOSE_EVT ){
-      bt_state = BT_STATE_ON;
-    }
-  }
-
-  bool bt_setup_hw() {
-    if (!bt_ready) {
-      if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
-        bt_enabled = true;
+    void bt_confirm_pairing(uint32_t numVal) {
+      bt_ssp_pin = numVal;
+      kiss_indicate_btpin();
+      if (bt_allow_pairing) {
+        SerialBT.confirmReply(true);
       } else {
-        bt_enabled = false;
+        SerialBT.confirmReply(false);
       }
-      if (btStart()) {
-        if (esp_bluedroid_init() == ESP_OK) {
-          if (esp_bluedroid_enable() == ESP_OK) {
-            const uint8_t* bda_ptr = esp_bt_dev_get_address();
-            char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
-            for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
-                data[i] = bda_ptr[i];
-            }
-            data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
-            unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
-            memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
-            sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
-            free(data);
+    }
 
-            SerialBT.enableSSP();
-            SerialBT.onConfirmRequest(bt_confirm_pairing);
-            SerialBT.onAuthComplete(bt_pairing_complete);
-            SerialBT.register_callback(bt_connection_callback);
-            
-            bt_ready = true;
-            return true;
+    void bt_stop() {
+      if (bt_state != BT_STATE_OFF) {
+        SerialBT.end();
+        bt_allow_pairing = false;
+        bt_state = BT_STATE_OFF;
+      }
+    }
 
+    void bt_start() {
+      if (bt_state == BT_STATE_OFF) {
+        SerialBT.begin(bt_devname);
+        bt_state = BT_STATE_ON;
+       }
+    }
+
+    void bt_enable_pairing() {
+      if (bt_state == BT_STATE_OFF) bt_start();
+      bt_allow_pairing = true;
+      bt_pairing_started = millis();
+      bt_state = BT_STATE_PAIRING;
+    }
+
+    void bt_disable_pairing() {
+      bt_allow_pairing = false;
+      bt_ssp_pin = 0;
+      bt_state = BT_STATE_ON;
+    }
+
+    void bt_pairing_complete(boolean success) {
+      if (success) {
+        bt_disable_pairing();
+      } else {
+        bt_ssp_pin = 0;
+      }
+    }
+
+    void bt_connection_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
+      if(event == ESP_SPP_SRV_OPEN_EVT) {
+        bt_state = BT_STATE_CONNECTED;
+        cable_state = CABLE_STATE_DISCONNECTED;
+      }
+       
+      if(event == ESP_SPP_CLOSE_EVT ){
+        bt_state = BT_STATE_ON;
+      }
+    }
+
+    bool bt_setup_hw() {
+      if (!bt_ready) {
+        if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+          bt_enabled = true;
+        } else {
+          bt_enabled = false;
+        }
+        if (btStart()) {
+          if (esp_bluedroid_init() == ESP_OK) {
+            if (esp_bluedroid_enable() == ESP_OK) {
+              const uint8_t* bda_ptr = esp_bt_dev_get_address();
+              char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
+              for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
+                  data[i] = bda_ptr[i];
+              }
+              data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
+              unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
+              memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
+              sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+              free(data);
+
+              SerialBT.enableSSP();
+              SerialBT.onConfirmRequest(bt_confirm_pairing);
+              SerialBT.onAuthComplete(bt_pairing_complete);
+              SerialBT.register_callback(bt_connection_callback);
+              
+              bt_ready = true;
+              return true;
+
+            } else { return false; }
           } else { return false; }
         } else { return false; }
       } else { return false; }
-    } else { return false; }
-  }
-
-  bool bt_init() {
-      bt_state = BT_STATE_OFF;
-      if (bt_setup_hw()) {
-        if (bt_enabled && !console_active) bt_start();
-        return true;
-      } else {
-        return false;
-      }
-  }
-
-  void update_bt() {
-    if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
-      bt_disable_pairing();
     }
-  }
+
+    bool bt_init() {
+        bt_state = BT_STATE_OFF;
+        if (bt_setup_hw()) {
+          if (bt_enabled && !console_active) bt_start();
+          return true;
+        } else {
+          return false;
+        }
+    }
+
+    void update_bt() {
+      if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
+        bt_disable_pairing();
+      }
+    }
+
+  #elif HAS_BLE == true
+    void bt_stop() {
+      if (bt_state != BT_STATE_OFF) {
+        bt_allow_pairing = false;
+        bt_state = BT_STATE_OFF;
+      }
+    }
+
+    void bt_disable_pairing() {
+      bt_allow_pairing = false;
+      bt_ssp_pin = 0;
+      bt_state = BT_STATE_ON;
+    }
+
+    void bt_connect_callback(uint16_t conn_handle) {
+      bt_state = BT_STATE_CONNECTED;
+      cable_state = CABLE_STATE_DISCONNECTED;
+    }
+
+    void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason) {
+      bt_state = BT_STATE_ON;
+    }
+
+    bool bt_setup_hw() {
+      if (!bt_ready) {
+        if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+          bt_enabled = true;
+        } else {
+          bt_enabled = false;
+        }
+        if (btStart()) {
+          if (esp_bluedroid_init() == ESP_OK) {
+            if (esp_bluedroid_enable() == ESP_OK) {
+              const uint8_t* bda_ptr = esp_bt_dev_get_address();
+              char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
+              for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
+                  data[i] = bda_ptr[i];
+              }
+              data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
+              unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
+              memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
+              sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+              free(data);
+
+              // TODO: Implement GAP & GATT for RNode comms over BLE
+              
+              bt_ready = true;
+              return true;
+
+            } else { return false; }
+          } else { return false; }
+        } else { return false; }
+      } else { return false; }
+    }
+
+    void bt_start() {
+      if (bt_state == BT_STATE_OFF) {
+        bt_state = BT_STATE_ON;
+        // TODO: Implement
+      }
+    }
+
+    bool bt_init() {
+        bt_state = BT_STATE_OFF;
+        if (bt_setup_hw()) {
+          if (bt_enabled && !console_active) bt_start();
+          return true;
+        } else {
+          return false;
+        }
+    }
+
+    void bt_enable_pairing() {
+      if (bt_state == BT_STATE_OFF) bt_start();
+      bt_allow_pairing = true;
+      bt_pairing_started = millis();
+      bt_state = BT_STATE_PAIRING;
+    }
+
+    void update_bt() {
+      if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
+        bt_disable_pairing();
+      }
+    }
+  #endif
 
 #elif MCU_VARIANT == MCU_NRF52
 uint8_t eeprom_read(uint32_t mapped_addr);
@@ -244,8 +340,8 @@ bool bt_setup_hw() {
 void bt_start() {
   if (bt_state == BT_STATE_OFF) {
     Bluefruit.setName(bt_devname);
-    bledis.setManufacturer("Adafruit Industries");
-    bledis.setModel("Bluefruit Feather52");
+    bledis.setManufacturer(BLE_MANUFACTURER);
+    bledis.setModel(BLE_MODEL);
     // start device information service
     bledis.begin();
 
