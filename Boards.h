@@ -239,7 +239,7 @@
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 18;
-      const int pin_reset = 23;
+      const int pin_reset = 14;
       const int pin_dio = 26;
       #if defined(EXTERNAL_LEDS)
         const int pin_led_rx = 36;
