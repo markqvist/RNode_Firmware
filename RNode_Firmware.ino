@@ -82,6 +82,10 @@ void setup() {
   serial_interrupt_init();
 
   // Configure input and output pins
+  #if HAS_INPUT
+    input_init();
+  #endif
+
   #if HAS_NP == false
     pinMode(pin_led_rx, OUTPUT);
     pinMode(pin_led_tx, OUTPUT);
@@ -1289,6 +1293,23 @@ void loop() {
   #if HAS_BLUETOOTH || HAS_BLE == true
     if (!console_active && bt_ready) update_bt();
   #endif
+
+  #if HAS_INPUT
+    input_read();
+  #endif
+}
+
+void sleep_now() {
+  #if HAS_SLEEP == true
+    esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
+    esp_deep_sleep_start();
+  #endif
+}
+
+void button_event(uint8_t event, unsigned long duration) {
+  if (duration > 2000) {
+    sleep_now();
+  }
 }
 
 volatile bool serial_polling = false;

@@ -56,6 +56,10 @@ sx128x *LoRa = &sx128x_modem;
   #include "Power.h"
 #endif
 
+#if HAS_INPUT == true
+	#include "Input.h"
+#endif
+
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 	#include "Device.h"
 #endif
