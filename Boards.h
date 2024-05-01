@@ -271,7 +271,7 @@
       #define HAS_BUSY true
       #define DIO2_AS_RF_SWITCH true
 
-      // following pins are for the sx1262
+      // Following pins are for the SX1262
       const int pin_cs = 8;
       const int pin_busy = 13;
       const int pin_dio = 14;
