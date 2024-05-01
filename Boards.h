@@ -258,7 +258,6 @@
       #define HAS_SLEEP true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
-      // Cannot run wifi and BLE at same time?
       #define HAS_CONSOLE false
       #define HAS_EEPROM true
       #define PIN_WAKEUP GPIO_NUM_0
