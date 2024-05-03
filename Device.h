@@ -22,8 +22,6 @@
 #include "esp_partition.h"
 #endif
 
-#define VALIDATE_FIRMWARE true
-
 // Forward declaration from Utilities.h
 void eeprom_update(int mapped_addr, uint8_t byte);
 uint8_t eeprom_read(uint32_t addr);

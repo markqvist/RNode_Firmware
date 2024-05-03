@@ -79,6 +79,7 @@
   #define HAS_EEPROM false
   #define HAS_INPUT false
   #define HAS_SLEEP false
+  #define VALIDATE_FIRMWARE true
 
   #if defined(ENABLE_TCXO)
       #define HAS_TCXO true
@@ -254,15 +255,17 @@
     #elif BOARD_MODEL == BOARD_HELTEC32_V3
       #define IS_ESP32S3 true
       #define HAS_DISPLAY true
-      #define HAS_INPUT true
-      #define HAS_SLEEP true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_CONSOLE false
       #define HAS_EEPROM true
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
-      
+
+      const int pin_btn_usr1 = 0;
+
       #if defined(EXTERNAL_LEDS)
         const int pin_led_rx = 13;
         const int pin_led_tx = 14;
@@ -270,7 +273,6 @@
         const int pin_led_rx = 35;
         const int pin_led_tx = 35;
       #endif
-      const int pin_btn_usr1 = 0;
 
       #define MODEM SX1262
       #define HAS_TCXO true
@@ -350,6 +352,12 @@
       #define HAS_NP false
       #define HAS_SD false
       #define HAS_EEPROM true
+
+      // #define HAS_INPUT true
+      // #define HAS_SLEEP true
+      // #define PIN_WAKEUP GPIO_NUM_0
+      // #define WAKEUP_LEVEL 0
+      // const int pin_btn_usr1 = 0;
 
       const int pin_cs = 7;
       const int pin_reset = 8;
