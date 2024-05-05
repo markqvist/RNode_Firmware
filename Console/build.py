@@ -174,7 +174,7 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
-    pm = 140
+    pm = 115
     scale_imgs = [
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
@@ -208,6 +208,10 @@ def optimise_manual(path):
         "_static/_sphinx_javascript_frameworks_compat.js",
         "_static/scripts/furo.js.LICENSE.txt",
         "_static/styles/furo-extensions.css.map",
+        # "_static/pygments.css",
+        # "_static/language_data.js",
+        # "_static/searchtools.js",
+        # "searchindex.js",
     ]
     for file in remove_files:
         fp = path+"/"+file
