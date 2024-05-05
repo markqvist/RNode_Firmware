@@ -361,6 +361,14 @@ int sx128x::begin(unsigned long frequency)
     delay(10);
   }
 
+  if (_rxen != -1) {
+      pinMode(_rxen, OUTPUT);
+  }
+
+  if (_txen != -1) {
+      pinMode(_txen, OUTPUT);
+  }
+
   if (_busy != -1) {
       pinMode(_busy, INPUT);
   }
