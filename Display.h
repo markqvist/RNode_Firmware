@@ -134,7 +134,11 @@ bool display_init() {
     #endif
 
     #if DISP_CUSTOM_ADDR == true
+      #if HAS_EEPROM
       uint8_t display_address = EEPROM.read(eeprom_addr(ADDR_CONF_DADR));
+      #elif MCU_VARIANT == MCU_NRF52
+      uint8_t display_address = eeprom_read(eeprom_addr(ADDR_CONF_DADR));
+      #endif
       if (display_address == 0xFF) display_address = DISP_ADDR;
     #else
       uint8_t display_address = DISP_ADDR;
@@ -188,7 +192,11 @@ bool display_init() {
       disp_area.cp437(true);
       display.cp437(true);
 
-      display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
+      #if HAS_EEPROM
+      uint8_t display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
+      #elif MCU_VARIANT == MCU_NRF52
+      uint8_t display_intensity = eeprom_read(eeprom_addr(ADDR_CONF_DINT));
+      #endif
 
       return true;
     }
