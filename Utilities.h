@@ -43,6 +43,10 @@ sx128x *LoRa = &sx128x_modem;
 #include "Framing.h"
 #include "MD5.h"
 
+#if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+uint8_t eeprom_read(uint32_t mapped_addr);
+#endif
+
 #if HAS_DISPLAY == true
   #include "Display.h"
 #endif

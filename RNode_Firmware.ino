@@ -151,7 +151,11 @@ void setup() {
   #endif
 
   #if HAS_DISPLAY
+    #if HAS_EEPROM
     if (EEPROM.read(eeprom_addr(ADDR_CONF_DSET)) != CONF_OK_BYTE) {
+    #elif MCU_VARIANT == MCU_NRF52
+    if (eeprom_read(eeprom_addr(ADDR_CONF_DSET)) != CONF_OK_BYTE) {
+    #endif
       eeprom_update(eeprom_addr(ADDR_CONF_DSET), CONF_OK_BYTE);
       eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
     }
