@@ -313,7 +313,6 @@ bool bt_setup_hw() {
       Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
       Bluefruit.Periph.setConnectCallback(bt_connect_callback);
       Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
-      Bluefruit.Security.setIOCaps(true, true, false);
       Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
       const ble_gap_addr_t gap_addr = Bluefruit.getAddr();
       char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
