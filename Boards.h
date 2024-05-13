@@ -41,7 +41,7 @@
   #define BOARD_RNODE_NG_21   0x41
   #define BOARD_RNODE_NG_22   0x42
   #define BOARD_GENERIC_NRF52 0x50
-  #define BOARD_RAK4630       0x51
+  #define BOARD_RAK4631       0x51
 
   #if defined(__AVR_ATmega1284P__)
     #define PLATFORM PLATFORM_AVR
@@ -61,7 +61,7 @@
   #endif
 
   #ifndef MODEM
-    #if BOARD_MODEL == BOARD_RAK4630
+    #if BOARD_MODEL == BOARD_RAK4631
       #define MODEM SX1262
     #elif BOARD_MODEL == BOARD_GENERIC_NRF52
       #define MODEM SX1262
@@ -392,9 +392,9 @@
     #endif
   
   #elif MCU_VARIANT == MCU_NRF52
-    #if BOARD_MODEL == BOARD_RAK4630
+    #if BOARD_MODEL == BOARD_RAK4631
       #define HAS_EEPROM false
-      #define HAS_DISPLAY true
+      #define HAS_DISPLAY false
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_CONSOLE false
@@ -407,7 +407,7 @@
       #define CONFIG_UART_BUFFER_SIZE 6144
       #define CONFIG_QUEUE_SIZE 6144
       #define CONFIG_QUEUE_MAX_LENGTH 200
-      #define EEPROM_SIZE 200
+      #define EEPROM_SIZE 296
       #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
       #define BLE_MANUFACTURER "RAK Wireless"
       #define BLE_MODEL "RAK4640"

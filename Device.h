@@ -20,10 +20,29 @@
 #include "esp_ota_ops.h"
 #include "esp_flash_partitions.h"
 #include "esp_partition.h"
+
+#elif MCU_VARIANT == MCU_NRF52
+#include "Adafruit_nRFCrypto.h"
+
+// size of chunk to retrieve from flash sector
+#define CHUNK_SIZE 128
+
+#define END_SECTION_SIZE 256
+
+#if defined(NRF52840_XXAA)
+// https://learn.adafruit.com/introducing-the-adafruit-nrf52840-feather/hathach-memory-map
+// each section follows along from one another, in this order
+// this is always at the start of the memory map
+#define APPLICATION_START 0x26000
+
+#define USER_DATA_START 0xED000
+#endif
+
 #endif
 
 // Forward declaration from Utilities.h
 void eeprom_update(int mapped_addr, uint8_t byte);
+void eeprom_flush();
 uint8_t eeprom_read(uint32_t addr);
 void hard_reset(void);
 
@@ -112,12 +131,115 @@ void device_save_firmware_hash() {
   for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
     eeprom_update(dev_fwhash_addr(i), dev_firmware_hash_target[i]);
   }
+  eeprom_flush();
   if (!fw_signature_validated) hard_reset();
 }
 
-#if MCU_VARIANT == MCU_ESP32
+#if MCU_VARIANT == MCU_NRF52
+void calculate_region_hash(unsigned long long start, unsigned long long end, uint8_t* return_hash) {
+    // this function calculates the hash digest of a region of memory,
+    // currently it is only designed to work for the application region
+    uint8_t chunk[CHUNK_SIZE] = {0};
+
+    // to store potential last chunk of program
+    uint8_t chunk_next[CHUNK_SIZE] = {0};
+    nRFCrypto_Hash hash;
+
+    hash.begin(CRYS_HASH_SHA256_mode);
+
+    bool finish = false;
+    uint8_t size;
+    bool application = true;
+    int end_count = 0;
+    unsigned long length = 0;
+
+    while (start < end - 1 ) {
+        const void* src = (const void*)start;
+        if (start + CHUNK_SIZE >= end) {
+            size = (end - 1) - start;
+        }
+        else {
+            size = CHUNK_SIZE;
+        }
+
+        memcpy(chunk, src, CHUNK_SIZE);
+
+        // check if we've reached the end of the program
+        // if we're checking the application region
+        if (application) {
+            for (int i = 0; i < CHUNK_SIZE; i++) {
+                if (chunk[i] == 0xFF) {
+                    bool matched = true;
+                    end_count = 1;
+                    // check if rest of chunk is FFs as well, only if FF is not
+                    // at the end of chunk
+                    if (i < CHUNK_SIZE - 1) {
+                        for (int x = 0; x < CHUNK_SIZE - i; x++) {
+                            if (chunk[i+x] != 0xFF) {
+                                matched = false;
+                                break;
+                            }
+                            end_count++;
+                        }
+                    }
+
+                    if (matched) {
+                        while (end_count < END_SECTION_SIZE) {
+                            // check if bytes in next chunk up to total
+                            // required are also FFs
+                            for (int x = 1; x <= ceil(END_SECTION_SIZE / CHUNK_SIZE); x++) {
+                                const void* src_next = (const void*)start + CHUNK_SIZE*x;
+                                if ((END_SECTION_SIZE - end_count) > CHUNK_SIZE) {
+                                    size = CHUNK_SIZE;
+                                } else {
+                                    size = END_SECTION_SIZE - end_count;
+                                }
+                                memcpy(chunk_next, src_next, size);
+                                for (int y = 0; y < size; y++) {
+                                    if (chunk_next[y] != 0xFF) {
+                                        matched = false;
+                                        break;
+                                    }
+                                    end_count++;
+                                }
+
+                                if (!matched) {
+                                    break;
+                                }
+                            }
+                            if (!matched) {
+                                break;
+                            }
+                        }
+
+                        if (matched) {
+                            finish = true;
+                            size = i;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (finish) {
+            hash.update(chunk, size);
+            length += size;
+            break;
+        } else {
+            hash.update(chunk, size);
+        }
+
+        start += CHUNK_SIZE;
+        length += CHUNK_SIZE;
+    }
+    hash.end(return_hash);
+}
+#endif
+
 void device_validate_partitions() {
   device_load_firmware_hash();
+  #if MCU_VARIANT == MCU_ESP32
   esp_partition_t partition;
   partition.address   = ESP_PARTITION_TABLE_OFFSET;
   partition.size      = ESP_PARTITION_TABLE_MAX_LEN;
@@ -128,6 +250,10 @@ void device_validate_partitions() {
   partition.type      = ESP_PARTITION_TYPE_APP;
   esp_partition_get_sha256(&partition, dev_bootloader_hash);
   esp_partition_get_sha256(esp_ota_get_running_partition(), dev_firmware_hash);
+  #elif MCU_VARIANT == MCU_NRF52
+  // todo, add bootloader, partition table, or softdevice?
+  calculate_region_hash(APPLICATION_START, USER_DATA_START, dev_firmware_hash);
+  #endif
   #if VALIDATE_FIRMWARE
     for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
       if (dev_firmware_hash_target[i] != dev_firmware_hash[i]) {
@@ -137,15 +263,15 @@ void device_validate_partitions() {
     }
   #endif
 }
-#endif
 
 bool device_firmware_ok() {
   return fw_signature_validated;
 }
 
-#if MCU_VARIANT == MCU_ESP32
+#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 bool device_init() {
   if (bt_ready) {
+    #if MCU_VARIANT == MCU_ESP32
     for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=EEPROM.read(eeprom_addr(ADDR_SIGNATURE+i));}
     mbedtls_md_context_t ctx;
     mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;     
@@ -161,9 +287,32 @@ bool device_init() {
     mbedtls_md_update(&ctx, dev_eeprom_signature, EEPROM_SIG_LEN);
     mbedtls_md_finish(&ctx, dev_hash);
     mbedtls_md_free(&ctx);
+    #elif MCU_VARIANT == MCU_NRF52
+    for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=eeprom_read(eeprom_addr(ADDR_SIGNATURE+i));}
+    nRFCrypto.begin();
+
+    nRFCrypto_Hash hash;
+
+    hash.begin(CRYS_HASH_SHA256_mode);
+
+    #if HAS_BLUETOOTH == true || HAS_BLE == true
+      hash.update(dev_bt_mac, BT_DEV_ADDR_LEN);
+    #else
+      // TODO: Get from BLE stack instead
+      // hash.update(dev_bt_mac, BT_DEV_ADDR_LEN);
+    #endif
+    hash.update(dev_eeprom_signature, EEPROM_SIG_LEN);
+
+    hash.end(dev_hash);
+    #endif
     device_load_signature();
     device_validate_signature();
+
     device_validate_partitions();
+
+    #if MCU_VARIANT == MCU_NRF52
+    nRFCrypto.end();
+    #endif
     device_init_done = true;
     return device_init_done && fw_signature_validated;
   } else {
