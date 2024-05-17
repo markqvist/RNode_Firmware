@@ -79,6 +79,7 @@
   #define HAS_EEPROM false
   #define HAS_INPUT false
   #define HAS_SLEEP false
+  #define PIN_DISP_SLEEP -1
   #define VALIDATE_FIRMWARE true
 
   #if defined(ENABLE_TCXO)
@@ -353,11 +354,13 @@
       #define HAS_SD false
       #define HAS_EEPROM true
 
-      // #define HAS_INPUT true
-      // #define HAS_SLEEP true
-      // #define PIN_WAKEUP GPIO_NUM_0
-      // #define WAKEUP_LEVEL 0
-      // const int pin_btn_usr1 = 0;
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_0
+      #define WAKEUP_LEVEL 0
+      // #define PIN_DISP_SLEEP 21
+      // #define DISP_SLEEP_LEVEL HIGH
+      const int pin_btn_usr1 = 0;
 
       const int pin_cs = 7;
       const int pin_reset = 8;

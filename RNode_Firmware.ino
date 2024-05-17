@@ -77,7 +77,9 @@ void setup() {
   fifo_init(&serialFIFO, serialBuffer, CONFIG_UART_BUFFER_SIZE);
 
   Serial.begin(serial_baudrate);
-  while (!Serial);
+  #if BOARD_MODEL != BOARD_RNODE_NG_22
+    while (!Serial);
+  #endif
 
   serial_interrupt_init();
 
@@ -1305,6 +1307,14 @@ void loop() {
 
 void sleep_now() {
   #if HAS_SLEEP == true
+    #if BOARD_MODEL == BOARD_RNODE_NG_22
+      display_intensity = 0;
+      update_display(true);
+    #endif
+    #if PIN_DISP_SLEEP >= 0
+      pinMode(PIN_DISP_SLEEP, OUTPUT);
+      digitalWrite(PIN_DISP_SLEEP, DISP_SLEEP_LEVEL);
+    #endif
     esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
     esp_deep_sleep_start();
   #endif
