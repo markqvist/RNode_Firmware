@@ -404,6 +404,7 @@
       #define HAS_TCXO true
       #define HAS_RF_SWITCH_RX_TX true
       #define HAS_BUSY true
+      #define DIO2_AS_RF_SWITCH true
       #define CONFIG_UART_BUFFER_SIZE 6144
       #define CONFIG_QUEUE_SIZE 6144
       #define CONFIG_QUEUE_MAX_LENGTH 200
