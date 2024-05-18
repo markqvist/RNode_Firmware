@@ -77,12 +77,13 @@ void setup() {
   fifo_init(&serialFIFO, serialBuffer, CONFIG_UART_BUFFER_SIZE);
 
   Serial.begin(serial_baudrate);
-  #if BOARD_MODEL != BOARD_RAK4631
+
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_RNODE_NG_22
   // Some boards need to wait until the hardware UART is set up before booting
   // the full firmware. In the case of the RAK4631, the line below will wait
   // until a serial connection is actually established with a master. Thus, it
   // is disabled on this platform.
-  while (!Serial);
+    while (!Serial);
   #endif
 
   serial_interrupt_init();
@@ -1311,6 +1312,14 @@ void loop() {
 
 void sleep_now() {
   #if HAS_SLEEP == true
+    #if BOARD_MODEL == BOARD_RNODE_NG_22
+      display_intensity = 0;
+      update_display(true);
+    #endif
+    #if PIN_DISP_SLEEP >= 0
+      pinMode(PIN_DISP_SLEEP, OUTPUT);
+      digitalWrite(PIN_DISP_SLEEP, DISP_SLEEP_LEVEL);
+    #endif
     esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
     esp_deep_sleep_start();
   #endif

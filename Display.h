@@ -564,17 +564,26 @@ void update_disp_area() {
   }
 }
 
-void update_display() {
-  if (millis()-last_disp_update >= disp_update_interval) {
+void update_display(bool blank = false) {
+  if (blank) {
     if (display_contrast != display_intensity) {
       display_contrast = display_intensity;
       set_contrast(&display, display_contrast);
     }
     display.clearDisplay();
-    update_stat_area();
-    update_disp_area();
-    display.display();
-    last_disp_update = millis();
+    display.display();    
+  } else {
+    if (millis()-last_disp_update >= disp_update_interval) {
+      if (display_contrast != display_intensity) {
+        display_contrast = display_intensity;
+        set_contrast(&display, display_contrast);
+      }
+      display.clearDisplay();
+      update_stat_area();
+      update_disp_area();
+      display.display();
+      last_disp_update = millis();
+    }
   }
 }
 
