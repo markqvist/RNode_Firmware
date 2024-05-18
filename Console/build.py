@@ -174,7 +174,7 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
-    pm = 115
+    pm = 110
     scale_imgs = [
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
