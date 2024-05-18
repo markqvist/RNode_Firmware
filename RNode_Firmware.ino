@@ -77,7 +77,12 @@ void setup() {
   fifo_init(&serialFIFO, serialBuffer, CONFIG_UART_BUFFER_SIZE);
 
   Serial.begin(serial_baudrate);
-  #if BOARD_MODEL != BOARD_RNODE_NG_22
+
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_RNODE_NG_22
+  // Some boards need to wait until the hardware UART is set up before booting
+  // the full firmware. In the case of the RAK4631, the line below will wait
+  // until a serial connection is actually established with a master. Thus, it
+  // is disabled on this platform.
     while (!Serial);
   #endif
 
@@ -1114,7 +1119,7 @@ void validate_status() {
         if (eeprom_checksum_valid()) {
           eeprom_ok = true;
           if (modem_installed) {
-            #if PLATFORM == PLATFORM_ESP32
+            #if PLATFORM == PLATFORM_ESP32 || PLATFORM == PLATFORM_NRF52
               if (device_init()) {
                 hw_ready = true;
               } else {
