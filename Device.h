@@ -42,9 +42,12 @@
 
 // Forward declaration from Utilities.h
 void eeprom_update(int mapped_addr, uint8_t byte);
-void eeprom_flush();
 uint8_t eeprom_read(uint32_t addr);
 void hard_reset(void);
+
+#if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+  void eeprom_flush();
+#endif
 
 const uint8_t dev_keys [] PROGMEM = {
    0x0f, 0x15, 0x86, 0x74, 0xa0, 0x7d, 0xf2, 0xde, 0x32, 0x11, 0x29, 0xc1, 0x0d, 0xda, 0xcc, 0xc3,
@@ -131,7 +134,9 @@ void device_save_firmware_hash() {
   for (uint8_t i = 0; i < DEV_HASH_LEN; i++) {
     eeprom_update(dev_fwhash_addr(i), dev_firmware_hash_target[i]);
   }
-  eeprom_flush();
+  #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+    eeprom_flush();
+  #endif
   if (!fw_signature_validated) hard_reset();
 }
 
