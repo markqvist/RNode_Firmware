@@ -1,3 +1,5 @@
+*This repository is currently functioning as a stable reference for the default RNode Firmware, and only receives bugfix and security updates. Further development, new features and expanded board support is now happening at the [RNode Firmware Community Edition](https://github.com/markqvist/RNode_Firmware) repository, and is maintained by @jacobeva. Thanks for all contributions so far!*
+
 # RNode Firmware
 
 This is the open firmware that powers RNode devices.
@@ -14,14 +16,15 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.68`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.72`. This release brings the following changes:
 
-- Fixed a bug in high-bandwidth optimisation
-- Fixed a potential memory overflow during firmware update
-- Fixed a bug in LoRa modem status updates
-- Updated bootstrap console with latest packages
+- Added support for flashing T3S3 boards
+- Added deep sleep support on T3S3
+- Various quality updates for nRF / RAK4631
+- Fixed a bug with antenna switch utilisation on RAK4631
+- Updated console image to include latest packages
 
-You must have at least version `2.1.3` of `rnodeconf` installed to update the RNode Firmware to version `1.67`. Get it by updating the `rns` package to at least version `0.6.4`.
+You must have at least version `2.1.3` of `rnodeconf` installed to update the RNode Firmware to version `1.72`. Get it by updating the `rns` package to at least version `0.7.5`.
 
 ## A Self-Replicating System
 
