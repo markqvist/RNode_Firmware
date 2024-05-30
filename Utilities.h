@@ -1250,13 +1250,16 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
             file.write(byte);
         }
         written_bytes++;
-        
-        if ((mapped_addr - eeprom_addr(0)) == ADDR_INFO_LOCK) {
-            #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-                // have to do a flush because we're only writing 1 byte and it syncs after 4
+
+        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+            // have to do a flush because we're only writing 1 byte and it syncs after 4
+            if ((mapped_addr - eeprom_addr(0)) == ADDR_INFO_LOCK) {
                 eeprom_flush();
-            #endif
-        }
+            }
+            else if ((mapped_addr - eeprom_addr(0)) == ADDR_CONF_OK) {
+                eeprom_flush();
+            }
+        #endif
 
         if (written_bytes >= 4) {
             file.close();
