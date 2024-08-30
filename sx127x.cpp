@@ -345,7 +345,7 @@ void sx127x::setTxPower(int level, int outputPin) {
 
   } else {
     if (level < 2) { level = 2; }
-    else if (level > 17) { level = 17; }
+    else if (level > 20) { level = 20; }
 
     writeRegister(REG_PA_DAC_7X, 0x84);
     writeRegister(REG_PA_CONFIG_7X, PA_BOOST_7X | (level - 2));
