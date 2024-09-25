@@ -4,9 +4,9 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.7.5-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.4.9-py3-none-any.whl",
-    "lxmf": "lxmf-0.4.3-py3-none-any.whl",
+    "rns": "rns-0.8.0-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.5.3-py3-none-any.whl",
+    "lxmf": "lxmf-0.5.3-py3-none-any.whl",
     "rnsh": "rnsh-0.1.4-py3-none-any.whl",
 }
 
@@ -184,9 +184,11 @@ def optimise_manual(path):
         ("_images/sideband_devices.webp", pm),
         ("_images/board_tbeam.png", pm),
         ("_images/nomadnet_3.png", pm),
+        ("_images/meshchat_1.webp", pm),
         ("_images/radio_is5ac.png", pm),
         ("_images/radio_rblhg5.png", pm),
         ("_static/rns_logo_512.png", 256),
+        ("../images/bg_h_1.webp", pm),
     ]
 
     import subprocess
@@ -205,6 +207,7 @@ def optimise_manual(path):
         "_static/scripts/furo.js.map",
         "_static/jquery-3.6.0.js",
         "_static/jquery.js",
+        "static/underscore-1.13.1.js",
         "_static/_sphinx_javascript_frameworks_compat.js",
         "_static/scripts/furo.js.LICENSE.txt",
         "_static/styles/furo-extensions.css.map",
