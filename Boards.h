@@ -258,7 +258,8 @@
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
-      #define HAS_CONSOLE false
+      #define HAS_PMU true
+      #define HAS_CONSOLE true
       #define HAS_EEPROM true
       #define HAS_INPUT true
       #define HAS_SLEEP true

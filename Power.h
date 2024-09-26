@@ -44,6 +44,24 @@
   int bat_charged_samples = 0;
   bool bat_voltage_dropping = false;
   float bat_delay_v = 0;
+#elif BOARD_MODEL == BOARD_HELTEC32_V3
+  #define BAT_C_SAMPLES   7
+  #define BAT_D_SAMPLES   2
+  #define BAT_V_MIN       3.15
+  #define BAT_V_MAX       4.3
+  #define BAT_V_CHG       4.48
+  #define BAT_V_FLOAT     4.33
+  #define BAT_SAMPLES     5
+  const uint8_t pin_vbat = 1;
+  const uint8_t pin_ctrl = 37;
+  float bat_p_samples[BAT_SAMPLES];
+  float bat_v_samples[BAT_SAMPLES];
+  uint8_t bat_samples_count = 0;
+  int bat_discharging_samples = 0;
+  int bat_charging_samples = 0;
+  int bat_charged_samples = 0;
+  bool bat_voltage_dropping = false;
+  float bat_delay_v = 0;
 #endif
 
 uint32_t last_pmu_update = 0;
@@ -54,10 +72,17 @@ uint8_t pmu_rc = 0;
 void kiss_indicate_battery();
 
 void measure_battery() {
-  #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1
+  #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_HELTEC32_V3
     battery_installed = true;
     battery_indeterminate = true;
-    bat_v_samples[bat_samples_count%BAT_SAMPLES] = (float)(analogRead(pin_vbat)) / 4095*2*3.3*1.1;
+
+    #if BOARD_MODEL == BOARD_HELTEC32_V3
+      float battery_measurement = (float)(analogRead(pin_vbat)) * 0.0041;
+    #else
+      float battery_measurement = (float)(analogRead(pin_vbat)) / 4095.0*2.0*3.3*1.1;
+    #endif
+
+    bat_v_samples[bat_samples_count%BAT_SAMPLES] = battery_measurement;
     bat_p_samples[bat_samples_count%BAT_SAMPLES] = ((battery_voltage-BAT_V_MIN) / (BAT_V_MAX-BAT_V_MIN))*100.0;
     
     bat_samples_count++;
@@ -95,11 +120,7 @@ void measure_battery() {
       if (bat_voltage_dropping && battery_voltage < BAT_V_FLOAT) {
         battery_state = BATTERY_STATE_DISCHARGING;
       } else {
-        #if BOARD_MODEL == BOARD_RNODE_NG_21
           battery_state = BATTERY_STATE_CHARGING;
-        #else
-          battery_state = BATTERY_STATE_DISCHARGING;
-        #endif
       }
 
 
@@ -213,6 +234,10 @@ void update_pmu() {
 bool init_pmu() {
   #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1
     pinMode(pin_vbat, INPUT);
+    return true;
+  #elif BOARD_MODEL == BOARD_HELTEC32_V3
+    pinMode(pin_ctrl,OUTPUT);
+    digitalWrite(pin_ctrl, LOW);
     return true;
   #elif BOARD_MODEL == BOARD_TBEAM
     Wire.begin(I2C_SDA, I2C_SCL);
