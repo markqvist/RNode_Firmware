@@ -109,7 +109,19 @@ uint8_t boot_vector = 0x00;
 	uint8_t npr = 0;
   uint8_t npg = 0;
   uint8_t npb = 0;
+  float npi = NP_M;
   bool pixels_started = false;
+
+  void led_set_intensity(uint8_t intensity) {
+  	npi = (float)intensity/255.0;
+  }
+
+  void led_init() {
+  	if (EEPROM.read(eeprom_addr(ADDR_CONF_PSET)) != 0xFF) {
+  		led_set_intensity(EEPROM.read(eeprom_addr(ADDR_CONF_PINT)));
+  	}
+  }
+
   void npset(uint8_t r, uint8_t g, uint8_t b) {
   	if (pixels_started != true) {
   		pixels.begin();
@@ -118,7 +130,7 @@ uint8_t boot_vector = 0x00;
 
   	if (r != npr || g != npg || b != npb) {
   		npr = r; npg = g; npb = b;
-  		pixels.setPixelColor(0, pixels.Color(npr*NP_M, npg*NP_M, npb*NP_M));
+  		pixels.setPixelColor(0, pixels.Color(npr*npi, npg*npi, npb*npi));
   		pixels.show();
   	}
   }
@@ -1424,6 +1436,16 @@ void di_conf_save(uint8_t dint) {
 void da_conf_save(uint8_t dadr) {
 	eeprom_update(eeprom_addr(ADDR_CONF_DADR), dadr);
 }
+
+void db_conf_save(uint8_t val) {
+	eeprom_update(eeprom_addr(ADDR_CONF_DBLK), val);
+}
+
+void np_int_conf_save(uint8_t p_int) {
+	eeprom_update(eeprom_addr(ADDR_CONF_PSET), 0x01);
+	eeprom_update(eeprom_addr(ADDR_CONF_PINT), p_int);
+}
+
 
 bool eeprom_have_conf() {
     #if HAS_EEPROM

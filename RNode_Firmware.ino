@@ -78,6 +78,10 @@ void setup() {
 
   Serial.begin(serial_baudrate);
 
+  #if HAS_NP
+    led_init();
+  #endif
+
   #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_RNODE_NG_22
   // Some boards need to wait until the hardware UART is set up before booting
   // the full firmware. In the case of the RAK4631, the line below will wait
@@ -960,6 +964,40 @@ void serialCallback(uint8_t sbyte) {
             }
             display_addr = sbyte;
             da_conf_save(display_addr);
+        }
+
+      #endif
+    } else if (command == CMD_DISP_BLNK) {
+      #if HAS_NP
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            if (sbyte == 0x00) {
+              db_conf_save(0x00);
+            } else {
+              db_conf_save(0x01);
+            }
+        }
+
+      #endif
+    } else if (command == CMD_NP_INT) {
+      #if HAS_NP
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            npi = sbyte;
+            led_set_intensity(npi);
+            np_int_conf_save(npi);
         }
 
       #endif
