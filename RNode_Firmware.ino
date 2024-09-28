@@ -995,9 +995,9 @@ void serialCallback(uint8_t sbyte) {
                 if (sbyte == TFESC) sbyte = FESC;
                 ESCAPE = false;
             }
-            npi = sbyte;
-            led_set_intensity(npi);
-            np_int_conf_save(npi);
+            sbyte;
+            led_set_intensity(sbyte);
+            np_int_conf_save(sbyte);
         }
 
       #endif

@@ -117,8 +117,9 @@ uint8_t boot_vector = 0x00;
   }
 
   void led_init() {
-  	if (EEPROM.read(eeprom_addr(ADDR_CONF_PSET)) != 0xFF) {
-  		led_set_intensity(EEPROM.read(eeprom_addr(ADDR_CONF_PINT)));
+  	if (EEPROM.read(eeprom_addr(ADDR_CONF_PSET)) == CONF_OK_BYTE) {
+  		uint8_t int_val = EEPROM.read(eeprom_addr(ADDR_CONF_PINT));
+  		led_set_intensity(int_val);
   	}
   }
 
@@ -1181,11 +1182,11 @@ void promisc_disable() {
 #endif
 
 bool eeprom_info_locked() {
-    #if HAS_EEPROM
-	    uint8_t lock_byte = EEPROM.read(eeprom_addr(ADDR_INFO_LOCK));
-    #elif MCU_VARIANT == MCU_NRF52
-        uint8_t lock_byte = eeprom_read(eeprom_addr(ADDR_INFO_LOCK));
-    #endif
+  #if HAS_EEPROM
+    uint8_t lock_byte = EEPROM.read(eeprom_addr(ADDR_INFO_LOCK));
+  #elif MCU_VARIANT == MCU_NRF52
+    uint8_t lock_byte = eeprom_read(eeprom_addr(ADDR_INFO_LOCK));
+  #endif
 	if (lock_byte == INFO_LOCK_BYTE) {
 		return true;
 	} else {
@@ -1250,31 +1251,31 @@ void eeprom_update(int mapped_addr, uint8_t byte) {
 			EEPROM.write(mapped_addr, byte);
 			EEPROM.commit();
 		}
-    #elif !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-        // todo: clean up this implementation, writing one byte and syncing
-        // each time is really slow, but this is also suboptimal
-        uint8_t read_byte;
-        void* read_byte_ptr = &read_byte;
-        file.seek(mapped_addr);
-        file.read(read_byte_ptr, 1);
-        file.seek(mapped_addr);
-        if (read_byte != byte) {
-            file.write(byte);
-        }
-        written_bytes++;
-        
-        if ((mapped_addr - eeprom_addr(0)) == ADDR_INFO_LOCK) {
-            #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-                // have to do a flush because we're only writing 1 byte and it syncs after 4
-                eeprom_flush();
-            #endif
-        }
+  #elif !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+    // todo: clean up this implementation, writing one byte and syncing
+    // each time is really slow, but this is also suboptimal
+    uint8_t read_byte;
+    void* read_byte_ptr = &read_byte;
+    file.seek(mapped_addr);
+    file.read(read_byte_ptr, 1);
+    file.seek(mapped_addr);
+    if (read_byte != byte) {
+      file.write(byte);
+    }
+    written_bytes++;
+    
+    if ((mapped_addr - eeprom_addr(0)) == ADDR_INFO_LOCK) {
+      #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+        // have to do a flush because we're only writing 1 byte and it syncs after 4
+        eeprom_flush();
+      #endif
+    }
 
-        if (written_bytes >= 4) {
-            file.close();
-            file.open(EEPROM_FILE, FILE_O_WRITE);
-            written_bytes = 0;
-        }
+    if (written_bytes >= 4) {
+      file.close();
+      file.open(EEPROM_FILE, FILE_O_WRITE);
+      written_bytes = 0;
+    }
 	#endif
 }
 
@@ -1416,16 +1417,16 @@ bool eeprom_checksum_valid() {
 void bt_conf_save(bool is_enabled) {
 	if (is_enabled) {
 		eeprom_update(eeprom_addr(ADDR_CONF_BT), BT_ENABLE_BYTE);
-        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-            // have to do a flush because we're only writing 1 byte and it syncs after 8
-            eeprom_flush();
-        #endif
+      #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+        // have to do a flush because we're only writing 1 byte and it syncs after 8
+        eeprom_flush();
+      #endif
 	} else {
 		eeprom_update(eeprom_addr(ADDR_CONF_BT), 0x00);
-        #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-            // have to do a flush because we're only writing 1 byte and it syncs after 8
-            eeprom_flush();
-        #endif
+    #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+      // have to do a flush because we're only writing 1 byte and it syncs after 8
+      eeprom_flush();
+    #endif
 	}
 }
 
@@ -1442,7 +1443,7 @@ void db_conf_save(uint8_t val) {
 }
 
 void np_int_conf_save(uint8_t p_int) {
-	eeprom_update(eeprom_addr(ADDR_CONF_PSET), 0x01);
+	eeprom_update(eeprom_addr(ADDR_CONF_PSET), CONF_OK_BYTE);
 	eeprom_update(eeprom_addr(ADDR_CONF_PINT), p_int);
 }
 
