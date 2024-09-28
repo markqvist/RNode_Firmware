@@ -193,9 +193,11 @@ bool display_init() {
       display.cp437(true);
 
       #if HAS_EEPROM
-      uint8_t display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
-      #elif MCU_VARIANT == MCU_NRF52
-      uint8_t display_intensity = eeprom_read(eeprom_addr(ADDR_CONF_DINT));
+        #if MCU_VARIANT != MCU_NRF52
+          display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
+        #else
+          display_intensity = eeprom_read(eeprom_addr(ADDR_CONF_DINT));
+        #endif
       #endif
 
       return true;
