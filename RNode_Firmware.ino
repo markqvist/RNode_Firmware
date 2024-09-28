@@ -1367,8 +1367,10 @@ void button_event(uint8_t event, unsigned long duration) {
   if (duration > 6000) {
     bt_enable_pairing();
   } else if (duration > 4000) {
-    console_active = true;
-    console_start();
+    #if HAS_CONSOLE
+      console_active = true;
+      console_start();
+    #endif
   } else if (duration > 2000) {
     sleep_now();
   } else {
