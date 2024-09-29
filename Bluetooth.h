@@ -64,6 +64,7 @@ char bt_devname[11];
     }
 
     void bt_stop() {
+      display_unblank();
       if (bt_state != BT_STATE_OFF) {
         SerialBT.end();
         bt_allow_pairing = false;
@@ -72,6 +73,7 @@ char bt_devname[11];
     }
 
     void bt_start() {
+      display_unblank();
       if (bt_state == BT_STATE_OFF) {
         SerialBT.begin(bt_devname);
         bt_state = BT_STATE_ON;
@@ -79,6 +81,7 @@ char bt_devname[11];
     }
 
     void bt_enable_pairing() {
+      display_unblank();
       if (bt_state == BT_STATE_OFF) bt_start();
       bt_allow_pairing = true;
       bt_pairing_started = millis();
@@ -86,12 +89,14 @@ char bt_devname[11];
     }
 
     void bt_disable_pairing() {
+      display_unblank();
       bt_allow_pairing = false;
       bt_ssp_pin = 0;
       bt_state = BT_STATE_ON;
     }
 
     void bt_pairing_complete(boolean success) {
+      display_unblank();
       if (success) {
         bt_disable_pairing();
       } else {
@@ -99,7 +104,8 @@ char bt_devname[11];
       }
     }
 
-    void bt_connection_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param){
+    void bt_connection_callback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) {
+      display_unblank();
       if(event == ESP_SPP_SRV_OPEN_EVT) {
         bt_state = BT_STATE_CONNECTED;
         cable_state = CABLE_STATE_DISCONNECTED;
@@ -163,6 +169,7 @@ char bt_devname[11];
 
   #elif HAS_BLE == true
     void bt_stop() {
+      display_unblank();
       if (bt_state != BT_STATE_OFF) {
         bt_allow_pairing = false;
         bt_state = BT_STATE_OFF;
@@ -170,17 +177,20 @@ char bt_devname[11];
     }
 
     void bt_disable_pairing() {
+      display_unblank();
       bt_allow_pairing = false;
       bt_ssp_pin = 0;
       bt_state = BT_STATE_ON;
     }
 
     void bt_connect_callback(uint16_t conn_handle) {
+      display_unblank();
       bt_state = BT_STATE_CONNECTED;
       cable_state = CABLE_STATE_DISCONNECTED;
     }
 
     void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason) {
+      display_unblank();
       bt_state = BT_STATE_ON;
     }
 
@@ -217,6 +227,7 @@ char bt_devname[11];
     }
 
     void bt_start() {
+      display_unblank();
       if (bt_state == BT_STATE_OFF) {
         bt_state = BT_STATE_ON;
         // TODO: Implement
@@ -234,6 +245,7 @@ char bt_devname[11];
     }
 
     void bt_enable_pairing() {
+      display_unblank();
       if (bt_state == BT_STATE_OFF) bt_start();
       bt_allow_pairing = true;
       bt_pairing_started = millis();

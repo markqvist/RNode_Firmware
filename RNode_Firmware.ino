@@ -170,6 +170,7 @@ void setup() {
       eeprom_update(eeprom_addr(ADDR_CONF_DSET), CONF_OK_BYTE);
       eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
     }
+    display_unblank();
     disp_ready = display_init();
     update_display();
   #endif
@@ -421,6 +422,7 @@ void flushQueue(void) {
   if (!queue_flushing) {
     queue_flushing = true;
 
+    display_unblank();
     led_tx_on();
     uint16_t processed = 0;
 
@@ -581,6 +583,7 @@ void serialCallback(uint8_t sbyte) {
             fifo16_push(&packet_lengths, l);
 
             current_packet_start = queue_cursor;
+            display_unblank();
         }
 
     }
@@ -594,7 +597,10 @@ void serialCallback(uint8_t sbyte) {
     if (frame_len == 0 && command == CMD_UNKNOWN) {
         command = sbyte;
     } else if (command == CMD_DATA) {
-        if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
+        if (bt_state != BT_STATE_CONNECTED) {
+          cable_state = CABLE_STATE_CONNECTED;
+          display_unblank();
+        }
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
@@ -699,6 +705,7 @@ void serialCallback(uint8_t sbyte) {
       kiss_indicate_implicit_length();
     } else if (command == CMD_LEAVE) {
       if (sbyte == 0xFF) {
+        display_unblank();
         cable_state   = CABLE_STATE_DISCONNECTED;
         current_rssi  = -292;
         last_rssi     = -292;
@@ -706,7 +713,10 @@ void serialCallback(uint8_t sbyte) {
         last_snr_raw  = 0x80;
       }
     } else if (command == CMD_RADIO_STATE) {
-      if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
+      if (bt_state != BT_STATE_CONNECTED) {
+        cable_state = CABLE_STATE_CONNECTED;
+        display_unblank();
+      }
       if (sbyte == 0xFF) {
         kiss_indicate_radiostate();
       } else if (sbyte == 0x00) {
@@ -949,6 +959,7 @@ void serialCallback(uint8_t sbyte) {
             }
             display_intensity = sbyte;
             di_conf_save(display_intensity);
+            display_unblank();
         }
 
       #endif
@@ -977,11 +988,8 @@ void serialCallback(uint8_t sbyte) {
                 if (sbyte == TFESC) sbyte = FESC;
                 ESCAPE = false;
             }
-            if (sbyte == 0x00) {
-              db_conf_save(0x00);
-            } else {
-              db_conf_save(0x01);
-            }
+            db_conf_save(sbyte);
+            display_unblank();
         }
 
       #endif
@@ -1364,6 +1372,7 @@ void sleep_now() {
 }
 
 void button_event(uint8_t event, unsigned long duration) {
+  display_unblank();
   if (duration > 6000) {
     bt_enable_pairing();
   } else if (duration > 4000) {

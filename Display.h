@@ -59,10 +59,14 @@ Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 #define DISP_MODE_LANDSCAPE 0x01
 #define DISP_MODE_PORTRAIT  0x02
 #define DISP_PIN_SIZE   6
+#define DISPLAY_BLANKING_TIMEOUT 15*1000
 uint8_t disp_mode = DISP_MODE_UNKNOWN;
 uint8_t disp_ext_fb = false;
 unsigned char fb[512];
 uint32_t last_disp_update = 0;
+uint32_t last_unblank_event = 0;
+uint32_t display_blanking_timeout = DISPLAY_BLANKING_TIMEOUT;
+uint8_t display_unblank_intensity = display_intensity;
 uint8_t disp_target_fps = 7;
 int disp_update_interval = 1000/disp_target_fps;
 uint32_t last_page_flip = 0;
@@ -144,6 +148,17 @@ bool display_init() {
       uint8_t display_address = DISP_ADDR;
     #endif
 
+    #if HAS_EEPROM
+      if (EEPROM.read(eeprom_addr(ADDR_CONF_BSET)) == CONF_OK_BYTE) {
+        uint8_t db_timeout = EEPROM.read(eeprom_addr(ADDR_CONF_DBLK));
+        if (db_timeout == 0x00) {
+          display_blanking_enabled = false;
+        } else {
+          display_blanking_enabled = true;
+          display_blanking_timeout = db_timeout*1000;
+        }
+      }
+    #endif
     
     if(!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
       return false;
@@ -567,13 +582,29 @@ void update_disp_area() {
 }
 
 void update_display(bool blank = false) {
-  if (blank) {
-    if (display_contrast != display_intensity) {
-      display_contrast = display_intensity;
-      set_contrast(&display, display_contrast);
+  if (display_blanking_enabled && millis()-last_unblank_event >= display_blanking_timeout) {
+    blank = true;
+    if (display_intensity != 0) {
+      display_unblank_intensity = display_intensity;
     }
-    display.clearDisplay();
-    display.display();    
+    display_intensity = 0;
+  } else {
+    if (display_unblank_intensity != 0x00) {
+      display_intensity = display_unblank_intensity;
+      display_unblank_intensity = 0x00;
+    }
+  }
+
+  if (blank) {
+    if (millis()-last_disp_update >= disp_update_interval) {
+      if (display_contrast != display_intensity) {
+        display_contrast = display_intensity;
+        set_contrast(&display, display_contrast);
+      }
+      display.clearDisplay();
+      display.display();
+      last_disp_update = millis();
+    }
   } else {
     if (millis()-last_disp_update >= disp_update_interval) {
       if (display_contrast != display_intensity) {
@@ -587,6 +618,10 @@ void update_display(bool blank = false) {
       last_disp_update = millis();
     }
   }
+}
+
+void display_unblank() {
+  last_unblank_event = millis();
 }
 
 void ext_fb_enable() {
