@@ -970,11 +970,6 @@ void ISR_VECT sx126x::handleDio0Rise()
             _onReceive(packetLength);
         }
     }
-    // else {
-    //   Serial.println("CRCE");
-    //   Serial.println(buf[0]);
-    //   Serial.println(buf[1]);
-    // }
 }
 
 void ISR_VECT sx126x::onDio0Rise()
