@@ -224,6 +224,9 @@ inline void kiss_write_packet() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     packet_ready = false;
   #endif
+  #if MCU_VARIANT == MCU_ESP32 && HAS_BLE
+    bt_flush();
+  #endif
 }
 
 inline void getPacketData(uint16_t len) {
@@ -1378,17 +1381,26 @@ void button_event(uint8_t event, unsigned long duration) {
       bt_enable_pairing();
     } else if (duration > 4000) {
       #if HAS_CONSOLE
+        #if HAS_BLUETOOTH || HAS_BLE
+          bt_stop();
+        #endif
         console_active = true;
         console_start();
       #endif
     } else if (duration > 2000) {
-      sleep_now();
+      #if HAS_SLEEP
+        sleep_now();
+      #endif
     } else {
-      if (bt_state == BT_STATE_OFF) {
-        bt_start();
-      } else {
-        bt_stop();
-      }
+      #if HAS_BLUETOOTH || HAS_BLE
+        if (bt_state == BT_STATE_OFF) {
+          bt_start();
+          bt_conf_save(true);
+        } else {
+          bt_stop();
+          bt_conf_save(false);
+        }
+      #endif
     }
   #endif
 }

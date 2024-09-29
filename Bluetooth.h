@@ -28,8 +28,8 @@
   #elif HAS_BLE == true
     #include "esp_bt_main.h"
     #include "esp_bt_device.h"
-    #include "BleSerial.h"
-    BleSerial SerialBT;
+    #include "BLESerial.h"
+    BLESerial SerialBT;
   #endif
 
 #elif MCU_VARIANT == MCU_NRF52
@@ -41,6 +41,7 @@
 #endif
 
 #define BT_PAIRING_TIMEOUT 35000
+#define BLE_FLUSH_TIMEOUT 20
 uint32_t bt_pairing_started = 0;
 
 #define BT_DEV_ADDR_LEN 6
@@ -168,19 +169,42 @@ char bt_devname[11];
     }
 
   #elif HAS_BLE == true
-    void bt_stop() {
-      display_unblank();
-      if (bt_state != BT_STATE_OFF) {
-        bt_allow_pairing = false;
-        bt_state = BT_STATE_OFF;
-      }
-    }
+    BLESecurity *ble_security = new BLESecurity();
+
+    void bt_flush() { if (bt_state == BT_STATE_CONNECTED) { SerialBT.flush(); } }
 
     void bt_disable_pairing() {
       display_unblank();
       bt_allow_pairing = false;
       bt_ssp_pin = 0;
       bt_state = BT_STATE_ON;
+    }
+
+    void bt_passkey_notify_callback(uint32_t passkey) {
+      bt_ssp_pin = passkey;
+      bt_state = BT_STATE_PAIRING;
+      bt_allow_pairing = true;
+      bt_pairing_started = millis();
+      kiss_indicate_btpin();
+    }
+
+    uint32_t bt_passkey_callback() {
+      uint32_t pairing_pin = random(899999)+100000;
+      return pairing_pin;
+    }
+
+    bool bt_security_request_callback() {
+      return true;
+    }
+
+    void bt_authentication_complete_callback(esp_ble_auth_cmpl_t auth_result) {
+      if (auth_result.success == true) {
+        bt_state = BT_STATE_CONNECTED;
+      } else {
+        bt_state = BT_STATE_ON;
+      }
+      bt_allow_pairing = false;
+      bt_ssp_pin = 0;
     }
 
     void bt_connect_callback(uint16_t conn_handle) {
@@ -215,8 +239,6 @@ char bt_devname[11];
               sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
               free(data);
 
-              // TODO: Implement GAP & GATT for RNode comms over BLE
-              
               bt_ready = true;
               return true;
 
@@ -230,7 +252,17 @@ char bt_devname[11];
       display_unblank();
       if (bt_state == BT_STATE_OFF) {
         bt_state = BT_STATE_ON;
-        // TODO: Implement
+        SerialBT.begin(bt_devname);
+        SerialBT.setTimeout(10);
+      }
+    }
+
+    void bt_stop() {
+      display_unblank();
+      if (bt_state != BT_STATE_OFF) {
+        bt_allow_pairing = false;
+        bt_state = BT_STATE_OFF;
+        SerialBT.end();
       }
     }
 
@@ -247,6 +279,16 @@ char bt_devname[11];
     void bt_enable_pairing() {
       display_unblank();
       if (bt_state == BT_STATE_OFF) bt_start();
+
+      int dev_num = esp_ble_get_bond_device_num();
+      esp_ble_bond_dev_t *dev_list = (esp_ble_bond_dev_t *)malloc(sizeof(esp_ble_bond_dev_t) * dev_num);
+      esp_ble_get_bond_device_list(&dev_num, dev_list);
+      for (int i = 0; i < dev_num; i++) { esp_ble_remove_bond_device(dev_list[i].bd_addr); }
+      free(dev_list);
+
+      ble_security->setStaticPIN(bt_passkey_callback());
+      ble_security->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_MITM_BOND);
+
       bt_allow_pairing = true;
       bt_pairing_started = millis();
       bt_state = BT_STATE_PAIRING;
@@ -255,6 +297,11 @@ char bt_devname[11];
     void update_bt() {
       if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
         bt_disable_pairing();
+      }
+      if (bt_state == BT_STATE_CONNECTED && millis()-SerialBT.lastFlushTime >= BLE_FLUSH_TIMEOUT) {
+        if (SerialBT.transmitBufferLength > 0) {
+          bt_flush();
+        }
       }
     }
   #endif
