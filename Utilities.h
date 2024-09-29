@@ -49,6 +49,8 @@ uint8_t eeprom_read(uint32_t mapped_addr);
 
 #if HAS_DISPLAY == true
   #include "Display.h"
+#else
+	void display_unblank() {}
 #endif
 
 #if HAS_BLUETOOTH == true || HAS_BLE == true
@@ -1439,14 +1441,16 @@ void da_conf_save(uint8_t dadr) {
 }
 
 void db_conf_save(uint8_t val) {
-	if (val == 0x00) {
-		display_blanking_enabled = false;
-	} else {
-		display_blanking_enabled = true;
-		display_blanking_timeout = val*1000;
-	}
-	eeprom_update(eeprom_addr(ADDR_CONF_BSET), CONF_OK_BYTE);
-	eeprom_update(eeprom_addr(ADDR_CONF_DBLK), val);
+	#if HAS_DISPLAY
+		if (val == 0x00) {
+			display_blanking_enabled = false;
+		} else {
+			display_blanking_enabled = true;
+			display_blanking_timeout = val*1000;
+		}
+		eeprom_update(eeprom_addr(ADDR_CONF_BSET), CONF_OK_BYTE);
+		eeprom_update(eeprom_addr(ADDR_CONF_DBLK), val);
+	#endif
 }
 
 void np_int_conf_save(uint8_t p_int) {

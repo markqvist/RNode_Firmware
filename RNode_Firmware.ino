@@ -1372,23 +1372,25 @@ void sleep_now() {
 }
 
 void button_event(uint8_t event, unsigned long duration) {
-  display_unblank();
-  if (duration > 6000) {
-    bt_enable_pairing();
-  } else if (duration > 4000) {
-    #if HAS_CONSOLE
-      console_active = true;
-      console_start();
-    #endif
-  } else if (duration > 2000) {
-    sleep_now();
-  } else {
-    if (bt_state == BT_STATE_OFF) {
-      bt_start();
+  #if MCU_VARIANT == MCU_ESP32
+    display_unblank();
+    if (duration > 6000) {
+      bt_enable_pairing();
+    } else if (duration > 4000) {
+      #if HAS_CONSOLE
+        console_active = true;
+        console_start();
+      #endif
+    } else if (duration > 2000) {
+      sleep_now();
     } else {
-      bt_stop();
+      if (bt_state == BT_STATE_OFF) {
+        bt_start();
+      } else {
+        bt_stop();
+      }
     }
-  }
+  #endif
 }
 
 volatile bool serial_polling = false;
