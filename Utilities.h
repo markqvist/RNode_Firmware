@@ -75,8 +75,8 @@ uint8_t eeprom_read(uint32_t mapped_addr);
     #include "hal/wdt_hal.h"
 	#elif BOARD_MODEL == BOARD_RNODE_NG_22
 		#include "hal/wdt_hal.h"
-  #else BOARD_MODEL != BOARD_RNODE_NG_22
-	  #include "soc/rtc_wdt.h"
+  #else
+		#include "hal/wdt_hal.h"
 	#endif
   #define ISR_VECT IRAM_ATTR
 #else
