@@ -31,7 +31,7 @@
 
 #if MCU_VARIANT == MCU_ESP32
   #if MCU_VARIANT == MCU_ESP32 and !defined(CONFIG_IDF_TARGET_ESP32S3)
-    #include "soc/rtc_wdt.h"
+    #include "hal/wdt_hal.h"
   #endif
   #define ISR_VECT IRAM_ATTR
 #else
