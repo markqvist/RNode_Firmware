@@ -5,16 +5,17 @@ void bt_passkey_notify_callback(uint32_t passkey);
 bool bt_security_request_callback();
 void bt_authentication_complete_callback(esp_ble_auth_cmpl_t auth_result);
 bool bt_confirm_pin_callback(uint32_t pin);
-void bt_connect_callback(uint16_t conn_handle);
-void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason);
+void bt_connect_callback(BLEServer *server);
+void bt_disconnect_callback(BLEServer *server);
+bool bt_client_authenticated();
 
 uint32_t BLESerial::onPassKeyRequest() { return bt_passkey_callback(); }
 void BLESerial::onPassKeyNotify(uint32_t passkey) { bt_passkey_notify_callback(passkey); }
 bool BLESerial::onSecurityRequest() { return bt_security_request_callback(); }
 void BLESerial::onAuthenticationComplete(esp_ble_auth_cmpl_t auth_result) { bt_authentication_complete_callback(auth_result); }
-void BLESerial::onConnect(BLEServer *server) { bt_connect_callback(0); }
-void BLESerial::onDisconnect(BLEServer *server) { bt_disconnect_callback(0, 0); ble_server->startAdvertising(); }
-bool BLESerial::onConfirmPIN(uint32_t pin) { return false; };
+void BLESerial::onConnect(BLEServer *server) { bt_connect_callback(server); }
+void BLESerial::onDisconnect(BLEServer *server) { bt_disconnect_callback(server); ble_server->startAdvertising(); }
+bool BLESerial::onConfirmPIN(uint32_t pin) { return bt_confirm_pin_callback(pin); };
 bool BLESerial::connected() { return ble_server->getConnectedCount() > 0; }
 
 int BLESerial::read() {
@@ -54,11 +55,15 @@ size_t BLESerial::write(const uint8_t *buffer, size_t bufferSize) {
 }
 
 size_t BLESerial::write(uint8_t byte) {
-  if (ble_server->getConnectedCount() <= 0) { return 0; } else {
-    this->transmitBuffer[this->transmitBufferLength] = byte;
-    this->transmitBufferLength++;
-    if (this->transmitBufferLength == maxTransferSize) { flush(); }
-    return 1;
+  if (bt_client_authenticated()) {
+    if (ble_server->getConnectedCount() <= 0) { return 0; } else {
+      this->transmitBuffer[this->transmitBufferLength] = byte;
+      this->transmitBufferLength++;
+      if (this->transmitBufferLength == maxTransferSize) { flush(); }
+      return 1;
+    }
+  } else {
+    return 0;
   }
 }
 
@@ -81,6 +86,7 @@ void BLESerial::begin(const char *name) {
 
   ble_server = BLEDevice::createServer();
   ble_server->setCallbacks(this);
+  BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
   BLEDevice::setSecurityCallbacks(this);
 
   SetupSerialService();
@@ -114,6 +120,7 @@ void BLESerial::SetupSerialService() {
   TxCharacteristic = SerialService->createCharacteristic(BLE_TX_UUID, BLECharacteristic::PROPERTY_NOTIFY);
   TxCharacteristic->setAccessPermissions(ESP_GATT_PERM_READ_ENC_MITM);
   TxCharacteristic->addDescriptor(new BLE2902());
+  TxCharacteristic->setNotifyProperty(true);
   TxCharacteristic->setReadProperty(true);
 
   SerialService->start();
