@@ -224,8 +224,10 @@ inline void kiss_write_packet() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     packet_ready = false;
   #endif
-  #if MCU_VARIANT == MCU_ESP32 && HAS_BLE
-    bt_flush();
+  #if MCU_VARIANT == MCU_ESP32
+    #if HAS_BLE
+      bt_flush();
+    #endif
   #endif
 }
 

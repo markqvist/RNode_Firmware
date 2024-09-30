@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #if MCU_VARIANT == MCU_ESP32
-  
 
 #elif MCU_VARIANT == MCU_NRF52
 #endif

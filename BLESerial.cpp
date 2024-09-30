@@ -1,3 +1,7 @@
+#include "Boards.h"
+
+#if HAS_BLE
+
 #include "BLESerial.h"
 
 uint32_t bt_passkey_callback();
@@ -127,3 +131,5 @@ void BLESerial::SetupSerialService() {
 }
 
 BLESerial::BLESerial() { }
+
+#endif

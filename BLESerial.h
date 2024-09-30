@@ -1,4 +1,7 @@
-#pragma once
+#include "Boards.h"
+
+#if HAS_BLE
+
 #include <Arduino.h>
 
 #include <BLEDevice.h>
@@ -109,3 +112,5 @@ private:
 
   bool started = false;
 };
+
+#endif
