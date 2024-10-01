@@ -1379,9 +1379,7 @@ void sleep_now() {
 void button_event(uint8_t event, unsigned long duration) {
   #if MCU_VARIANT == MCU_ESP32
     display_unblank();
-    if (duration > 6000) {
-      bt_enable_pairing();
-    } else if (duration > 4000) {
+    if (duration > 10000) {
       #if HAS_CONSOLE
         #if HAS_BLUETOOTH || HAS_BLE
           bt_stop();
@@ -1389,12 +1387,17 @@ void button_event(uint8_t event, unsigned long duration) {
         console_active = true;
         console_start();
       #endif
-    } else if (duration > 2000) {
+    } else if (duration > 5000) {
+      #if HAS_BLUETOOTH || HAS_BLE
+        if (bt_state != BT_STATE_CONNECTED) { bt_enable_pairing(); }
+      #endif
+    } else if (duration > 700) {
       #if HAS_SLEEP
         sleep_now();
       #endif
     } else {
       #if HAS_BLUETOOTH || HAS_BLE
+      if (bt_state != BT_STATE_CONNECTED) {
         if (bt_state == BT_STATE_OFF) {
           bt_start();
           bt_conf_save(true);
@@ -1402,6 +1405,7 @@ void button_event(uint8_t event, unsigned long duration) {
           bt_stop();
           bt_conf_save(false);
         }
+      }
       #endif
     }
   #endif
