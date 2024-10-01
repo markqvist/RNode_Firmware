@@ -28,8 +28,6 @@
       pmuInterrupt = true;
   }
 #elif BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1
-  #define BAT_C_SAMPLES   7
-  #define BAT_D_SAMPLES   2
   #define BAT_V_MIN       3.15
   #define BAT_V_MAX       4.3
   #define BAT_V_CHG       4.48
@@ -44,14 +42,13 @@
   int bat_charged_samples = 0;
   bool bat_voltage_dropping = false;
   float bat_delay_v = 0;
+  float bat_state_change_v = 0;
 #elif BOARD_MODEL == BOARD_HELTEC32_V3
-  #define BAT_C_SAMPLES   7
-  #define BAT_D_SAMPLES   2
   #define BAT_V_MIN       3.15
   #define BAT_V_MAX       4.3
   #define BAT_V_CHG       4.48
   #define BAT_V_FLOAT     4.33
-  #define BAT_SAMPLES     5
+  #define BAT_SAMPLES     7
   const uint8_t pin_vbat = 1;
   const uint8_t pin_ctrl = 37;
   float bat_p_samples[BAT_SAMPLES];
@@ -62,6 +59,7 @@
   int bat_charged_samples = 0;
   bool bat_voltage_dropping = false;
   float bat_delay_v = 0;
+  float bat_state_change_v = 0;
 #endif
 
 uint32_t last_pmu_update = 0;
@@ -105,33 +103,52 @@ void measure_battery() {
       battery_voltage = battery_voltage/BAT_SAMPLES;
       
       if (bat_delay_v == 0) bat_delay_v = battery_voltage;
+      if (bat_state_change_v == 0) bat_state_change_v = battery_voltage;
       if (battery_percent > 100.0) battery_percent = 100.0;
       if (battery_percent < 0.0) battery_percent = 0.0;
 
       if (bat_samples_count%BAT_SAMPLES == 0) {
+        float bat_delay_diff = bat_state_change_v-battery_voltage;
+        if (bat_delay_diff < 0) { bat_delay_diff *= -1; }
+
         if (battery_voltage < bat_delay_v && battery_voltage < BAT_V_FLOAT) {
-          bat_voltage_dropping = true;
+          if (bat_voltage_dropping == false) {
+            if (bat_delay_diff > 0.008) {
+              bat_voltage_dropping = true;
+              bat_state_change_v = battery_voltage;
+              // SerialBT.printf("STATE CHANGE to DISCHARGE at delta=%.3fv. State change v is now %.3fv.\n", bat_delay_diff, bat_state_change_v);
+            }
+          }
         } else {
-          bat_voltage_dropping = false;
+          if (bat_voltage_dropping == true) {
+            if (bat_delay_diff > 0.008) {
+              bat_voltage_dropping = false;
+              bat_state_change_v = battery_voltage;
+              // SerialBT.printf("STATE CHANGE to CHARGE at delta=%.3fv. State change v is now %.3fv.\n", bat_delay_diff, bat_state_change_v);
+            }
+          }
         }
         bat_samples_count = 0;
+        bat_delay_v = battery_voltage;
       }
 
       if (bat_voltage_dropping && battery_voltage < BAT_V_FLOAT) {
         battery_state = BATTERY_STATE_DISCHARGING;
       } else {
-          battery_state = BATTERY_STATE_CHARGING;
+        battery_state = BATTERY_STATE_CHARGING;
       }
-
-
 
       // if (bt_state == BT_STATE_CONNECTED) {
       //   SerialBT.printf("Bus voltage %.3fv. Unfiltered %.3fv.", battery_voltage, bat_v_samples[BAT_SAMPLES-1]);
       //   if (bat_voltage_dropping) {
-      //     SerialBT.printf(" Voltage is dropping. Percentage %.1f%%.\n", battery_percent);
+      //     SerialBT.printf(" Voltage is dropping. Percentage %.1f%%.", battery_percent);
       //   } else {
-      //     SerialBT.print(" Voltage is not dropping.\n");
+      //     SerialBT.printf(" Voltage is not dropping. Percentage %.1f%%.", battery_percent);
       //   }
+      //   if (battery_state == BATTERY_STATE_DISCHARGING) { SerialBT.printf(" Battery discharging. delay_v %.3fv", bat_delay_v); }
+      //   if (battery_state == BATTERY_STATE_CHARGING) { SerialBT.printf(" Battery charging. delay_v %.3fv", bat_delay_v); }
+      //   if (battery_state == BATTERY_STATE_CHARGED) { SerialBT.print(" Battery is charged."); }
+      //   SerialBT.print("\n");
       // }
     }
 
