@@ -121,7 +121,7 @@ void measure_battery() {
           }
         } else {
           if (bat_voltage_dropping == true) {
-            if (bat_delay_diff > 0.008) {
+            if (bat_delay_diff > 0.01) {
               bat_voltage_dropping = false;
               bat_state_change_v = battery_voltage;
               // SerialBT.printf("STATE CHANGE to CHARGE at delta=%.3fv. State change v is now %.3fv.\n", bat_delay_diff, bat_state_change_v);

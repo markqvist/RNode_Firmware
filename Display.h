@@ -266,14 +266,22 @@ void draw_battery_bars(int px, int py) {
     if (battery_ready) {
       if (battery_installed) {
         float battery_value = battery_percent;
+
+        // Disable charging state display for now, since
+        // boards without dedicated PMU are completely
+        // unreliable for determining actual charging state.
+        bool disable_charge_status = false;
+        if (battery_indeterminate && battery_state == BATTERY_STATE_CHARGING) {
+          disable_charge_status = true;
+        }
         
-        if (battery_state == BATTERY_STATE_CHARGING) {
+        if (battery_state == BATTERY_STATE_CHARGING && !disable_charge_status) {
           battery_value = charge_tick;
           charge_tick += 3;
           if (charge_tick > 100) charge_tick = 0;
         }
 
-        if (battery_indeterminate && battery_state == BATTERY_STATE_CHARGING) {
+        if (battery_indeterminate && battery_state == BATTERY_STATE_CHARGING && !disable_charge_status) {
           stat_area.fillRect(px-2, py-2, 18, 7, SSD1306_BLACK);
           stat_area.drawBitmap(px-2, py-2, bm_plug, 17, 7, SSD1306_WHITE, SSD1306_BLACK);
         } else {
