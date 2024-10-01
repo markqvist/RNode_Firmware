@@ -169,9 +169,10 @@
 	const uint8_t RX_ONGOING = 0x04;
 
     // Power management
+    #define BATTERY_STATE_UNKNOWN     0x00
     #define BATTERY_STATE_DISCHARGING 0x01
-    #define BATTERY_STATE_CHARGING 0x02
-    #define BATTERY_STATE_CHARGED 0x03
+    #define BATTERY_STATE_CHARGING    0x02
+    #define BATTERY_STATE_CHARGED     0x03
     bool battery_installed = false;
     bool battery_indeterminate = false;
     bool external_power = false;
@@ -189,8 +190,8 @@
 
 	// Boot flags
 	#define START_FROM_BOOTLOADER 0x01
-	#define START_FROM_POWERON 0x02
-	#define START_FROM_BROWNOUT 0x03
-	#define START_FROM_JTAG 0x04
+	#define START_FROM_POWERON    0x02
+	#define START_FROM_BROWNOUT   0x03
+	#define START_FROM_JTAG       0x04
 
 #endif

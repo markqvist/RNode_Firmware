@@ -190,7 +190,7 @@ void measure_battery() {
           }
         }
       } else {
-        battery_state = BATTERY_STATE_DISCHARGING;
+        battery_state = BATTERY_STATE_UNKNOWN;
         battery_percent = 0.0;
         battery_voltage = 0.0;
       }
