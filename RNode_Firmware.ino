@@ -427,7 +427,6 @@ void flushQueue(void) {
   if (!queue_flushing) {
     queue_flushing = true;
 
-    display_unblank();
     led_tx_on();
     uint16_t processed = 0;
 
@@ -588,7 +587,6 @@ void serialCallback(uint8_t sbyte) {
             fifo16_push(&packet_lengths, l);
 
             current_packet_start = queue_cursor;
-            display_unblank();
         }
 
     }
@@ -604,7 +602,6 @@ void serialCallback(uint8_t sbyte) {
     } else if (command == CMD_DATA) {
         if (bt_state != BT_STATE_CONNECTED) {
           cable_state = CABLE_STATE_CONNECTED;
-          display_unblank();
         }
         if (sbyte == FESC) {
             ESCAPE = true;
@@ -1378,35 +1375,38 @@ void sleep_now() {
 
 void button_event(uint8_t event, unsigned long duration) {
   #if MCU_VARIANT == MCU_ESP32
-    display_unblank();
-    if (duration > 10000) {
-      #if HAS_CONSOLE
-        #if HAS_BLUETOOTH || HAS_BLE
-          bt_stop();
-        #endif
-        console_active = true;
-        console_start();
-      #endif
-    } else if (duration > 5000) {
-      #if HAS_BLUETOOTH || HAS_BLE
-        if (bt_state != BT_STATE_CONNECTED) { bt_enable_pairing(); }
-      #endif
-    } else if (duration > 700) {
-      #if HAS_SLEEP
-        sleep_now();
-      #endif
+    if (display_blanked) {
+      display_unblank();
     } else {
-      #if HAS_BLUETOOTH || HAS_BLE
-      if (bt_state != BT_STATE_CONNECTED) {
-        if (bt_state == BT_STATE_OFF) {
-          bt_start();
-          bt_conf_save(true);
-        } else {
-          bt_stop();
-          bt_conf_save(false);
+      if (duration > 10000) {
+        #if HAS_CONSOLE
+          #if HAS_BLUETOOTH || HAS_BLE
+            bt_stop();
+          #endif
+          console_active = true;
+          console_start();
+        #endif
+      } else if (duration > 5000) {
+        #if HAS_BLUETOOTH || HAS_BLE
+          if (bt_state != BT_STATE_CONNECTED) { bt_enable_pairing(); }
+        #endif
+      } else if (duration > 700) {
+        #if HAS_SLEEP
+          sleep_now();
+        #endif
+      } else {
+        #if HAS_BLUETOOTH || HAS_BLE
+        if (bt_state != BT_STATE_CONNECTED) {
+          if (bt_state == BT_STATE_OFF) {
+            bt_start();
+            bt_conf_save(true);
+          } else {
+            bt_stop();
+            bt_conf_save(false);
+          }
         }
+        #endif
       }
-      #endif
     }
   #endif
 }

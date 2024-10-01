@@ -67,6 +67,7 @@ uint32_t last_disp_update = 0;
 uint32_t last_unblank_event = 0;
 uint32_t display_blanking_timeout = DISPLAY_BLANKING_TIMEOUT;
 uint8_t display_unblank_intensity = display_intensity;
+bool display_blanked = false;
 uint8_t disp_target_fps = 7;
 int disp_update_interval = 1000/disp_target_fps;
 uint32_t last_page_flip = 0;
@@ -597,11 +598,13 @@ void update_disp_area() {
 void update_display(bool blank = false) {
   if (display_blanking_enabled && millis()-last_unblank_event >= display_blanking_timeout) {
     blank = true;
+    display_blanked = true;
     if (display_intensity != 0) {
       display_unblank_intensity = display_intensity;
     }
     display_intensity = 0;
   } else {
+    display_blanked = false;
     if (display_unblank_intensity != 0x00) {
       display_intensity = display_unblank_intensity;
       display_unblank_intensity = 0x00;
