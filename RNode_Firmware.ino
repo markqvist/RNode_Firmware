@@ -981,7 +981,7 @@ void serialCallback(uint8_t sbyte) {
 
       #endif
     } else if (command == CMD_DISP_BLNK) {
-      #if HAS_NP
+      #if HAS_DISPLAY
         if (sbyte == FESC) {
             ESCAPE = true;
         } else {
