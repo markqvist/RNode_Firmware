@@ -21,7 +21,7 @@ pages-debug:
 
 sourcepack:
 	@echo Packing firmware sources...
-	zip --junk-paths -r build/pkg/rnode_firmware.zip ../arduino-cli.yaml ../Bluetooth.h ../Config.h ../Console.h ../Device.h ../Display.h ../Framing.h ../Graphics.h ../LICENSE ../LoRa.cpp ../LoRa.h ../Makefile ../MD5.cpp ../MD5.h ../partition_hashes ../Power.h ../README.md ../release_hashes.py ../RNode_Firmware.ino ../ROM.h ../Utilities.h ../esp32_btbufs.py
+	zip --junk-paths -r build/pkg/rnode_firmware.zip ../arduino-cli.yaml ../BLESerial.cpp ../BLESerial.h ../Bluetooth.h ../Boards.h ../Config.h ../Console.h ../Device.h ../Display.h ../Framing.h ../Graphics.h ../LICENSE ../Makefile ../MD5.cpp ../MD5.h ../partition_hashes ../Power.h ../README.md ../release_hashes.py ../RNode_Firmware.ino ../ROM.h ../sx126x.cpp ../sx126x.h ../sx127x.cpp ../sx127x.h ../sx128x.cpp ../sx128x.h ../Utilities.h ../esp32_btbufs.py
 	
 data:
 	@echo Including assets...
