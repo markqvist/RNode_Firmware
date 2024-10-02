@@ -37,6 +37,7 @@
   #define BOARD_LORA32_V1_0   0x39
   #define BOARD_HELTEC32_V2   0x38
   #define BOARD_HELTEC32_V3   0x3A
+  #define BOARD_TDECK         0x3B
   #define BOARD_RNODE_NG_20   0x40
   #define BOARD_RNODE_NG_21   0x41
   #define BOARD_RNODE_NG_22   0x42
@@ -384,6 +385,55 @@
         #else
           const int pin_led_rx = 37;
           const int pin_led_tx = 37;
+        #endif
+      #endif
+
+    #elif BOARD_MODEL == BOARD_TDECK
+      #define IS_ESP32S3 true
+      #define MODEM SX1262
+      #define DIO2_AS_RF_SWITCH true
+      #define HAS_BUSY true
+      #define HAS_TCXO true
+
+      #define HAS_DISPLAY false
+      #define HAS_CONSOLE false
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_PMU true
+      #define HAS_NP false
+      #define HAS_SD false
+      #define HAS_EEPROM true
+
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_0
+      #define WAKEUP_LEVEL 0
+
+      const int pin_poweron = 10;
+      const int pin_btn_usr1 = 0;
+
+      const int pin_cs = 9;
+      const int pin_reset = 17;
+      const int pin_sclk = 40;
+      const int pin_mosi = 41;
+      const int pin_miso = 38;
+      const int pin_tcxo_enable = -1;
+      const int pin_dio = 45;
+      const int pin_busy = 13;
+      
+      const int SD_MISO = 38;
+      const int SD_MOSI = 41;
+      const int SD_CLK = 40;
+      const int SD_CS = 39;
+      const int DISPLAY_CS = 12;
+
+      #if HAS_NP == false
+        #if defined(EXTERNAL_LEDS)
+          const int pin_led_rx = 43;
+          const int pin_led_tx = 43;
+        #else
+          const int pin_led_rx = 43;
+          const int pin_led_tx = 43;
         #endif
       #endif
 

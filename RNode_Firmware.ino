@@ -52,6 +52,16 @@ void setup() {
     boot_seq();
     EEPROM.begin(EEPROM_SIZE);
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
+
+    #if BOARD_MODEL == BOARD_TDECK
+      pinMode(pin_poweron, OUTPUT);
+      digitalWrite(pin_poweron, HIGH);
+
+      pinMode(SD_CS, OUTPUT);
+      pinMode(DISPLAY_CS, OUTPUT);
+      digitalWrite(SD_CS, HIGH);
+      digitalWrite(DISPLAY_CS, HIGH);
+    #endif
   #endif
 
   #if MCU_VARIANT == MCU_NRF52
@@ -1178,7 +1188,7 @@ void validate_status() {
             #endif
           } else {
             hw_ready = false;
-            Serial.write("No valid radio module found\r\n");
+            Serial.write("No radio module found\r\n");
             #if HAS_DISPLAY
               if (disp_ready) {
                 device_init_done = true;
@@ -1203,6 +1213,7 @@ void validate_status() {
         }
       } else {
         hw_ready = false;
+        // Serial.write("Invalid EEPROM configuration\r\n");
         #if HAS_DISPLAY
           if (disp_ready) {
             device_init_done = true;
@@ -1212,6 +1223,7 @@ void validate_status() {
       }
     } else {
       hw_ready = false;
+      // Serial.write("Device unprovisioned, no device configuration found in EEPROM\r\n");
       #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;
