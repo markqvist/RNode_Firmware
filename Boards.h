@@ -395,7 +395,7 @@
       #define HAS_BUSY true
       #define HAS_TCXO true
 
-      #define HAS_DISPLAY true
+      #define HAS_DISPLAY false
       #define HAS_CONSOLE false
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
