@@ -61,6 +61,8 @@ void setup() {
       pinMode(DISPLAY_CS, OUTPUT);
       digitalWrite(SD_CS, HIGH);
       digitalWrite(DISPLAY_CS, HIGH);
+
+      pinMode(DISPLAY_BL_PIN, OUTPUT);
     #endif
   #endif
 

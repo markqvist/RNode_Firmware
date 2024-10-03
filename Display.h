@@ -14,9 +14,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "Graphics.h"
-#include <Wire.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+
+#if BOARD_MODEL == BOARD_TDECK
+  #include <Adafruit_ST7789.h>
+#else
+  #include <Wire.h>
+  #include <Adafruit_SSD1306.h>
+#endif
+
 #include "Fonts/Org_01.h"
 #define DISP_W 128
 #define DISP_H 64
@@ -53,7 +59,13 @@
 
 #define SMALL_FONT &Org_01
 
-Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
+#if BOARD_MODEL == BOARD_TDECK
+  Adafruit_ST7789 display = Adafruit_ST7789(DISPLAY_CS, DISPLAY_DC, -1);
+  #define SSD1306_WHITE ST77XX_WHITE
+  #define SSD1306_BLACK ST77XX_BLACK
+#else
+  Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
+#endif
 
 #define DISP_MODE_UNKNOWN   0x00
 #define DISP_MODE_LANDSCAPE 0x01
@@ -102,10 +114,37 @@ void update_area_positions() {
 }
 
 uint8_t display_contrast = 0x00;
-void set_contrast(Adafruit_SSD1306 *display, uint8_t contrast) {
+#if BOARD_MODEL != BOARD_TDECK
+  void set_contrast(Adafruit_SSD1306 *display, uint8_t contrast) {
     display->ssd1306_command(SSD1306_SETCONTRAST);
     display->ssd1306_command(contrast);
-}
+  }
+#else
+  void set_contrast(Adafruit_ST7789 *display, uint8_t value) {
+    static uint8_t level = 0;
+    static uint8_t steps = 16;
+    if (value > 15) value = 15;
+    if (value == 0) {
+        digitalWrite(DISPLAY_BL_PIN, 0);
+        delay(3);
+        level = 0;
+        return;
+    }
+    if (level == 0) {
+        digitalWrite(DISPLAY_BL_PIN, 1);
+        level = steps;
+        delayMicroseconds(30);
+    }
+    int from = steps - level;
+    int to = steps - value;
+    int num = (steps + to - from) % steps;
+    for (int i = 0; i < num; i++) {
+        digitalWrite(DISPLAY_BL_PIN, 0);
+        digitalWrite(DISPLAY_BL_PIN, 1);
+    }
+    level = value;
+  }
+#endif
 
 bool display_init() {
   #if HAS_DISPLAY
@@ -161,7 +200,13 @@ bool display_init() {
       }
     #endif
     
-    if(!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
+    #if BOARD_MODEL == BOARD_TDECK
+    display.init(240, 320);
+    display.setSPISpeed(80e6);
+    if (false) {
+    #else
+    if (!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
+    #endif
       return false;
     } else {
       set_contrast(&display, display_contrast);
@@ -188,10 +233,10 @@ bool display_init() {
         display.setRotation(1);
       #elif BOARD_MODEL == BOARD_HELTEC32_V3
         disp_mode = DISP_MODE_PORTRAIT;
-        // Antenna conx up
         display.setRotation(1);
-        // USB-C up
-        // display.setRotation(3);
+      #elif BOARD_MODEL == BOARD_TDECK
+        disp_mode = DISP_MODE_PORTRAIT;
+        display.setRotation(3);
       #else
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
@@ -214,6 +259,10 @@ bool display_init() {
         #else
           display_intensity = eeprom_read(eeprom_addr(ADDR_CONF_DINT));
         #endif
+      #endif
+
+      #if BOARD_MODEL == BOARD_TDECK
+        display.fillScreen(SSD1306_BLACK);
       #endif
 
       return true;
@@ -412,7 +461,7 @@ void draw_stat_area() {
 
 void update_stat_area() {
   if (eeprom_ok && !firmware_update_mode && !console_active) {
-    
+
     draw_stat_area();
     if (disp_mode == DISP_MODE_PORTRAIT) {
       display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
@@ -587,6 +636,7 @@ void draw_disp_area() {
 
 void update_disp_area() {
   draw_disp_area();
+
   display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
   if (disp_mode == DISP_MODE_LANDSCAPE) {
     if (device_init_done && !firmware_update_mode && !disp_ext_fb) {
@@ -617,8 +667,14 @@ void update_display(bool blank = false) {
         display_contrast = display_intensity;
         set_contrast(&display, display_contrast);
       }
-      display.clearDisplay();
-      display.display();
+
+      #if BOARD_MODEL != BOARD_TDECK
+        display.clearDisplay();
+        display.display();
+      #else
+        // TODO: Clear screen
+      #endif
+
       last_disp_update = millis();
     }
   } else {
@@ -627,10 +683,17 @@ void update_display(bool blank = false) {
         display_contrast = display_intensity;
         set_contrast(&display, display_contrast);
       }
-      display.clearDisplay();
+
+      #if BOARD_MODEL != BOARD_TDECK
+        display.clearDisplay();
+      #endif
+
       update_stat_area();
       update_disp_area();
-      display.display();
+
+      #if BOARD_MODEL != BOARD_TDECK
+        display.display();
+      #endif
       last_disp_update = millis();
     }
   }

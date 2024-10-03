@@ -395,7 +395,7 @@
       #define HAS_BUSY true
       #define HAS_TCXO true
 
-      #define HAS_DISPLAY false
+      #define HAS_DISPLAY true
       #define HAS_CONSOLE false
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
@@ -425,7 +425,13 @@
       const int SD_MOSI = 41;
       const int SD_CLK = 40;
       const int SD_CS = 39;
+
+      const int DISPLAY_DC = 11;
       const int DISPLAY_CS = 12;
+      const int DISPLAY_MISO = 38;
+      const int DISPLAY_MOSI = 41;
+      const int DISPLAY_CLK = 40;
+      const int DISPLAY_BL_PIN = 42;
 
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
