@@ -74,6 +74,8 @@ The RNode Firmware supports the following boards:
 - Original v1.x RNodes from [unsigned.io](https://unsigned.io/shop/product/rnode)
 - LilyGO T-Beam v1.1 devices with SX1276/8 LoRa chips
 - LilyGO T-Beam v1.1 devices with SX1262/8 LoRa chips
+- LilyGO T-Beam Supreme devices
+- LilyGO T-Deck devices (currently display is disabled)
 - LilyGO LoRa32 v1.0 devices
 - LilyGO LoRa32 v2.0 devices
 - LilyGO LoRa32 v2.1 devices (with and without TCXO)

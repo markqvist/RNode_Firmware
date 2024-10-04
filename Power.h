@@ -1,9 +1,13 @@
-#if BOARD_MODEL == BOARD_TBEAM
+#if BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
   #include <XPowersLib.h>
   XPowersLibInterface* PMU = NULL;
 
   #ifndef PMU_WIRE_PORT
-    #define PMU_WIRE_PORT   Wire
+    #if BOARD_MODEL == BOARD_TBEAM_S_V1
+      #define PMU_WIRE_PORT   Wire1
+    #else
+      #define PMU_WIRE_PORT   Wire
+    #endif
   #endif
 
   #define BAT_V_MIN       3.15
@@ -168,7 +172,7 @@ void measure_battery() {
       // }
     }
 
-  #elif BOARD_MODEL == BOARD_TBEAM
+  #elif BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
     if (PMU) {
       float discharge_current = 0;
       float charge_current    = 0;
@@ -278,22 +282,16 @@ bool init_pmu() {
     if (!PMU) {
         PMU = new XPowersAXP2101(PMU_WIRE_PORT);
         if (!PMU->init()) {
-            Serial.println("Warning: Failed to find AXP2101 power management");
             delete PMU;
             PMU = NULL;
-        } else {
-            Serial.println("AXP2101 PMU init succeeded, using AXP2101 PMU");
         }
     }
 
     if (!PMU) {
         PMU = new XPowersAXP192(PMU_WIRE_PORT);
         if (!PMU->init()) {
-            Serial.println("Warning: Failed to find AXP192 power management");
             delete PMU;
             PMU = NULL;
-        } else {
-            Serial.println("AXP192 PMU init succeeded, using AXP192 PMU");
         }
     }
 
@@ -397,6 +395,86 @@ bool init_pmu() {
 
     // Set the time of pressing the button to turn off
     PMU->setPowerKeyPressOffTime(XPOWERS_POWEROFF_4S);
+
+    return true; 
+  #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+    Wire1.begin(I2C_SDA, I2C_SCL);
+
+    if (!PMU) {
+        PMU = new XPowersAXP2101(PMU_WIRE_PORT);
+        if (!PMU->init()) {
+            delete PMU;
+            PMU = NULL;
+        }
+    }
+
+    if (!PMU) {
+      return false;
+    }
+
+    /**
+     * gnss module power channel
+     * The default ALDO4 is off, you need to turn on the GNSS power first, otherwise it will be invalid during
+     * initialization
+     */
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO4, 3300);
+    PMU->enablePowerOutput(XPOWERS_ALDO4);
+
+    // lora radio power channel
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO3, 3300);
+    PMU->enablePowerOutput(XPOWERS_ALDO3);
+
+    // m.2 interface
+    PMU->setPowerChannelVoltage(XPOWERS_DCDC3, 3300);
+    PMU->enablePowerOutput(XPOWERS_DCDC3);
+
+    /**
+     * ALDO2 cannot be turned off.
+     * It is a necessary condition for sensor communication.
+     * It must be turned on to properly access the sensor and screen
+     * It is also responsible for the power supply of PCF8563
+     */
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO2, 3300);
+    PMU->enablePowerOutput(XPOWERS_ALDO2);
+
+    // 6-axis , magnetometer ,bme280 , oled screen power channel
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO1, 3300);
+    PMU->enablePowerOutput(XPOWERS_ALDO1);
+
+    // sdcard power channle
+    PMU->setPowerChannelVoltage(XPOWERS_BLDO1, 3300);
+    PMU->enablePowerOutput(XPOWERS_BLDO1);
+
+    // PMU->setPowerChannelVoltage(XPOWERS_DCDC4, 3300);
+    // PMU->enablePowerOutput(XPOWERS_DCDC4);
+
+    // not use channel
+    PMU->disablePowerOutput(XPOWERS_DCDC2); // not elicited
+    PMU->disablePowerOutput(XPOWERS_DCDC5); // not elicited
+    PMU->disablePowerOutput(XPOWERS_DLDO1); // Invalid power channel, it does not exist
+    PMU->disablePowerOutput(XPOWERS_DLDO2); // Invalid power channel, it does not exist
+    PMU->disablePowerOutput(XPOWERS_VBACKUP);
+
+    // Configure charging
+    PMU->setChargeTargetVoltage(XPOWERS_AXP2101_CHG_VOL_4V2);
+    PMU->setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_500MA);
+    // TODO: Reset
+    PMU->setChargingLedMode(XPOWERS_CHG_LED_CTRL_CHG);
+
+    // Set the time of pressing the button to turn off
+    PMU->setPowerKeyPressOffTime(XPOWERS_POWEROFF_4S);
+    PMU->setPowerKeyPressOnTime(XPOWERS_POWERON_128MS);
+
+    // disable all axp chip interrupt
+    PMU->disableIRQ(XPOWERS_AXP2101_ALL_IRQ);
+    PMU->clearIrqStatus();
+
+    // It is necessary to disable the detection function of the TS pin on the board
+    // without the battery temperature detection function, otherwise it will cause abnormal charging
+    PMU->disableTSPinMeasure();
+    PMU->enableVbusVoltageMeasure();
+    PMU->enableBattVoltageMeasure();
+
 
     return true; 
   #else

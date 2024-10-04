@@ -18,6 +18,8 @@
 
 #if BOARD_MODEL == BOARD_TDECK
   #include <Adafruit_ST7789.h>
+#elif BOARD_MODEL == BOARD_TBEAM_S_V1
+  #include <Adafruit_SH110X.h>
 #else
   #include <Wire.h>
   #include <Adafruit_SSD1306.h>
@@ -51,6 +53,12 @@
   #define DISP_ADDR 0x3C
   #define SCL_OLED 17
   #define SDA_OLED 18
+#elif BOARD_MODEL == BOARD_TBEAM_S_V1
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3C
+  #define SCL_OLED 18
+  #define SDA_OLED 17
+  #define DISP_CUSTOM_ADDR false
 #else
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
@@ -63,6 +71,10 @@
   Adafruit_ST7789 display = Adafruit_ST7789(DISPLAY_CS, DISPLAY_DC, -1);
   #define SSD1306_WHITE ST77XX_WHITE
   #define SSD1306_BLACK ST77XX_BLACK
+#elif BOARD_MODEL == BOARD_TBEAM_S_V1
+  Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
+  #define SSD1306_WHITE SH110X_WHITE
+  #define SSD1306_BLACK SH110X_BLACK
 #else
   Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 #endif
@@ -114,12 +126,10 @@ void update_area_positions() {
 }
 
 uint8_t display_contrast = 0x00;
-#if BOARD_MODEL != BOARD_TDECK
-  void set_contrast(Adafruit_SSD1306 *display, uint8_t contrast) {
-    display->ssd1306_command(SSD1306_SETCONTRAST);
-    display->ssd1306_command(contrast);
+#if BOARD_MODEL == BOARD_TBEAM_S_V1
+  void set_contrast(Adafruit_SH1106G *display, uint8_t value) {
   }
-#else
+#elif BOARD_MODEL == BOARD_TDECK
   void set_contrast(Adafruit_ST7789 *display, uint8_t value) {
     static uint8_t level = 0;
     static uint8_t steps = 16;
@@ -143,6 +153,11 @@ uint8_t display_contrast = 0x00;
         digitalWrite(DISPLAY_BL_PIN, 1);
     }
     level = value;
+  }
+#else
+  void set_contrast(Adafruit_SSD1306 *display, uint8_t contrast) {
+    display->ssd1306_command(SSD1306_SETCONTRAST);
+    display->ssd1306_command(contrast);
   }
 #endif
 
@@ -175,6 +190,8 @@ bool display_init() {
       delay(50);
       digitalWrite(pin_display_en, HIGH);
       Wire.begin(SDA_OLED, SCL_OLED);
+    #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+      Wire.begin(SDA_OLED, SCL_OLED);
     #endif
 
     #if DISP_CUSTOM_ADDR == true
@@ -204,6 +221,8 @@ bool display_init() {
     display.init(240, 320);
     display.setSPISpeed(80e6);
     if (false) {
+    #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+    if (!display.begin(display_address, true)) {
     #else
     if (!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
     #endif
@@ -228,6 +247,9 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_TBEAM
         disp_mode = DISP_MODE_LANDSCAPE;
         display.setRotation(0);
+      #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+        disp_mode = DISP_MODE_PORTRAIT;
+        display.setRotation(1);
       #elif BOARD_MODEL == BOARD_HELTEC32_V2
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(1);
