@@ -42,8 +42,10 @@
   #define MODEL_A7            0xA7 // RNode v2.1, 868 MHz
 
   #define BOARD_RNODE_NG_22   0x42 // RNode hardware revision v2.2
-  #define MODEL_A1            0xA1 // RNode v2.2, 433 MHz
-  #define MODEL_A6            0xA6 // RNode v2.2, 868 MHz
+  #define MODEL_A1            0xA1 // RNode v2.2, 433 MHz with SX1268
+  #define MODEL_A5            0xA1 // RNode v2.2, 433 MHz with SX1278
+  #define MODEL_A6            0xA6 // RNode v2.2, 868 MHz with SX1262
+  #define MODEL_AA            0xA6 // RNode v2.2, 868 MHz with SX1276
 
   #define PRODUCT_TBEAM       0xE0 // T-Beam devices
   #define BOARD_TBEAM         0x33
