@@ -416,7 +416,6 @@
       const int pin_sclk = 5;
       const int pin_mosi = 6;
       const int pin_miso = 3;
-      const int pin_dio = 9;
       
       #if MODEM == SX1262
         #define DIO2_AS_RF_SWITCH true
@@ -425,6 +424,8 @@
         const int pin_busy = 34;
         const int pin_dio = 33;
         const int pin_tcxo_enable = -1;
+      #else
+        const int pin_dio = 9;
       #endif
       
       const int pin_np = 38;
