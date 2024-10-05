@@ -1415,7 +1415,17 @@ void loop() {
     input_read();
   #endif
 
-  if (memory_low) { kiss_indicate_error(ERROR_MEMORY_LOW); memory_low = false; }
+  if (memory_low) {
+    #if PLATFORM == PLATFORM_ESP32
+      if (esp_get_free_heap_size() < 8192) {
+        kiss_indicate_error(ERROR_MEMORY_LOW); memory_low = false;
+      } else {
+        memory_low = false;
+      }
+    #else
+      kiss_indicate_error(ERROR_MEMORY_LOW); memory_low = false;
+    #endif
+  }
 }
 
 void sleep_now() {
