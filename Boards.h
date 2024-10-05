@@ -214,6 +214,10 @@
       #define I2C_SDA 21
       #define I2C_SCL 22
       #define PMU_IRQ 35
+
+      #define HAS_INPUT true
+      const int pin_btn_usr1 = 38;
+
       const int pin_cs = 18;
       const int pin_reset = 23;
       const int pin_led_rx = 2;
@@ -297,6 +301,13 @@
       #define HAS_BLUETOOTH true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_0
+      #define WAKEUP_LEVEL 0
+
+      const int pin_btn_usr1 = 0;
+
       const int pin_cs = 18;
       const int pin_reset = 14;
       const int pin_dio = 26;
