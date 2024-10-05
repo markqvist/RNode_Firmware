@@ -70,8 +70,6 @@ It's easy to create your own RNodes from one of the supported development boards
 
 The RNode Firmware supports the following boards:
 
-- Handheld v2.x RNodes from [unsigned.io](https://unsigned.io/shop/product/handheld-rnode)
-- Original v1.x RNodes from [unsigned.io](https://unsigned.io/shop/product/rnode)
 - LilyGO T-Beam v1.1 devices with SX1276/8 LoRa chips
 - LilyGO T-Beam v1.1 devices with SX1262/8 LoRa chips
 - LilyGO T-Beam Supreme devices
