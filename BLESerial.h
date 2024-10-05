@@ -1,5 +1,6 @@
 #include "Boards.h"
 
+#if PLATFORM != PLATFORM_NRF52
 #if HAS_BLE
 
 #include <Arduino.h>
@@ -113,4 +114,5 @@ private:
   bool started = false;
 };
 
+#endif
 #endif

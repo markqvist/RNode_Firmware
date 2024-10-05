@@ -1,5 +1,6 @@
 #include "Boards.h"
 
+#if PLATFORM != PLATFORM_NRF52
 #if HAS_BLE
 
 #include "BLESerial.h"
@@ -132,4 +133,5 @@ void BLESerial::SetupSerialService() {
 
 BLESerial::BLESerial() { }
 
+#endif
 #endif
