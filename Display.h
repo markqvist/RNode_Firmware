@@ -263,8 +263,8 @@ bool display_init() {
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(1);
       #elif BOARD_MODEL == BOARD_RAK4631
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(1);
+        disp_mode = DISP_MODE_LANDSCAPE;
+        display.setRotation(0);
       #elif BOARD_MODEL == BOARD_TDECK
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
