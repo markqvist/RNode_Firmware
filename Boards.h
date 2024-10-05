@@ -559,7 +559,7 @@
   #elif MCU_VARIANT == MCU_NRF52
     #if BOARD_MODEL == BOARD_RAK4631
       #define HAS_EEPROM false
-      #define HAS_DISPLAY false
+      #define HAS_DISPLAY true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_CONSOLE false
