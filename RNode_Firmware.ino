@@ -1389,7 +1389,7 @@ void sleep_now() {
 }
 
 void button_event(uint8_t event, unsigned long duration) {
-  #if MCU_VARIANT == MCU_ESP32
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     if (display_blanked) {
       display_unblank();
     } else {

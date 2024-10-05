@@ -45,6 +45,12 @@
   #define DISP_ADDR 0x3C
   #define SCL_OLED 18
   #define SDA_OLED 17
+#elif BOARD_MODEL == BOARD_RAK4631
+  // RAK1921/SSD1306
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3C
+  #define SCL_OLED 14
+  #define SDA_OLED 13
 #elif BOARD_MODEL == BOARD_RNODE_NG_21
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
@@ -256,6 +262,9 @@ bool display_init() {
       #elif BOARD_MODEL == BOARD_HELTEC32_V3
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(1);
+      #elif BOARD_MODEL == BOARD_RAK4631
+        disp_mode = DISP_MODE_LANDSCAPE;
+        display.setRotation(0);
       #elif BOARD_MODEL == BOARD_TDECK
         disp_mode = DISP_MODE_PORTRAIT;
         display.setRotation(3);
