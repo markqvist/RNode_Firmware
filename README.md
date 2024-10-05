@@ -110,7 +110,12 @@ For more detailed instruction and in-depth guides, you can have a look at some o
 - Learn the basics on how to [create and build your own RNode designs](https://unsigned.io/guides/2022_01_26_how-to-make-your-own-rnodes.html) from scratch
 - Once you've got the hang of it, start building RNodes for your community, or [even for selling them](https://unsigned.io/sell_rnodes.html)
 
-If you would rather just buy a pre-made unit, you can visit [my shop](https://unsigned.io/shop) and purchase my particular version of the [Handheld RNode](https://unsigned.io/shop/handheld-rnode/), which I can assure you is made to the highest quality, and with a lot of care.
+If you would rather just buy a pre-made unit, you can visit one of the community vendors that produce and sell RNodes:
+
+- [Liberated Embedded Systems](https://store.liberatedsystems.co.uk/)
+- [Simply Equipped](https://simplyequipped.com/)
+
+If you'd like to have your shop added to this list, let me know.
 
 ## Support RNode Development
 You can help support the continued development of open, free and private communications systems by donating via one of the following channels:
