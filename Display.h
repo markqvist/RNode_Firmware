@@ -98,6 +98,7 @@ uint32_t last_unblank_event = 0;
 uint32_t display_blanking_timeout = DISPLAY_BLANKING_TIMEOUT;
 uint8_t display_unblank_intensity = display_intensity;
 bool display_blanked = false;
+bool display_tx = false;
 uint8_t disp_target_fps = 7;
 int disp_update_interval = 1000/disp_target_fps;
 uint32_t last_page_flip = 0;
@@ -446,6 +447,8 @@ void draw_signal_bars(int px, int py) {
   }
 }
 
+#define WF_TX_SIZE 5
+#define WF_TX_WIDTH 5
 #define WF_RSSI_MAX -60
 #define WF_RSSI_MIN -135
 #define WF_RSSI_SPAN (WF_RSSI_MAX-WF_RSSI_MIN)
@@ -455,9 +458,16 @@ void draw_waterfall(int px, int py) {
   if (rssi_val < WF_RSSI_MIN) rssi_val = WF_RSSI_MIN;
   if (rssi_val > WF_RSSI_MAX) rssi_val = WF_RSSI_MAX;
   int rssi_normalised = ((rssi_val - WF_RSSI_MIN)*(1.0/WF_RSSI_SPAN))*WF_PIXEL_WIDTH;
-
-  waterfall[waterfall_head++] = rssi_normalised;
-  if (waterfall_head >= WATERFALL_SIZE) waterfall_head = 0;
+  if (display_tx) {
+    for (uint8_t i; i < WF_TX_SIZE; i++) {
+      waterfall[waterfall_head++] = -1;
+      if (waterfall_head >= WATERFALL_SIZE) waterfall_head = 0;
+    }
+    display_tx = false;
+  } else {
+    waterfall[waterfall_head++] = rssi_normalised;
+    if (waterfall_head >= WATERFALL_SIZE) waterfall_head = 0;
+  }
 
   stat_area.fillRect(px,py,WF_PIXEL_WIDTH, WATERFALL_SIZE, SSD1306_BLACK);
   for (int i = 0; i < WATERFALL_SIZE; i++){
@@ -465,6 +475,11 @@ void draw_waterfall(int px, int py) {
     int ws = waterfall[wi];
     if (ws > 0) {
       stat_area.drawLine(px, py+i, px+ws-1, py+i, SSD1306_WHITE);
+    } else if (ws == -1) {
+      uint8_t o = i%2;
+      for (uint8_t ti = 0; ti < WF_PIXEL_WIDTH/2; ti++) {
+        stat_area.drawPixel(px+ti*2+o, py+i, SSD1306_WHITE);
+      }
     }
   }
 }

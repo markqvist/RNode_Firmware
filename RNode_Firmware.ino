@@ -500,6 +500,9 @@ void flushQueue(void) {
     update_airtime();
   #endif
   queue_flushing = false;
+  #if HAS_DISPLAY
+    display_tx = true;
+  #endif
 }
 
 #define PHY_HEADER_LORA_SYMBOLS 8
