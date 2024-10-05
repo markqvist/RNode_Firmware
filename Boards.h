@@ -41,11 +41,11 @@
   #define MODEL_A2            0xA2 // RNode v2.1, 433 MHz
   #define MODEL_A7            0xA7 // RNode v2.1, 868 MHz
 
-  #define BOARD_RNODE_NG_22   0x42 // RNode hardware revision v2.2
+  #define BOARD_RNODE_NG_22   0x42 // RNode hardware revision v2.2 (T3S3)
   #define MODEL_A1            0xA1 // RNode v2.2, 433 MHz with SX1268
-  #define MODEL_A5            0xA1 // RNode v2.2, 433 MHz with SX1278
+  #define MODEL_A5            0xA5 // RNode v2.2, 433 MHz with SX1278
   #define MODEL_A6            0xA6 // RNode v2.2, 868 MHz with SX1262
-  #define MODEL_AA            0xA6 // RNode v2.2, 868 MHz with SX1276
+  #define MODEL_AA            0xAA // RNode v2.2, 868 MHz with SX1276
 
   #define PRODUCT_TBEAM       0xE0 // T-Beam devices
   #define BOARD_TBEAM         0x33
@@ -396,11 +396,6 @@
 
     #elif BOARD_MODEL == BOARD_RNODE_NG_22
       #define IS_ESP32S3 true
-      #define MODEM SX1262
-      #define DIO2_AS_RF_SWITCH true
-      #define HAS_BUSY true
-      #define HAS_TCXO true
-
       #define HAS_DISPLAY true
       #define HAS_CONSOLE false
       #define HAS_BLUETOOTH false
@@ -414,8 +409,6 @@
       #define HAS_SLEEP true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
-      // #define PIN_DISP_SLEEP 21
-      // #define DISP_SLEEP_LEVEL HIGH
       const int pin_btn_usr1 = 0;
 
       const int pin_cs = 7;
@@ -423,10 +416,16 @@
       const int pin_sclk = 5;
       const int pin_mosi = 6;
       const int pin_miso = 3;
-      const int pin_tcxo_enable = -1;
-
-      const int pin_dio = 33;
-      const int pin_busy = 34;
+      const int pin_dio = 9;
+      
+      #if MODEM == SX1262
+        #define DIO2_AS_RF_SWITCH true
+        #define HAS_BUSY true
+        #define HAS_TCXO true
+        const int pin_busy = 34;
+        const int pin_dio = 33;
+        const int pin_tcxo_enable = -1;
+      #endif
       
       const int pin_np = 38;
       const int pin_dac = 25;
@@ -436,6 +435,7 @@
       const int SD_MOSI = 11;
       const int SD_CLK = 14;
       const int SD_CS = 13;
+
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
           const int pin_led_rx = 37;

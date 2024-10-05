@@ -1206,6 +1206,7 @@ void validate_status() {
           }
         } else {
           hw_ready = false;
+          Serial.write("Invalid EEPROM checksum\r\n");
           #if HAS_DISPLAY
             if (disp_ready) {
               device_init_done = true;
@@ -1215,7 +1216,7 @@ void validate_status() {
         }
       } else {
         hw_ready = false;
-        // Serial.write("Invalid EEPROM configuration\r\n");
+        Serial.write("Invalid EEPROM configuration\r\n");
         #if HAS_DISPLAY
           if (disp_ready) {
             device_init_done = true;
@@ -1225,7 +1226,7 @@ void validate_status() {
       }
     } else {
       hw_ready = false;
-      // Serial.write("Device unprovisioned, no device configuration found in EEPROM\r\n");
+      Serial.write("Device unprovisioned, no device configuration found in EEPROM\r\n");
       #if HAS_DISPLAY
         if (disp_ready) {
           device_init_done = true;

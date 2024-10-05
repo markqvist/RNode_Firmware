@@ -106,7 +106,12 @@ void sx127x::flush() { }
 bool sx127x::preInit() {
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
-  SPI.begin();
+  
+  #if BOARD_MODEL == BOARD_RNODE_NG_22
+    SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
+  #else
+    SPI.begin();
+  #endif
 
   // Check modem version
   uint8_t version;
