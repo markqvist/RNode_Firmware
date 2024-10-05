@@ -41,6 +41,15 @@ volatile bool serial_buffering = false;
   #include "Console.h"
 #endif
 
+#if PLATFORM == PLATFORM_ESP32 || PLATFORM == PLATFORM_NRF52
+  #define MODEM_QUEUE_SIZE 4
+  typedef struct {
+          size_t len;
+          uint8_t data[];
+  } modem_packet_t;
+  static xQueueHandle modem_packet_queue = NULL;
+#endif
+
 char sbuf[128];
 
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
@@ -132,6 +141,10 @@ void setup() {
   
   memset(packet_lengths_buf, 0, sizeof(packet_starts_buf));
   fifo16_init(&packet_lengths, packet_lengths_buf, CONFIG_QUEUE_MAX_LENGTH);
+
+  #if PLATFORM == PLATFORM_ESP32 || PLATFORM == PLATFORM_NRF52
+    modem_packet_queue = xQueueCreate(MODEM_QUEUE_SIZE, sizeof(modem_packet_t*));
+  #endif
 
   // Set chip select, reset and interrupt
   // pins for the LoRa module
@@ -335,8 +348,22 @@ void ISR_VECT receive_callback(int packet_size) {
 
         // And then write the entire packet
         kiss_write_packet();
+      
       #else
-        packet_ready = true;
+        // Allocate packet struct, but abort if there
+        // is not enough memory available.
+        modem_packet_t *modem_packet = (modem_packet_t*)malloc(sizeof(modem_packet_t) + read_len);
+        if(!modem_packet) { memory_low = true; return; }
+
+        // Send packet to event queue, but free the
+        // allocated memory again if the queue is
+        // unable to receive the packet.
+        modem_packet->len = read_len;
+        memcpy(modem_packet->data, pbuf, read_len);
+        if (!modem_packet_queue || xQueueSendFromISR(modem_packet_queue, &modem_packet, NULL) != pdPASS) {
+            free(modem_packet);
+        }
+
       #endif
     }  
   } else {
@@ -1259,7 +1286,13 @@ void validate_status() {
 void loop() {
   if (radio_online) {
     #if MCU_VARIANT == MCU_ESP32
-      if (packet_ready) {
+      modem_packet_t *modem_packet = NULL;
+      if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
+        memcpy(&pbuf, modem_packet->data, modem_packet->len);
+        read_len = modem_packet->len;
+        free(modem_packet);
+        modem_packet = NULL;
+
         portENTER_CRITICAL(&update_lock);
         last_rssi = LoRa->packetRssi();
         last_snr_raw = LoRa->packetSnrRaw();
@@ -1274,7 +1307,13 @@ void loop() {
       if (lt_airtime_limit != 0.0 && longterm_airtime >= lt_airtime_limit) airtime_lock = true;
 
     #elif MCU_VARIANT == MCU_NRF52
-      if (packet_ready) {
+      modem_packet_t *modem_packet = NULL;
+      if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
+        memcpy(&pbuf, modem_packet->data, modem_packet->len);
+        read_len = modem_packet->len;
+        free(modem_packet);
+        modem_packet = NULL;
+
         portENTER_CRITICAL();
         last_rssi = LoRa->packetRssi();
         last_snr_raw = LoRa->packetSnrRaw();
@@ -1287,6 +1326,7 @@ void loop() {
       airtime_lock = false;
       if (st_airtime_limit != 0.0 && airtime >= st_airtime_limit) airtime_lock = true;
       if (lt_airtime_limit != 0.0 && longterm_airtime >= lt_airtime_limit) airtime_lock = true;
+
     #endif
 
     checkModemStatus();
@@ -1371,6 +1411,8 @@ void loop() {
   #if HAS_INPUT
     input_read();
   #endif
+
+  if (memory_low) { kiss_indicate_error(ERROR_MEMORY_LOW); memory_low = false; }
 }
 
 void sleep_now() {

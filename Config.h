@@ -100,6 +100,7 @@
 	bool pmu_ready     = false;
 	bool promisc       = false;
 	bool implicit      = false;
+	bool memory_low    = false;
 	uint8_t implicit_l = 0;
 
 	uint8_t op_mode   = MODE_HOST;
