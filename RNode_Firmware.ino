@@ -163,20 +163,26 @@ void setup() {
     // probe boot parameters.
     if (LoRa->preInit()) {
       modem_installed = true;
-      uint32_t lfr = LoRa->getFrequency();
-      if (lfr == 0) {
-        // Normal boot
-      } else if (lfr == M_FRQ_R) {
-        // Quick reboot
-        #if HAS_CONSOLE
-          if (rtc_get_reset_reason(0) == POWERON_RESET) {
-            console_active = true;
-          }
-        #endif
-      } else {
-        // Unknown boot
-      }
-      LoRa->setFrequency(M_FRQ_S);
+      
+      #if HAS_INPUT
+        // Skip quick-reset console activation
+      #else
+        uint32_t lfr = LoRa->getFrequency();
+        if (lfr == 0) {
+          // Normal boot
+        } else if (lfr == M_FRQ_R) {
+          // Quick reboot
+          #if HAS_CONSOLE
+            if (rtc_get_reset_reason(0) == POWERON_RESET) {
+              console_active = true;
+            }
+          #endif
+        } else {
+          // Unknown boot
+        }
+        LoRa->setFrequency(M_FRQ_S);
+      #endif
+
     } else {
       modem_installed = false;
     }
@@ -573,7 +579,14 @@ void transmit(uint16_t size) {
         }
       }
 
-      LoRa->endPacket(); add_airtime(written);
+      if (!LoRa->endPacket()) {
+        kiss_indicate_error(ERROR_MODEM_TIMEOUT);
+        kiss_indicate_error(ERROR_TXFAILED);
+        led_indicate_error(5);
+        hard_reset();
+      }
+      add_airtime(written);
+
     } else {
       // In promiscuous mode, we only send out
       // plain raw LoRa packets with a maximum
@@ -988,7 +1001,13 @@ void serialCallback(uint8_t sbyte) {
           bt_start();
           bt_conf_save(true);
         } else if (sbyte == 0x02) {
-          bt_enable_pairing();
+          if (bt_state == BT_STATE_OFF) {
+            bt_start();
+            bt_conf_save(true);
+          }
+          if (bt_state != BT_STATE_CONNECTED) {
+            bt_enable_pairing();
+          }
         }
       #endif
     } else if (command == CMD_DISP_INT) {
@@ -1282,8 +1301,8 @@ void validate_status() {
   #define _S 10.0
   float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
   void update_csma_p() {
-      csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime)))*255.0);
-}
+    csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime)))*255.0);
+  }
 #endif
 
 void loop() {
