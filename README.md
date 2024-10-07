@@ -16,15 +16,13 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.72`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.77`. This release brings the following changes:
 
-- Added support for flashing T3S3 boards
-- Added deep sleep support on T3S3
-- Various quality updates for nRF / RAK4631
-- Fixed a bug with antenna switch utilisation on RAK4631
+- Fixed display sleep on T3S3
+- Improved BLE pairing
 - Updated console image to include latest packages
 
-You must have at least version `2.1.3` of `rnodeconf` installed to update the RNode Firmware to version `1.72`. Get it by updating the `rns` package to at least version `0.7.5`.
+You must have at least version `2.2.0` of `rnodeconf` installed to update the RNode Firmware to version `1.77`. Get it by updating the `rns` package to at least version `0.8.2`.
 
 ## A Self-Replicating System
 
