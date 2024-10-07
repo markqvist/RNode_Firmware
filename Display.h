@@ -692,18 +692,22 @@ void update_disp_area() {
 }
 
 void update_display(bool blank = false) {
-  if (display_blanking_enabled && millis()-last_unblank_event >= display_blanking_timeout) {
-    blank = true;
-    display_blanked = true;
-    if (display_intensity != 0) {
-      display_unblank_intensity = display_intensity;
-    }
-    display_intensity = 0;
+  if (blank == true) {
+    last_disp_update = millis()-disp_update_interval-1;
   } else {
-    display_blanked = false;
-    if (display_unblank_intensity != 0x00) {
-      display_intensity = display_unblank_intensity;
-      display_unblank_intensity = 0x00;
+    if (display_blanking_enabled && millis()-last_unblank_event >= display_blanking_timeout) {
+      blank = true;
+      display_blanked = true;
+      if (display_intensity != 0) {
+        display_unblank_intensity = display_intensity;
+      }
+      display_intensity = 0;
+    } else {
+      display_blanked = false;
+      if (display_unblank_intensity != 0x00) {
+        display_intensity = display_unblank_intensity;
+        display_unblank_intensity = 0x00;
+      }
     }
   }
 
