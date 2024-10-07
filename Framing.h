@@ -94,6 +94,7 @@
   #define ERROR_EEPROM_LOCKED 0x03
   #define ERROR_QUEUE_FULL    0x04
   #define ERROR_MEMORY_LOW    0x05
+  #define ERROR_MODEM_TIMEOUT 0x06
 
   // Serial framing variables
   size_t frame_len;
