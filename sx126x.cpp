@@ -472,34 +472,43 @@ int sx126x::beginPacket(int implicitHeader)
 
 int sx126x::endPacket()
 {
-      setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+  setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
-      // put in single TX mode
-      uint8_t timeout[3] = {0};
-      executeOpcode(OP_TX_6X, timeout, 3);
+  // put in single TX mode
+  uint8_t timeout[3] = {0};
+  executeOpcode(OP_TX_6X, timeout, 3);
 
-      uint8_t buf[2];
+  uint8_t buf[2];
 
-      buf[0] = 0x00;
-      buf[1] = 0x00;
+  buf[0] = 0x00;
+  buf[1] = 0x00;
 
-      executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
+  executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
 
-      // wait for TX done
-      while ((buf[1] & IRQ_TX_DONE_MASK_6X) == 0) {
-        buf[0] = 0x00;
-        buf[1] = 0x00;
-        executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
-        yield();
-      }
+  bool timed_out = false;
+  uint32_t w_timeout = millis()+LORA_MODEM_TIMEOUT_MS;
+  // wait for TX done
+  while ((millis() < w_timeout) && ((buf[1] & IRQ_TX_DONE_MASK_6X) == 0)) {
+    buf[0] = 0x00;
+    buf[1] = 0x00;
+    executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
+    yield();
+  }
 
-      // clear IRQ's
+  if (!(millis() < w_timeout)) { timed_out = true; }
 
-      uint8_t mask[2];
-      mask[0] = 0x00;
-      mask[1] = IRQ_TX_DONE_MASK_6X;
-      executeOpcode(OP_CLEAR_IRQ_STATUS_6X, mask, 2);
-  return 1;
+  // clear IRQ's
+
+  uint8_t mask[2];
+  mask[0] = 0x00;
+  mask[1] = IRQ_TX_DONE_MASK_6X;
+  executeOpcode(OP_CLEAR_IRQ_STATUS_6X, mask, 2);
+  
+  if (timed_out) {
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
 uint8_t sx126x::modemStatus() {
