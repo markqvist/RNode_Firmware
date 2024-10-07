@@ -351,8 +351,9 @@ char bt_devname[11];
       display_unblank();
       if (bt_state == BT_STATE_OFF) bt_start();
 
-      bt_debond_all();
-      bt_update_passkey();
+      bt_security_setup();
+      //bt_debond_all();
+      //bt_update_passkey();
 
       bt_allow_pairing = true;
       bt_pairing_started = millis();
