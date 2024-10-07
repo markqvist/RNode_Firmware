@@ -75,9 +75,10 @@
 	#define LORA_PREAMBLE_TARGET_MS   15
 	#define LORA_CAD_SYMBOLS 3
 	int csma_slot_ms = 50;
-	float csma_p_min = 0.1;
-	float csma_p_max = 0.8;
-	uint8_t csma_p = 0;
+	float csma_p_min = 0.08;
+	float csma_p_max = 0.75;
+	float csma_b_speed = 0.15;
+	uint8_t csma_p = 85;
 
 	int  lora_sf   	           = 0;
 	int  lora_cr               = 5;
