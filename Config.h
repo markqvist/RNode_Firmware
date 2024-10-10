@@ -20,7 +20,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x4d
+	#define MIN_VERS  0x4e
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
@@ -74,9 +74,11 @@
 	#define LORA_PREAMBLE_SYMBOLS_MIN 18
 	#define LORA_PREAMBLE_TARGET_MS   15
 	#define LORA_CAD_SYMBOLS 3
+	#define CSMA_SLOT_MAX_MS 100
+	#define CSMA_SLOT_MIN_MS 24
 	int csma_slot_ms = 50;
-	float csma_p_min = 0.08;
-	float csma_p_max = 0.75;
+	float csma_p_min = 0.15;
+	float csma_p_max = 0.333;
 	float csma_b_speed = 0.15;
 	uint8_t csma_p = 85;
 

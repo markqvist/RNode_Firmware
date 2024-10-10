@@ -1047,7 +1047,9 @@ void updateBitrate() {
 			lora_symbol_time_ms = (1.0/lora_symbol_rate)*1000.0;
 			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
 			lora_us_per_byte = 1000000.0/((float)lora_bitrate/8.0);
-			// csma_slot_ms = lora_symbol_time_ms*10;
+			csma_slot_ms = lora_symbol_time_ms*12;
+			if (csma_slot_ms > CSMA_SLOT_MAX_MS) { csma_slot_ms = CSMA_SLOT_MAX_MS; }
+			if (csma_slot_ms < CSMA_SLOT_MIN_MS) { csma_slot_ms = CSMA_SLOT_MIN_MS; }
 			float target_preamble_symbols = (LORA_PREAMBLE_TARGET_MS/lora_symbol_time_ms)-LORA_PREAMBLE_SYMBOLS_HW;
 			if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) {
 				target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN;

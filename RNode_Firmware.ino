@@ -1298,10 +1298,10 @@ void validate_status() {
 
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
   #define _e 2.71828183
-  #define _S 10.0
+  #define _S 12.5
   float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
   void update_csma_p() {
-    csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime)))*255.0);
+    csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime+csma_b_speed)))*255.0);
   }
 #endif
 
