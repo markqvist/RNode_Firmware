@@ -241,11 +241,25 @@ void lora_receive() {
   }
 }
 
+#if MCU_VARIANT == MCU_ESP32
+  portMUX_TYPE update_lock = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
 inline void kiss_write_packet() {
   serial_write(FEND);
   serial_write(CMD_DATA);
   for (uint16_t i = 0; i < read_len; i++) {
+    #if MCU_VARIANT == MCU_ESP32
+      portENTER_CRITICAL(&update_lock);
+    #elif MCU_VARIANT == MCU_NRF52
+      portENTER_CRITICAL();
+    #endif
     uint8_t byte = pbuf[i];
+    #if MCU_VARIANT == MCU_ESP32
+      portEXIT_CRITICAL(&update_lock);
+    #elif MCU_VARIANT == MCU_NRF52
+      portEXIT_CRITICAL();
+    #endif
     if (byte == FEND) { serial_write(FESC); byte = TFEND; }
     if (byte == FESC) { serial_write(FESC); byte = TFESC; }
     serial_write(byte);
@@ -263,12 +277,17 @@ inline void kiss_write_packet() {
 }
 
 inline void getPacketData(uint16_t len) {
+  BaseType_t int_mask = taskENTER_CRITICAL_FROM_ISR();
   while (len-- && read_len < MTU) {
     pbuf[read_len++] = LoRa->read();
   }
+  taskEXIT_CRITICAL_FROM_ISR(int_mask);
 }
 
 void ISR_VECT receive_callback(int packet_size) {
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+  BaseType_t int_mask;
+  #endif
   if (!promisc) {
     // The standard operating mode allows large
     // packets with a payload up to 500 bytes,
@@ -283,7 +302,13 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the first part of a split
       // packet, so we set the seq variable
       // and add the data to the buffer
+      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+      int_mask = taskENTER_CRITICAL_FROM_ISR();
+      #endif
       read_len = 0;
+      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+      taskEXIT_CRITICAL_FROM_ISR(int_mask);
+      #endif
       seq = sequence;
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
@@ -314,7 +339,13 @@ void ISR_VECT receive_callback(int packet_size) {
       // same sequence id, so we must assume
       // that we are seeing the first part of
       // a new split packet.
+      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+      int_mask = taskENTER_CRITICAL_FROM_ISR();
+      #endif
       read_len = 0;
+      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+      taskEXIT_CRITICAL_FROM_ISR(int_mask);
+      #endif
       seq = sequence;
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
@@ -332,7 +363,13 @@ void ISR_VECT receive_callback(int packet_size) {
       if (seq != SEQ_UNSET) {
         // If we already had part of a split
         // packet in the buffer, we clear it.
+        #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+        int_mask = taskENTER_CRITICAL_FROM_ISR();
+        #endif
         read_len = 0;
+        #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+        taskEXIT_CRITICAL_FROM_ISR(int_mask);
+        #endif
         seq = SEQ_UNSET;
       }
 
@@ -1075,10 +1112,6 @@ void serialCallback(uint8_t sbyte) {
     }
   }
 }
-
-#if MCU_VARIANT == MCU_ESP32
-  portMUX_TYPE update_lock = portMUX_INITIALIZER_UNLOCKED;
-#endif
 
 void updateModemStatus() {
   #if MCU_VARIANT == MCU_ESP32
