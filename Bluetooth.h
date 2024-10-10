@@ -387,129 +387,169 @@ char bt_devname[11];
     bt_ssp_pin = 0;
     bt_state = BT_STATE_ON;
   }
+void bt_pairing_complete(uint16_t conn_handle, uint8_t auth_status) {
+    if (auth_status == BLE_GAP_SEC_STATUS_SUCCESS) {
+      BLEConnection* connection = Bluefruit.Connection(conn_handle);
 
-  void bt_pairing_complete(uint16_t conn_handle, uint8_t auth_status) {
-      if (auth_status == BLE_GAP_SEC_STATUS_SUCCESS) {
-        bt_disable_pairing();
+      ble_gap_conn_sec_mode_t security = connection->getSecureMode();
+
+      // On the NRF52 it is not possible with the Arduino library to reject
+      // requests from devices with no IO capabilities, which would allow
+      // bypassing pin entry through pairing using the "just works" mode.
+      // Therefore, we must check the security level of the connection after
+      // pairing to ensure "just works" has not been used. If it has, we need
+      // to disconnect, unpair and delete any bonding information immediately.
+      // Settings on the SerialBT service should prevent unauthorised access to
+      // the serial port anyway, but this is still wise to do regardless.
+      //
+      // Note: It may be nice to have this done in the BLESecurity class in the
+      // future, but as it stands right now I'd have to fork the BSP to do
+      // that, which I don't fancy doing. Impact on security is likely minimal.
+      // Requires investigation.
+
+      if (security.sm == 1 && security.lv >= 3) {
+          bt_state = BT_STATE_CONNECTED;
+          cable_state = CABLE_STATE_DISCONNECTED;
+          bt_disable_pairing();
       } else {
-        bt_ssp_pin = 0;
-      }
-  }
-
-  bool bt_passkey_callback(uint16_t conn_handle, uint8_t const passkey[6], bool match_request) {
-      for (int i = 0; i < 6; i++) {
-          // multiply by tens however many times needed to make numbers appear in order
-          bt_ssp_pin += ((int)passkey[i] - 48) * pow(10, 5-i);
-      }
-      kiss_indicate_btpin();
-      if (match_request) {
-          if (bt_allow_pairing) {
-              return true;
+          if (connection->bonded()) {
+              connection->removeBondKey();
           }
+          connection->disconnect();
       }
-      return false;
-  }
-
-  void bt_connect_callback(uint16_t conn_handle) {
-      bt_state = BT_STATE_CONNECTED;
-      cable_state = CABLE_STATE_DISCONNECTED;
-  }
-
-  void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason) {
-      bt_state = BT_STATE_ON;
-  }
-
-  bool bt_setup_hw() {
-    if (!bt_ready) {
-      #if HAS_EEPROM 
-          if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
-      #else
-          if (eeprom_read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
-      #endif
-        bt_enabled = true;
-      } else {
-        bt_enabled = false;
-      }
-      Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
-      Bluefruit.autoConnLed(false);
-      if (Bluefruit.begin()) {
-        Bluefruit.setTxPower(4);    // Check bluefruit.h for supported values
-        Bluefruit.Security.setIOCaps(true, true, false);
-        Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
-        Bluefruit.Periph.setConnectCallback(bt_connect_callback);
-        Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
-        Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
-        const ble_gap_addr_t gap_addr = Bluefruit.getAddr();
-        char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
-        for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
-            data[i] = gap_addr.addr[i];
-        }
-        #if HAS_EEPROM 
-            data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
-        #else
-            data[BT_DEV_ADDR_LEN] = eeprom_read(eeprom_addr(ADDR_SIGNATURE));
-        #endif
-        unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
-        memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
-        sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
-        free(data);
-
-        bt_ready = true;
-        return true;
-
-      } else { return false; }
-    } else { return false; }
-  }
-
-  void bt_start() {
-    if (bt_state == BT_STATE_OFF) {
-      Bluefruit.setName(bt_devname);
-      bledis.setManufacturer(BLE_MANUFACTURER);
-      bledis.setModel(BLE_MODEL);
-      // start device information service
-      bledis.begin();
-
-      SerialBT.begin();
-
-      blebas.begin();
-
-      // non-connectable advertising
-      Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
-      Bluefruit.Advertising.addTxPower();
-
-      // Include bleuart 128-bit uuid
-      Bluefruit.Advertising.addService(SerialBT);
-
-      // There is no room for Name in Advertising packet
-      // Use Scan response for Name
-      Bluefruit.ScanResponse.addName();
-
-      Bluefruit.Advertising.start(0);
-
-      bt_state = BT_STATE_ON;
-     }
-  }
-
-  bool bt_init() {
-      bt_state = BT_STATE_OFF;
-      if (bt_setup_hw()) {
-        if (bt_enabled && !console_active) bt_start();
-        return true;
-      } else {
-        return false;
-      }
-  }
-
-  void bt_enable_pairing() {
-    if (bt_state == BT_STATE_OFF) bt_start();
-    bt_allow_pairing = true;
-    bt_pairing_started = millis();
-    bt_state = BT_STATE_PAIRING;
-  }
-
-  void update_bt() {
-    if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
-      bt_disable_pairing();
+    } else {
+      bt_ssp_pin = 0;
     }
+}
+
+bool bt_passkey_callback(uint16_t conn_handle, uint8_t const passkey[6], bool match_request) {
+    for (int i = 0; i < 6; i++) {
+        // multiply by tens however many times needed to make numbers appear in order
+        bt_ssp_pin += ((int)passkey[i] - 48) * pow(10, 5-i);
+    }
+    kiss_indicate_btpin();
+    if (bt_allow_pairing) {
+        return true;
+    }
+    return false;
+}
+
+void bt_connect_callback(uint16_t conn_handle) {
+    bt_state = BT_STATE_CONNECTED;
+    cable_state = CABLE_STATE_DISCONNECTED;
+
+    //BLEConnection* conn = Bluefruit.Connection(conn_handle);
+    conn->requestPHY(BLE_GAP_PHY_2MBPS);
+    conn->requestMtuExchange(512+3);
+    conn->requestDataLengthUpdate();
+}
+
+void bt_disconnect_callback(uint16_t conn_handle, uint8_t reason) {
+    if (reason != BLE_GAP_SEC_STATUS_SUCCESS) {
+        bt_state = BT_STATE_ON;
+    }
+}
+
+bool bt_setup_hw() {
+  if (!bt_ready) {
+    #if HAS_EEPROM 
+        if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+    #else
+        if (eeprom_read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
+    #endif
+      bt_enabled = true;
+    } else {
+      bt_enabled = false;
+    }
+    Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
+    Bluefruit.autoConnLed(false);
+    if (Bluefruit.begin()) {
+      Bluefruit.setTxPower(8);    // Check bluefruit.h for supported values
+      Bluefruit.Security.setIOCaps(true, false, false); // display, yes; yes / no, no; keyboard, no
+      // This device is indeed capable of yes / no through the pairing mode
+      // being set, but I have chosen to set it thus to force the input of the
+      // pin on the device initiating the pairing.
+
+      Bluefruit.Security.setMITM(true);
+      Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
+      Bluefruit.Security.setSecuredCallback(bt_connect_callback);
+      Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
+      Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
+      //Bluefruit.Periph.setConnInterval(6, 12); // 7.5 - 15 ms
+
+      const ble_gap_addr_t gap_addr = Bluefruit.getAddr();
+      char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
+      for (int i = 0; i < BT_DEV_ADDR_LEN; i++) {
+          data[i] = gap_addr.addr[i];
+      }
+      #if HAS_EEPROM 
+          data[BT_DEV_ADDR_LEN] = EEPROM.read(eeprom_addr(ADDR_SIGNATURE));
+      #else
+          data[BT_DEV_ADDR_LEN] = eeprom_read(eeprom_addr(ADDR_SIGNATURE));
+      #endif
+      unsigned char *hash = MD5::make_hash(data, BT_DEV_ADDR_LEN);
+      memcpy(bt_dh, hash, BT_DEV_HASH_LEN);
+      sprintf(bt_devname, "RNode %02X%02X", bt_dh[14], bt_dh[15]);
+      free(data);
+
+      bt_ready = true;
+      return true;
+
+    } else { return false; }
+  } else { return false; }
+}
+
+void bt_start() {
+  if (bt_state == BT_STATE_OFF) {
+    Bluefruit.setName(bt_devname);
+    bledis.setManufacturer(BLE_MANUFACTURER);
+    bledis.setModel(BLE_MODEL);
+    // start device information service
+    bledis.begin();
+
+    SerialBT.bufferTXD(true); // enable buffering
+
+    SerialBT.setPermission(SECMODE_ENC_WITH_MITM, SECMODE_ENC_WITH_MITM); // enable encryption for BLE serial
+    SerialBT.begin();
+
+    blebas.begin();
+
+    Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
+    Bluefruit.Advertising.addTxPower();
+
+    // Include bleuart 128-bit uuid
+    Bluefruit.Advertising.addService(SerialBT);
+
+    // There is no room for Name in Advertising packet
+    // Use Scan response for Name
+    Bluefruit.ScanResponse.addName();
+
+    Bluefruit.Advertising.start(0);
+
+    bt_state = BT_STATE_ON;
+   }
+}
+
+bool bt_init() {
+    bt_state = BT_STATE_OFF;
+    if (bt_setup_hw()) {
+      if (bt_enabled && !console_active) bt_start();
+      return true;
+    } else {
+      return false;
+    }
+}
+
+void bt_enable_pairing() {
+  if (bt_state == BT_STATE_OFF) bt_start();
+  bt_allow_pairing = true;
+  bt_pairing_started = millis();
+  bt_state = BT_STATE_PAIRING;
+}
+
+void update_bt() {
+  if (bt_allow_pairing && millis()-bt_pairing_started >= BT_PAIRING_TIMEOUT) {
+    bt_disable_pairing();
   }
+}
 #endif

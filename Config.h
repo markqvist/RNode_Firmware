@@ -189,6 +189,7 @@
     bool device_init_done = false;
     bool eeprom_ok = false;
     bool firmware_update_mode = false;
+    bool serial_in_frame = false;
 
 	// Boot flags
 	#define START_FROM_BOOTLOADER 0x01
