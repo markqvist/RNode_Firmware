@@ -437,8 +437,8 @@ unsigned long led_standby_ticks = 0;
 #elif MCU_VARIANT == MCU_ESP32
 
 	#if HAS_NP == true
-		int led_standby_lng = 100;
-		int led_standby_cut = 200;
+		int led_standby_lng = 200;
+		int led_standby_cut = 100;
 		int led_standby_min = 0;
 		int led_standby_max = 375+led_standby_lng;
 		int led_notready_min = 0;
@@ -518,7 +518,7 @@ int8_t  led_standby_direction = 0;
 				} else {
 					led_standby_intensity = led_standby_ti;
 				}
-  			npset(0x00, 0x00, led_standby_intensity);
+  			npset(led_standby_intensity/3, led_standby_intensity/3, led_standby_intensity/3);
 			}
 		}
 
