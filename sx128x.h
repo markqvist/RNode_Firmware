@@ -35,6 +35,7 @@ public:
 
   int parsePacket(int size = 0);
   int packetRssi();
+  int packetRssi(uint8_t pkt_snr_raw);
   int currentRssi();
   uint8_t packetRssiRaw();
   uint8_t currentRssiRaw();

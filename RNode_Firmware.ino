@@ -45,6 +45,8 @@ volatile bool serial_buffering = false;
   #define MODEM_QUEUE_SIZE 4
   typedef struct {
           size_t len;
+          int rssi;
+          int snr_raw;
           uint8_t data[];
   } modem_packet_t;
   static xQueueHandle modem_packet_queue = NULL;
@@ -241,34 +243,31 @@ void lora_receive() {
   }
 }
 
-#if MCU_VARIANT == MCU_ESP32
-  portMUX_TYPE update_lock = portMUX_INITIALIZER_UNLOCKED;
-#endif
-
 inline void kiss_write_packet() {
   serial_write(FEND);
   serial_write(CMD_DATA);
+  
   for (uint16_t i = 0; i < read_len; i++) {
-    #if MCU_VARIANT == MCU_ESP32
-      portENTER_CRITICAL(&update_lock);
-    #elif MCU_VARIANT == MCU_NRF52
+    #if MCU_VARIANT == MCU_NRF52
       portENTER_CRITICAL();
-    #endif
-    uint8_t byte = pbuf[i];
-    #if MCU_VARIANT == MCU_ESP32
-      portEXIT_CRITICAL(&update_lock);
-    #elif MCU_VARIANT == MCU_NRF52
+      uint8_t byte = pbuf[i];
       portEXIT_CRITICAL();
+    #else
+      uint8_t byte = pbuf[i];
     #endif
+
     if (byte == FEND) { serial_write(FESC); byte = TFEND; }
     if (byte == FESC) { serial_write(FESC); byte = TFESC; }
     serial_write(byte);
   }
+
   serial_write(FEND);
   read_len = 0;
+
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     packet_ready = false;
   #endif
+
   #if MCU_VARIANT == MCU_ESP32
     #if HAS_BLE
       bt_flush();
@@ -277,17 +276,24 @@ inline void kiss_write_packet() {
 }
 
 inline void getPacketData(uint16_t len) {
-  BaseType_t int_mask = taskENTER_CRITICAL_FROM_ISR();
-  while (len-- && read_len < MTU) {
-    pbuf[read_len++] = LoRa->read();
-  }
-  taskEXIT_CRITICAL_FROM_ISR(int_mask);
+  #if MCU_VARIANT != MCU_NRF52
+    while (len-- && read_len < MTU) {
+      pbuf[read_len++] = LoRa->read();
+    }  
+  #else
+    BaseType_t int_mask = taskENTER_CRITICAL_FROM_ISR();
+    while (len-- && read_len < MTU) {
+      pbuf[read_len++] = LoRa->read();
+    }
+    taskEXIT_CRITICAL_FROM_ISR(int_mask);
+  #endif
 }
 
 void ISR_VECT receive_callback(int packet_size) {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-  BaseType_t int_mask;
+    BaseType_t int_mask;
   #endif
+
   if (!promisc) {
     // The standard operating mode allows large
     // packets with a payload up to 500 bytes,
@@ -302,13 +308,12 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the first part of a split
       // packet, so we set the seq variable
       // and add the data to the buffer
-      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-      int_mask = taskENTER_CRITICAL_FROM_ISR();
+      #if MCU_VARIANT == MCU_NRF52
+        int_mask = taskENTER_CRITICAL_FROM_ISR(); read_len = 0; taskEXIT_CRITICAL_FROM_ISR(int_mask);
+      #else
+        read_len = 0;
       #endif
-      read_len = 0;
-      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-      taskEXIT_CRITICAL_FROM_ISR(int_mask);
-      #endif
+      
       seq = sequence;
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
@@ -322,15 +327,12 @@ void ISR_VECT receive_callback(int packet_size) {
       // This is the second part of a split
       // packet, so we add it to the buffer
       // and set the ready flag.
-      
-
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
         last_rssi = (last_rssi+LoRa->packetRssi())/2;
         last_snr_raw = (last_snr_raw+LoRa->packetSnrRaw())/2;
       #endif
 
       getPacketData(packet_size);
-
       seq = SEQ_UNSET;
       ready = true;
 
@@ -339,12 +341,10 @@ void ISR_VECT receive_callback(int packet_size) {
       // same sequence id, so we must assume
       // that we are seeing the first part of
       // a new split packet.
-      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-      int_mask = taskENTER_CRITICAL_FROM_ISR();
-      #endif
-      read_len = 0;
-      #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-      taskEXIT_CRITICAL_FROM_ISR(int_mask);
+      #if MCU_VARIANT == MCU_NRF52
+        int_mask = taskENTER_CRITICAL_FROM_ISR(); read_len = 0; taskEXIT_CRITICAL_FROM_ISR(int_mask);
+      #else
+        read_len = 0;
       #endif
       seq = sequence;
 
@@ -363,12 +363,10 @@ void ISR_VECT receive_callback(int packet_size) {
       if (seq != SEQ_UNSET) {
         // If we already had part of a split
         // packet in the buffer, we clear it.
-        #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-        int_mask = taskENTER_CRITICAL_FROM_ISR();
-        #endif
-        read_len = 0;
-        #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-        taskEXIT_CRITICAL_FROM_ISR(int_mask);
+        #if MCU_VARIANT == MCU_NRF52
+          int_mask = taskENTER_CRITICAL_FROM_ISR(); read_len = 0; taskEXIT_CRITICAL_FROM_ISR(int_mask);
+        #else
+          read_len = 0;
         #endif
         seq = SEQ_UNSET;
       }
@@ -398,6 +396,12 @@ void ISR_VECT receive_callback(int packet_size) {
         modem_packet_t *modem_packet = (modem_packet_t*)malloc(sizeof(modem_packet_t) + read_len);
         if(!modem_packet) { memory_low = true; return; }
 
+        // Get packet RSSI and SNR
+        #if MCU_VARIANT == MCU_ESP32
+          modem_packet->snr_raw = LoRa->packetSnrRaw();
+          modem_packet->rssi = LoRa->packetRssi(modem_packet->snr_raw);
+        #endif
+
         // Send packet to event queue, but free the
         // allocated memory again if the queue is
         // unable to receive the packet.
@@ -406,7 +410,6 @@ void ISR_VECT receive_callback(int packet_size) {
         if (!modem_packet_queue || xQueueSendFromISR(modem_packet_queue, &modem_packet, NULL) != pdPASS) {
             free(modem_packet);
         }
-
       #endif
     }  
   } else {
@@ -458,9 +461,7 @@ bool startRadio() {
         getFrequency();
 
         LoRa->enableCrc();
-
         LoRa->onReceive(receive_callback);
-
         lora_receive();
 
         // Flash an info pattern to indicate
@@ -1113,6 +1114,10 @@ void serialCallback(uint8_t sbyte) {
   }
 }
 
+#if MCU_VARIANT == MCU_ESP32
+  portMUX_TYPE update_lock = portMUX_INITIALIZER_UNLOCKED;
+#endif
+
 void updateModemStatus() {
   #if MCU_VARIANT == MCU_ESP32
     portENTER_CRITICAL(&update_lock);
@@ -1343,15 +1348,13 @@ void loop() {
     #if MCU_VARIANT == MCU_ESP32
       modem_packet_t *modem_packet = NULL;
       if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
-        memcpy(&pbuf, modem_packet->data, modem_packet->len);
         read_len = modem_packet->len;
+        last_rssi = modem_packet->rssi;
+        last_snr_raw = modem_packet->snr_raw;
+        memcpy(&pbuf, modem_packet->data, modem_packet->len);
         free(modem_packet);
         modem_packet = NULL;
 
-        portENTER_CRITICAL(&update_lock);
-        last_rssi = LoRa->packetRssi();
-        last_snr_raw = LoRa->packetSnrRaw();
-        portEXIT_CRITICAL(&update_lock);
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
         kiss_write_packet();

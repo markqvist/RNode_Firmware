@@ -523,6 +523,14 @@ int ISR_VECT sx128x::packetRssi() {
     return pkt_rssi;
 }
 
+int ISR_VECT sx128x::packetRssi(uint8_t pkt_snr_raw) {
+    // may need more calculations here
+    uint8_t buf[5] = {0};
+    executeOpcodeRead(OP_PACKET_STATUS_8X, buf, 5);
+    int pkt_rssi = -buf[0] / 2;
+    return pkt_rssi;
+}
+
 uint8_t ISR_VECT sx128x::packetSnrRaw() {
     uint8_t buf[5] = {0};
     executeOpcodeRead(OP_PACKET_STATUS_8X, buf, 5);

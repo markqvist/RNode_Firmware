@@ -230,6 +230,23 @@ uint8_t sx127x::packetRssiRaw() {
     return pkt_rssi_value;
 }
 
+int ISR_VECT sx127x::packetRssi(uint8_t pkt_snr_raw) {
+  int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE_7X) - RSSI_OFFSET;
+  int pkt_snr = ((int8_t)pkt_snr_raw)*0.25;
+
+  if (_frequency < 820E6) pkt_rssi -= 7;
+
+  if (pkt_snr < 0) {
+      pkt_rssi += pkt_snr;
+  } else {
+      // Slope correction is (16/15)*pkt_rssi,
+      // this estimation looses one floating point
+      // operation, and should be precise enough.
+      pkt_rssi = (int)(1.066 * pkt_rssi);
+  }
+  return pkt_rssi;
+}
+
 int ISR_VECT sx127x::packetRssi() {
     int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE_7X) - RSSI_OFFSET;
     int pkt_snr = packetSnr();
