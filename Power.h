@@ -155,7 +155,11 @@ void measure_battery() {
       if (bat_voltage_dropping && battery_voltage < BAT_V_FLOAT) {
         battery_state = BATTERY_STATE_DISCHARGING;
       } else {
-        battery_state = BATTERY_STATE_CHARGING;
+        if (battery_percent < 100.0) {
+          battery_state = BATTERY_STATE_CHARGING;
+        } else {
+          battery_state = BATTERY_STATE_CHARGED;
+        }
       }
 
       // if (bt_state == BT_STATE_CONNECTED) {
