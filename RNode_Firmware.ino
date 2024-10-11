@@ -1457,6 +1457,12 @@ void sleep_now() {
       pinMode(PIN_DISP_SLEEP, OUTPUT);
       digitalWrite(PIN_DISP_SLEEP, DISP_SLEEP_LEVEL);
     #endif
+    #if HAS_BLUETOOTH
+      if (bt_state == BT_STATE_CONNECTED) {
+        bt_stop();
+        delay(100);
+      }
+    #endif
     esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
     esp_deep_sleep_start();
   #endif
