@@ -1,7 +1,7 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license.
 
-// Modifications and additions copyright 2023 by Mark Qvist
+// Modifications and additions copyright 2024 by Mark Qvist
 // Obviously still under the MIT license.
 
 #ifndef SX128X_H
