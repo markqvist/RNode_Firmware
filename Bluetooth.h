@@ -1,4 +1,4 @@
-// Copyright (C) 2023, Mark Qvist
+// Copyright (C) 2024, Mark Qvist
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -439,7 +439,7 @@ char bt_devname[11];
     bt_state = BT_STATE_CONNECTED;
     cable_state = CABLE_STATE_DISCONNECTED;
 
-    //BLEConnection* conn = Bluefruit.Connection(conn_handle);
+    BLEConnection* conn = Bluefruit.Connection(conn_handle);
     conn->requestPHY(BLE_GAP_PHY_2MBPS);
     conn->requestMtuExchange(512+3);
     conn->requestDataLengthUpdate();
