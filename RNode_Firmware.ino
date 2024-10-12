@@ -609,7 +609,7 @@ void transmit(uint16_t size) {
 
         written++;
 
-        if (written == 255 && header & 0x0F) {
+        if (written == 255 && isSplitPacket(header)) {
           if (!LoRa->endPacket()) {
             kiss_indicate_error(ERROR_MODEM_TIMEOUT);
             kiss_indicate_error(ERROR_TXFAILED);
