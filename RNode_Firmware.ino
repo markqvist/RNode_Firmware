@@ -609,8 +609,14 @@ void transmit(uint16_t size) {
 
         written++;
 
-        if (written == 255) {
-          LoRa->endPacket(); add_airtime(written);
+        if (written == 255 && header & 0x0F) {
+          if (!LoRa->endPacket()) {
+            kiss_indicate_error(ERROR_MODEM_TIMEOUT);
+            kiss_indicate_error(ERROR_TXFAILED);
+            led_indicate_error(5);
+            hard_reset();
+          }
+          add_airtime(written);
           LoRa->beginPacket();
           LoRa->write(header);
           written = 1;
