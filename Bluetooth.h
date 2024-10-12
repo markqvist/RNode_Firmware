@@ -476,7 +476,7 @@ char bt_devname[11];
         Bluefruit.Security.setSecuredCallback(bt_connect_callback);
         Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
         Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
-        //Bluefruit.Periph.setConnInterval(6, 12); // 7.5 - 15 ms
+        Bluefruit.Periph.setConnInterval(6, 12); // 7.5 - 15 ms
 
         const ble_gap_addr_t gap_addr = Bluefruit.getAddr();
         char *data = (char*)malloc(BT_DEV_ADDR_LEN+1);
