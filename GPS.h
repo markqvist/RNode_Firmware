@@ -75,9 +75,6 @@ void GPS_poling(byte Target, byte Rate){ //Divisor, 0 = off, 1-?, 0-9 in this im
   message[9] = cTargetB[int(Target)];
   message[10] = cTargetC[int(Target)];
   byte checksum = NMEA_checksum(message, 19);
-  //char hexlookup[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-  //char checksumA = hexlookup[int(checksum ^ 16)];
-  //char checksumB = hexlookup[int((checksum>>4)^16)];
 
   Serial2.write('$');
   for(int i = 0; i < 19; i++){
@@ -89,16 +86,6 @@ void GPS_poling(byte Target, byte Rate){ //Divisor, 0 = off, 1-?, 0-9 in this im
   Serial2.write(0x0d);
   Serial2.write(0x0a);
 
-//// Dump outgoing commands to serial console
-//  Serial.write('$');
-//  for(int i = 0; i < 24; i++){
-//    Serial.write(message[i]);
-//  }
-//
-//  Serial.write('*');
-//  Serial.print(checksum,HEX);
-//  Serial.write(0x0d);
-//  Serial.write(0x0a);
 
 }
 
@@ -196,10 +183,6 @@ void GPS_Parse_Time(){
   for(int i = 0; i < 6; i++){
     GPSTime[i] = GPSGGA[8+i];
   }
-  //debug
-  //Serial.print("Pos 8: ");
-  //Serial.println(GPSGGA[8]);
-  //Serial.println(GPSTime);
 }
 
 void GPS_Parse_Location(){
@@ -226,41 +209,12 @@ void GPS_Parse_Location(){
     }
   }
 
-  //debug
-
-//  Serial.print("Locations: ");
-//  Serial.print(GPSGGA[18]); //4
-//  Serial.print(GPSGGA[19]); //3
-//  Serial.print(GPSGGA[20]); //2
-//  Serial.print(GPSGGA[21]); //5
-//  Serial.print(GPSGGA[22]); //.
-//  Serial.print(GPSGGA[23]); //2
-//  Serial.print(GPSGGA[24]); //7
-//  Serial.print(GPSGGA[25]); //0
-//  Serial.print(GPSGGA[26]); //0
-//  Serial.print(GPSGGA[27]); //1
-//  Serial.println(GPSGGA[29]); //N
-//
-//  Serial.print(GPSGGA[31]); //0
-//  Serial.print(GPSGGA[32]); //8
-//  Serial.print(GPSGGA[33]); //8
-//  Serial.print(GPSGGA[34]); //1
-//  Serial.print(GPSGGA[35]); //2
-//  Serial.print(GPSGGA[36]); //.
-//  Serial.print(GPSGGA[37]); //2
-//  Serial.print(GPSGGA[38]); //5
-//  Serial.print(GPSGGA[39]); //0
-//  Serial.print(GPSGGA[40]); //2
-//  Serial.print(GPSGGA[41]); //2
-//  Serial.println(GPSGGA[43]); //W
-
  
 
 }
 
 void GPS_init(){
     Serial2.begin(GPS_BAUD_RATE, SERIAL_8N1, PIN_GPS_RX, PIN_GPS_TX);
-    //Serial.println("Serial2 is up");
     GPS_poling(0,0);
     GPS_poling(1,0);
     GPS_poling(2,0);
@@ -268,10 +222,6 @@ void GPS_init(){
     GPS_poling(4,0);
     GPS_poling(5,0);
 
-    //debug
-//    isGPS_Automated = true;
-//    GPS_poling(0,1);
-//    GPS_request(0);
 }
 
 void GPS_sweep(){
