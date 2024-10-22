@@ -390,7 +390,7 @@ bool init_pmu() {
       PMU->setPowerChannelVoltage(XPOWERS_ALDO2, 3300);
       // GPS Voltage
       PMU->setPowerChannelVoltage(XPOWERS_ALDO3, 3300);
-      PMU->setPowerChannelVoltage(XPOWERS_VBACKUP, 3300);
+      //PMU->setPowerChannelVoltage(XPOWERS_VBACKUP, 3300); // I don't beleive tihs to be proper or safe. - Faragher
 
       // ESP32 VDD
       // ! No need to set, automatically open , Don't close it
