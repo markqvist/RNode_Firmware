@@ -130,15 +130,15 @@ firmware-rak4631:
 	arduino-cli compile --log --fqbn rakwireless:nrf52:WisCoreRAK4631Board -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x51\""
 
 upload:
-	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
+	arduino-cli upload -p /dev/ttyACM0 --fqbn unsignedio:avr:rnode
 
 upload-mega2560:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:mega
 
 upload-tbeam:
-	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:t-beam
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:t-beam
 	@sleep 1
-	rnodeconf /dev/ttyUSB0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.t-beam/RNode_Firmware.ino.bin)
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.t-beam/RNode_Firmware.ino.bin)
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
@@ -250,6 +250,15 @@ release-tbeam: check_bt_buffers
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_tbeam.bootloader
 	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_tbeam.partitions
 	zip --junk-paths ./Release/rnode_firmware_tbeam.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_tbeam.boot_app0 build/rnode_firmware_tbeam.bin build/rnode_firmware_tbeam.bootloader build/rnode_firmware_tbeam.partitions
+	rm -r build
+
+release-tbeam_GPS: check_bt_buffers
+	arduino-cli compile --fqbn esp32:esp32:t-beam -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x33\" \"-DENABLE_GPS\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/$(ARDUINO_ESP_CORE_VER)/tools/partitions/boot_app0.bin build/rnode_firmware_tbeam_GPS.boot_app0
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bin build/rnode_firmware_tbeam_GPS.bin
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_tbeam_GPS.bootloader
+	cp build/esp32.esp32.t-beam/RNode_Firmware.ino.partitions.bin build/rnode_firmware_tbeam_GPS.partitions
+	zip --junk-paths ./Release/rnode_firmware_tbeam_GPS.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_tbeam_GPS.boot_app0 build/rnode_firmware_tbeam_GPS.bin build/rnode_firmware_tbeam_GPS.bootloader build/rnode_firmware_tbeam_GPS.partitions
 	rm -r build
 
 release-tbeam_sx1262: check_bt_buffers
