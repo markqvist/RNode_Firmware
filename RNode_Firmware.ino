@@ -41,6 +41,10 @@ volatile bool serial_buffering = false;
   #include "Console.h"
 #endif
 
+#if defined(ENABLE_GPS)
+  #include "GPS.h"
+#endif
+
 #if PLATFORM == PLATFORM_ESP32 || PLATFORM == PLATFORM_NRF52
   #define MODEM_QUEUE_SIZE 4
   typedef struct {
@@ -227,6 +231,10 @@ void setup() {
     } else {
       kiss_indicate_reset();
     }
+  #endif
+      
+  #if defined(ENABLE_GPS)
+    GPS_init();
   #endif
 
   // Validate board health, EEPROM and config
@@ -1054,6 +1062,17 @@ void serialCallback(uint8_t sbyte) {
           }
         }
       #endif
+    } else if (command == CMD_GPS_CMD) {
+      #if defined(ENABLE_GPS)
+        GPS_handler(sbyte);
+      #endif
+    } else if (command == CMD_GPS_RATE) {
+      #if defined(ENABLE_GPS)
+        if(frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        if(frame_len == 2){
+          GPS_poling(cmdbuf[0],int(cmdbuf[1]));
+        }
+      #endif
     } else if (command == CMD_DISP_INT) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
@@ -1474,6 +1493,12 @@ void loop() {
 
   #if HAS_INPUT
     input_read();
+  #endif
+  
+  #if defined(ENABLE_GPS)
+    if(hw_ready){
+      GPS_process(); 
+    }
   #endif
 
   if (memory_low) {
