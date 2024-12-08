@@ -973,9 +973,9 @@ void serialCallback(uint8_t sbyte) {
           }
         #endif
     } else if (command == CMD_FB_READ) {
-      if (sbyte != 0x00) {
-        kiss_indicate_fb();
-      }
+      if (sbyte != 0x00) { kiss_indicate_fb(); }
+    } else if (command == CMD_DISP_READ) {
+      if (sbyte != 0x00) { kiss_indicate_disp(); }
     } else if (command == CMD_DEV_HASH) {
       #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
         if (sbyte != 0x00) {

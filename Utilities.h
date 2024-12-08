@@ -977,6 +977,20 @@ void kiss_indicate_fb() {
 	serial_write(FEND);
 }
 
+void kiss_indicate_disp() {
+	serial_write(FEND);
+	serial_write(CMD_DISP_READ);
+	#if HAS_DISPLAY
+		uint8_t *da = disp_area.getBuffer();
+		uint8_t *sa = stat_area.getBuffer();
+		for (int i = 0; i < 512; i++) { escaped_serial_write(da[i]); }
+		for (int i = 0; i < 512; i++) { escaped_serial_write(sa[i]); }
+	#else
+		serial_write(0xFF);
+	#endif
+	serial_write(FEND);
+}
+
 void kiss_indicate_ready() {
 	serial_write(FEND);
 	serial_write(CMD_READY);
