@@ -34,7 +34,8 @@
 #elif MCU_VARIANT == MCU_NRF52
   #include <bluefruit.h>
   #include <math.h>
-  BLEUart SerialBT;
+  #define BLE_RX_BUF 6144
+  BLEUart SerialBT(BLE_RX_BUF);
   BLEDis  bledis;
   BLEBas  blebas;
 #endif
