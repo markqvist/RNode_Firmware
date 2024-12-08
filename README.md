@@ -104,6 +104,8 @@ pip install rns --upgrade
 rnodeconf --autoinstall
 ```
 
+For most of the supported device types, it is also possible to use [Liam Cottle's Web-based RNode Flasher](https://liamcottle.github.io/rnode-flasher/). This option may be easier if you're not familiar with using a command line interface.
+
 For more detailed instruction and in-depth guides, you can have a look at some of these resources:
 
 - Create a [basic RNode from readily available development boards](https://unsigned.io/guides/2022_01_25_installing-rnode-firmware-on-supported-devices.html)
