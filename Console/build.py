@@ -4,9 +4,9 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.8.4-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.5.4-py3-none-any.whl",
-    "lxmf": "lxmf-0.5.5-py3-none-any.whl",
+    "rns": "rns-0.8.7-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.5.5-py3-none-any.whl",
+    "lxmf": "lxmf-0.5.8-py3-none-any.whl",
     "rnsh": "rnsh-0.1.4-py3-none-any.whl",
 }
 
@@ -174,7 +174,7 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
-    pm = 60
+    pm = 56
     scale_imgs = [
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
