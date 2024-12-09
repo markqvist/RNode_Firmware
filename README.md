@@ -16,16 +16,12 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.78`. This release brings the following changes:
+The latest release, installable through `rnodeconf`, is version `1.79`. This release brings the following changes:
 
 - Improves BLE on RAK4631
-- Adds graceful BLE disconnect on device sleep
-- Fixes intermittent packet corruption on RAK4631
-- Fixes incorrect preamble calculation on SX1280
-- Improves CSMA parameters and P-curve
-- Updated console image to include latest packages
+- Fixes a firmware provisioning bug on RAK4631
 
-You must have at least version `2.2.0` of `rnodeconf` installed to update the RNode Firmware to version `1.78`. Get it by updating the `rns` package to at least version `0.8.4`.
+You must have at least version `2.2.0` of `rnodeconf` installed to update the RNode Firmware to version `1.79`. Get it by updating the `rns` package to at least version `0.8.4`.
 
 ## A Self-Replicating System
 
