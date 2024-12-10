@@ -771,7 +771,7 @@ void sx126x::setTxPower(int level, int outputPin) {
     if (level > 22) { level = 22; }
     else if (level < -9) { level = -9; }
 
-    writeRegister(REG_OCP_6X, 0x38); // 160mA limit, overcurrent protection
+    writeRegister(REG_OCP_6X, OCP_TUNED); // Use board-specific tuned OCP
 
     uint8_t tx_buf[2];
 
