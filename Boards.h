@@ -332,7 +332,7 @@
       #define HAS_SLEEP true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
-      #define OCP_TUNED 0x28
+      #define OCP_TUNED 0x38
 
       const int pin_btn_usr1 = 0;
 
