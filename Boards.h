@@ -145,10 +145,6 @@
       #define HAS_TCXO true
   #endif
 
-  // Default OCP value if not specified
-  // in board configuration
-  #define OCP_TUNED 0x38
-
   #if MCU_VARIANT == MCU_1284P
     const int pin_cs = 4;
     const int pin_reset = 3;
@@ -630,6 +626,12 @@
 
   #ifndef DIO2_AS_RF_SWITCH
     #define DIO2_AS_RF_SWITCH false
+  #endif
+
+  // Default OCP value if not specified
+  // in board configuration
+  #ifndef OCP_TUNED
+    #define OCP_TUNED 0x38
   #endif
 
 #endif
