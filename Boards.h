@@ -145,6 +145,10 @@
       #define HAS_TCXO true
   #endif
 
+  // Default OCP value if not specified
+  // in board configuration
+  #define OCP_TUNED 0x38
+
   #if MCU_VARIANT == MCU_1284P
     const int pin_cs = 4;
     const int pin_reset = 3;
