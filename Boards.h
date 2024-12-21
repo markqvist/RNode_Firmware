@@ -89,6 +89,12 @@
   #define MODEL_C5            0xC5 // Heltec Lora32 v3, 433 MHz
   #define MODEL_CA            0xCA // Heltec Lora32 v3, 868 MHz
 
+  // https://resource.heltec.cn/download/Mesh_Node_T114/Datasheet.pdf
+  #define PRODUCT_HELTEC_T114 0xC2 // Heltec Mesh Node T114
+  #define BOARD_HELTEC_T114   0x3C
+  #define MODEL_C6            0xC6 // Heltec Mesh Node T114, 470-510 MHz (HT-n5262-LF)
+  #define MODEL_C7            0xC7 // Heltec Mesh Node T114, 863-928 MHz (HT-n5262-HF)
+
   #define PRODUCT_RAK4631     0x10
   #define BOARD_RAK4631       0x51
   #define MODEL_11            0x11 // RAK4631, 433 Mhz
@@ -609,10 +615,94 @@
       const int pin_led_tx = LED_GREEN;
       const int pin_tcxo_enable = -1;
 
+    #elif BOARD_MODEL == BOARD_HELTEC_T114
+      #define MODEM SX1262
+      #define HAS_EEPROM false
+      #define HAS_DISPLAY true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_CONSOLE false
+      #define HAS_PMU false
+      #define HAS_NP false
+      #define HAS_SD false
+      #define HAS_TCXO true
+      #define HAS_RF_SWITCH_RX_TX true
+      #define HAS_BUSY true
+      #define HAS_INPUT true
+      #define DIO2_AS_RF_SWITCH true
+      #define CONFIG_UART_BUFFER_SIZE 6144
+      #define CONFIG_QUEUE_SIZE 6144
+      #define CONFIG_QUEUE_MAX_LENGTH 200
+      #define EEPROM_SIZE 296
+      #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+      #define BLE_MANUFACTURER "Heltec"
+      #define BLE_MODEL "HT-n5262"
+
+      // ADC
+      #define PIN_T114_ADC_EN 6
+
+      // External sensors
+      #define PIN_T114_VEXT_EN 21
+
+      // LED
+      #define LED_T114_GREEN 3
+      #define PIN_T114_LED 14
+
+      // SPI
+      #define PIN_T114_MOSI 22
+      #define PIN_T114_MISO 23
+      #define PIN_T114_SCK  19
+      #define PIN_T114_SS   24
+
+      // SX1262
+      #define PIN_T114_RST  25
+      #define PIN_T114_DIO1 20
+      #define PIN_T114_BUSY 17
+
+      // TFT
+      #define DISPLAY_SCALE 2
+      #define PIN_T114_TFT_MOSI 9
+      #define PIN_T114_TFT_MISO 11 // not connected
+      #define PIN_T114_TFT_SCK 8
+      #define PIN_T114_TFT_SS 11
+      #define PIN_T114_TFT_DC 12
+      #define PIN_T114_TFT_RST 2
+      #define PIN_T114_TFT_EN 3
+      #define PIN_T114_TFT_BLGT 15
+
+      // pins for buttons on Heltec T114
+      const int pin_btn_usr1 = 42;
+
+      // pins for sx1262 on Heltec T114
+      const int pin_rxen = -1;
+      const int pin_reset = PIN_T114_RST;
+      const int pin_cs = PIN_T114_SS;
+      const int pin_sclk = PIN_T114_SCK;
+      const int pin_mosi = PIN_T114_MOSI;
+      const int pin_miso = PIN_T114_MISO;
+      const int pin_busy = PIN_T114_BUSY;
+      const int pin_dio = PIN_T114_DIO1;
+      const int pin_led_rx = 35;
+      const int pin_led_tx = 35;
+      const int pin_tcxo_enable = -1;
+
+      // pins for ST7789 display on Heltec T114
+      const int DISPLAY_DC = PIN_T114_TFT_DC;
+      const int DISPLAY_CS = PIN_T114_TFT_SS;
+      const int DISPLAY_MISO = PIN_T114_TFT_MISO;
+      const int DISPLAY_MOSI = PIN_T114_TFT_MOSI;
+      const int DISPLAY_CLK = PIN_T114_TFT_SCK;
+      const int DISPLAY_BL_PIN = PIN_T114_TFT_BLGT;
+      const int DISPLAY_RST = PIN_T114_TFT_RST;
+
     #else
       #error An unsupported nRF board was selected. Cannot compile RNode firmware.
     #endif
 
+  #endif
+
+  #ifndef DISPLAY_SCALE
+    #define DISPLAY_SCALE 1
   #endif
 
   #ifndef HAS_RF_SWITCH_RX_TX
