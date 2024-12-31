@@ -201,6 +201,13 @@ bool display_init() {
       Wire.begin(SDA_OLED, SCL_OLED);
     #endif
 
+    #if HAS_EEPROM
+      uint8_t display_rotation = EEPROM.read(eeprom_addr(ADDR_CONF_DROT));
+    #elif MCU_VARIANT == MCU_NRF52
+      uint8_t display_rotation = eeprom_read(eeprom_addr(ADDR_CONF_DROT));
+    #endif
+    if (display_rotation < 0 or display_rotation > 3) display_rotation = 0xFF;
+
     #if DISP_CUSTOM_ADDR == true
       #if HAS_EEPROM
       uint8_t display_address = EEPROM.read(eeprom_addr(ADDR_CONF_DADR));
@@ -236,43 +243,52 @@ bool display_init() {
       return false;
     } else {
       set_contrast(&display, display_contrast);
-      #if BOARD_MODEL == BOARD_RNODE_NG_20
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(3);
-      #elif BOARD_MODEL == BOARD_RNODE_NG_21
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(3);
-      #elif BOARD_MODEL == BOARD_LORA32_V1_0
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(3);
-      #elif BOARD_MODEL == BOARD_LORA32_V2_0
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(3);
-      #elif BOARD_MODEL == BOARD_LORA32_V2_1
-        disp_mode = DISP_MODE_LANDSCAPE;
-        display.setRotation(0);
-      #elif BOARD_MODEL == BOARD_TBEAM
-        disp_mode = DISP_MODE_LANDSCAPE;
-        display.setRotation(0);
-      #elif BOARD_MODEL == BOARD_TBEAM_S_V1
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(1);
-      #elif BOARD_MODEL == BOARD_HELTEC32_V2
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(1);
-      #elif BOARD_MODEL == BOARD_HELTEC32_V3
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(1);
-      #elif BOARD_MODEL == BOARD_RAK4631
-        disp_mode = DISP_MODE_LANDSCAPE;
-        display.setRotation(0);
-      #elif BOARD_MODEL == BOARD_TDECK
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(3);
-      #else
-        disp_mode = DISP_MODE_PORTRAIT;
-        display.setRotation(3);
-      #endif
+      if (display_rotation != 0xFF) {
+        if (display_rotation == 0 || display_rotation == 2) {
+          disp_mode = DISP_MODE_LANDSCAPE;
+        } else {
+          disp_mode = DISP_MODE_PORTRAIT;
+        }
+        display.setRotation(display_rotation);
+      } else {
+        #if BOARD_MODEL == BOARD_RNODE_NG_20
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(3);
+        #elif BOARD_MODEL == BOARD_RNODE_NG_21
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(3);
+        #elif BOARD_MODEL == BOARD_LORA32_V1_0
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(3);
+        #elif BOARD_MODEL == BOARD_LORA32_V2_0
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(3);
+        #elif BOARD_MODEL == BOARD_LORA32_V2_1
+          disp_mode = DISP_MODE_LANDSCAPE;
+          display.setRotation(0);
+        #elif BOARD_MODEL == BOARD_TBEAM
+          disp_mode = DISP_MODE_LANDSCAPE;
+          display.setRotation(0);
+        #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(1);
+        #elif BOARD_MODEL == BOARD_HELTEC32_V2
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(1);
+        #elif BOARD_MODEL == BOARD_HELTEC32_V3
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(1);
+        #elif BOARD_MODEL == BOARD_RAK4631
+          disp_mode = DISP_MODE_LANDSCAPE;
+          display.setRotation(0);
+        #elif BOARD_MODEL == BOARD_TDECK
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(3);
+        #else
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(3);
+        #endif
+      }
 
       update_area_positions();
       for (int i = 0; i < WATERFALL_SIZE; i++) {

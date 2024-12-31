@@ -1100,6 +1100,21 @@ void serialCallback(uint8_t sbyte) {
         }
 
       #endif
+    } else if (command == CMD_DISP_ROT) {
+      #if HAS_DISPLAY
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            drot_conf_save(sbyte);
+            display_unblank();
+        }
+
+      #endif
     } else if (command == CMD_NP_INT) {
       #if HAS_NP
         if (sbyte == FESC) {

@@ -56,6 +56,7 @@
   #define CMD_DISP_INT    0x45
   #define CMD_DISP_ADDR   0x63
   #define CMD_DISP_BLNK   0x64
+  #define CMD_DISP_ROT    0x67
   #define CMD_NP_INT      0x65
   #define CMD_BT_CTRL     0x46
   #define CMD_BT_PIN      0x62

@@ -1507,6 +1507,16 @@ void db_conf_save(uint8_t val) {
 	#endif
 }
 
+void drot_conf_save(uint8_t val) {
+	#if HAS_DISPLAY
+		if (val >= 0x00 and val <= 0x03) {
+			eeprom_update(eeprom_addr(ADDR_CONF_BSET), CONF_OK_BYTE);
+			eeprom_update(eeprom_addr(ADDR_CONF_DROT), val);
+			hard_reset();
+		}
+	#endif
+}
+
 void np_int_conf_save(uint8_t p_int) {
 	eeprom_update(eeprom_addr(ADDR_CONF_PSET), CONF_OK_BYTE);
 	eeprom_update(eeprom_addr(ADDR_CONF_PINT), p_int);

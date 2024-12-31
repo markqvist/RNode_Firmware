@@ -39,6 +39,7 @@
   #define ADDR_CONF_DINT 0xB2
   #define ADDR_CONF_DADR 0xB3
   #define ADDR_CONF_DBLK 0xB4
+  #define ADDR_CONF_DROT 0xB8
   #define ADDR_CONF_PSET 0xB5
   #define ADDR_CONF_PINT 0xB6
   #define ADDR_CONF_BSET 0xB7
