@@ -1124,7 +1124,6 @@ void serialCallback(uint8_t sbyte) {
                 ESCAPE = false;
             }
             if (sbyte > 0x00) recondition_display = true;
-            display_unblank();
         }
       #endif
     } else if (command == CMD_NP_INT) {
