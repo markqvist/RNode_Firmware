@@ -1098,7 +1098,6 @@ void serialCallback(uint8_t sbyte) {
             db_conf_save(sbyte);
             display_unblank();
         }
-
       #endif
     } else if (command == CMD_DISP_ROT) {
       #if HAS_DISPLAY
@@ -1113,7 +1112,20 @@ void serialCallback(uint8_t sbyte) {
             drot_conf_save(sbyte);
             display_unblank();
         }
-
+      #endif
+    } else if (command == CMD_DISP_RCND) {
+      #if HAS_DISPLAY
+        if (sbyte == FESC) {
+            ESCAPE = true;
+        } else {
+            if (ESCAPE) {
+                if (sbyte == TFEND) sbyte = FEND;
+                if (sbyte == TFESC) sbyte = FESC;
+                ESCAPE = false;
+            }
+            if (sbyte > 0x00) recondition_display = true;
+            display_unblank();
+        }
       #endif
     } else if (command == CMD_NP_INT) {
       #if HAS_NP

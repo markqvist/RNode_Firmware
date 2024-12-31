@@ -99,6 +99,7 @@ uint32_t display_blanking_timeout = DISPLAY_BLANKING_TIMEOUT;
 uint8_t display_unblank_intensity = display_intensity;
 bool display_blanked = false;
 bool display_tx = false;
+bool recondition_display = false;
 uint8_t disp_target_fps = 7;
 int disp_update_interval = 1000/disp_target_fps;
 uint32_t last_page_flip = 0;
@@ -707,6 +708,21 @@ void update_disp_area() {
   }
 }
 
+void display_recondition() {
+  for (uint8_t iy = 0; iy < disp_area.height(); iy++) {
+    unsigned char rand_seg [] = {random(0xFF),random(0xFF),random(0xFF),random(0xFF),random(0xFF),random(0xFF),random(0xFF),random(0xFF)};
+    stat_area.drawBitmap(0, iy, rand_seg, 64, 1, SSD1306_WHITE, SSD1306_BLACK);
+    disp_area.drawBitmap(0, iy, rand_seg, 64, 1, SSD1306_WHITE, SSD1306_BLACK);
+  }
+
+  display.drawBitmap(p_ad_x, p_ad_y, disp_area.getBuffer(), disp_area.width(), disp_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+  if (disp_mode == DISP_MODE_PORTRAIT) {
+    display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+  } else if (disp_mode == DISP_MODE_LANDSCAPE) {
+    display.drawBitmap(p_as_x, p_as_y, stat_area.getBuffer(), stat_area.width(), stat_area.height(), SSD1306_WHITE, SSD1306_BLACK);
+  }
+}
+
 void update_display(bool blank = false) {
   if (blank == true) {
     last_disp_update = millis()-disp_update_interval-1;
@@ -754,9 +770,15 @@ void update_display(bool blank = false) {
         display.clearDisplay();
       #endif
 
-      update_stat_area();
-      update_disp_area();
-
+      if (recondition_display) {
+        disp_target_fps = 30;
+        disp_update_interval = 1000/disp_target_fps;
+        display_recondition();
+      } else {
+        update_stat_area();
+        update_disp_area();
+      }
+      
       #if BOARD_MODEL != BOARD_TDECK
         display.display();
       #endif
