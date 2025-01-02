@@ -623,7 +623,7 @@
       #define HAS_BLE true
       #define HAS_CONSOLE false
       #define HAS_PMU false
-      #define HAS_NP false
+      #define HAS_NP true
       #define HAS_SD false
       #define HAS_TCXO true
       #define HAS_BUSY true
@@ -646,6 +646,8 @@
       // LED
       #define LED_T114_GREEN 3
       #define PIN_T114_LED 14
+      #define NP_M 1
+      const int pin_np = PIN_T114_LED;
 
       // SPI
       #define PIN_T114_MOSI 22
@@ -720,6 +722,10 @@
   // in board configuration
   #ifndef OCP_TUNED
     #define OCP_TUNED 0x38
+  #endif
+
+  #ifndef NP_M
+    #define NP_M 0.15
   #endif
 
 #endif
