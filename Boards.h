@@ -626,7 +626,6 @@
       #define HAS_NP false
       #define HAS_SD false
       #define HAS_TCXO true
-      #define HAS_RF_SWITCH_RX_TX true
       #define HAS_BUSY true
       #define HAS_INPUT true
       #define DIO2_AS_RF_SWITCH true
@@ -674,7 +673,6 @@
       const int pin_btn_usr1 = 42;
 
       // pins for sx1262 on Heltec T114
-      const int pin_rxen = -1;
       const int pin_reset = PIN_T114_RST;
       const int pin_cs = PIN_T114_SS;
       const int pin_sclk = PIN_T114_SCK;
