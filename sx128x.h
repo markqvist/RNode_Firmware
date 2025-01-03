@@ -17,7 +17,7 @@
 #define LORA_DEFAULT_RXEN_PIN  -1
 #define LORA_DEFAULT_TXEN_PIN  -1
 #define LORA_DEFAULT_BUSY_PIN  -1
-#define LORA_MODEM_TIMEOUT_MS 5E3
+#define LORA_MODEM_TIMEOUT_MS 15E3
 
 #define PA_OUTPUT_RFO_PIN      0
 #define PA_OUTPUT_PA_BOOST_PIN 1
@@ -91,11 +91,8 @@ public:
   void setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t length, uint8_t crc);
   void setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr);
 
-  // deprecated
   void crc() { enableCrc(); }
   void noCrc() { disableCrc(); }
-
-  byte random();
 
   void setPins(int ss = LORA_DEFAULT_SS_PIN, int reset = LORA_DEFAULT_RESET_PIN, int dio0 = LORA_DEFAULT_DIO0_PIN, int busy = LORA_DEFAULT_BUSY_PIN, int rxen = LORA_DEFAULT_RXEN_PIN, int txen = LORA_DEFAULT_TXEN_PIN);
   void setSPIFrequency(uint32_t frequency);

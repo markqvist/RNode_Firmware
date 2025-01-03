@@ -1214,13 +1214,7 @@ void setFrequency() {
 	}
 }
 
-uint8_t getRandom() {
-	if (radio_online) {
-		return LoRa->random();
-	} else {
-		return 0x00;
-	}
-}
+uint8_t getRandom() { return random(0xFF); }
 
 void promisc_enable() {
 	promisc = true;

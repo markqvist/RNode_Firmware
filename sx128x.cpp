@@ -1,7 +1,7 @@
 // Copyright (c) Sandeep Mistry. All rights reserved.
 // Licensed under the MIT license.
 
-// Modifications and additions copyright 2024 by Mark Qvist
+// Modifications and additions copyright 2024 by Mark Qvist & Jacob Eva
 // Obviously still under the MIT license.
 
 #include "sx128x.h"
@@ -114,19 +114,12 @@ sx128x::sx128x() :
 
 bool ISR_VECT sx128x::getPacketValidity() {
     uint8_t buf[2];
-
     buf[0] = 0x00;
     buf[1] = 0x00;
-
     executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
-
     executeOpcode(OP_CLEAR_IRQ_STATUS_8X, buf, 2);
-
-    if ((buf[1] & IRQ_PAYLOAD_CRC_ERROR_MASK_8X) == 0) {
-        return true;
-    } else {
-        return false;
-    }
+    if ((buf[1] & IRQ_PAYLOAD_CRC_ERROR_MASK_8X) == 0) { return true; }
+    else { return false; }
 }
 
 void ISR_VECT sx128x::onDio0Rise() {
@@ -162,42 +155,32 @@ void sx128x::handleDio0Rise() {
 }
 
 bool sx128x::preInit() {
-  // setup pins
   pinMode(_ss, OUTPUT);
-  // set SS high
   digitalWrite(_ss, HIGH);
   
   // todo: check if this change causes issues on any platforms
   #if MCU_VARIANT == MCU_ESP32
-  if (pin_sclk != -1 && pin_miso != -1 && pin_mosi != -1 && pin_cs != -1) {
-    SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
-  } else {
-    SPI.begin();
-  }
+    if (pin_sclk != -1 && pin_miso != -1 && pin_mosi != -1 && pin_cs != -1) {
+      SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
+    } else {
+      SPI.begin();
+    }
   #else
     SPI.begin();
   #endif
 
-  // check version (retry for up to 2 seconds)
+  // Detect modem (retry for up to 2 seconds)
   long start = millis();
-
   uint8_t version_msb;
   uint8_t version_lsb;
-
   while (((millis() - start) < 2000) && (millis() >= start)) {
-
       version_msb = readRegister(REG_FIRM_VER_MSB);
       version_lsb = readRegister(REG_FIRM_VER_LSB);
-
-      if ((version_msb == 0xB7 && version_lsb == 0xA9) || (version_msb == 0xB5 && version_lsb == 0xA9)) {
-          break;
-      }
+      if ((version_msb == 0xB7 && version_lsb == 0xA9) || (version_msb == 0xB5 && version_lsb == 0xA9)) { break; }
       delay(100);
   }
-  if ((version_msb != 0xB7 || version_lsb != 0xA9) && (version_msb != 0xB5 || version_lsb != 0xA9)) {
-      return false;
-  }
 
+  if ((version_msb != 0xB7 || version_lsb != 0xA9) && (version_msb != 0xB5 || version_lsb != 0xA9)) { return false; }
   _preinit_done = true;
   return true;
 }
@@ -205,144 +188,86 @@ bool sx128x::preInit() {
 uint8_t ISR_VECT sx128x::readRegister(uint16_t address) { return singleTransfer(OP_READ_REGISTER_8X, address, 0x00); }
 void sx128x::writeRegister(uint16_t address, uint8_t value) { singleTransfer(OP_WRITE_REGISTER_8X, address, value); }
 
-uint8_t ISR_VECT sx128x::singleTransfer(uint8_t opcode, uint16_t address, uint8_t value)
-{
+uint8_t ISR_VECT sx128x::singleTransfer(uint8_t opcode, uint16_t address, uint8_t value) {
     waitOnBusy();
-
     uint8_t response;
-
     digitalWrite(_ss, LOW);
 
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(opcode);
     SPI.transfer((address & 0xFF00) >> 8);
     SPI.transfer(address & 0x00FF);
-    if (opcode == OP_READ_REGISTER_8X) {
-        SPI.transfer(0x00);
-    }
+    if (opcode == OP_READ_REGISTER_8X) { SPI.transfer(0x00); }
     response = SPI.transfer(value);
     SPI.endTransaction();
-
     digitalWrite(_ss, HIGH);
 
     return response;
 }
 
-void sx128x::rxAntEnable()
-{
-    if (_txen != -1) {
-        digitalWrite(_txen, LOW);
-    }
-    if (_rxen != -1) {
-        digitalWrite(_rxen, HIGH);
-    }
+void sx128x::rxAntEnable() {
+    if (_txen != -1) { digitalWrite(_txen, LOW); }
+    if (_rxen != -1) { digitalWrite(_rxen, HIGH); }
 }
 
-void sx128x::txAntEnable()
-{
-    if (_txen != -1) {
-        digitalWrite(_txen, HIGH);
-    }
-    if (_rxen != -1) {
-        digitalWrite(_rxen, LOW);
-    }
+void sx128x::txAntEnable() {
+    if (_txen != -1) { digitalWrite(_txen, HIGH); }
+    if (_rxen != -1) { digitalWrite(_rxen, LOW); }
 }
 
 void sx128x::loraMode() {
-    // enable lora mode on the SX1262 chip
     uint8_t mode = MODE_LONG_RANGE_MODE_8X;
     executeOpcode(OP_PACKET_TYPE_8X, &mode, 1);
 }
 
 void sx128x::waitOnBusy() {
-    unsigned long time = millis();
-    while (digitalRead(_busy) == HIGH)
-    {
-        if (millis() >= (time + 100)) {
-            break;
-        }
-        // do nothing
-    }
+  unsigned long time = millis();
+  while (digitalRead(_busy) == HIGH) {
+    if (millis() >= (time + 100)) { break; }
+  }
 }
 
-void sx128x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size)
-{
+void sx128x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size) {
     waitOnBusy();
-
     digitalWrite(_ss, LOW);
-
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(opcode);
-
-    for (int i = 0; i < size; i++)
-    {
-        SPI.transfer(buffer[i]);
-    }
-
+    for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); }
     SPI.endTransaction();
-
     digitalWrite(_ss, HIGH);
 }
 
-void sx128x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size)
-{
+void sx128x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
     waitOnBusy();
-
     digitalWrite(_ss, LOW);
-
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(opcode);
     SPI.transfer(0x00);
-
-    for (int i = 0; i < size; i++)
-    {
-        buffer[i] = SPI.transfer(0x00);
-    }
-
+    for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
     SPI.endTransaction();
-
     digitalWrite(_ss, HIGH);
 }
 
-void sx128x::writeBuffer(const uint8_t* buffer, size_t size)
-{
+void sx128x::writeBuffer(const uint8_t* buffer, size_t size) {
     waitOnBusy();
-
     digitalWrite(_ss, LOW);
-
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(OP_FIFO_WRITE_8X);
     SPI.transfer(_fifo_tx_addr_ptr);
-
-    for (int i = 0; i < size; i++)
-    {
-        SPI.transfer(buffer[i]);
-        _fifo_tx_addr_ptr++;
-    }
-
+    for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
     SPI.endTransaction();
-
     digitalWrite(_ss, HIGH);
 }
 
-void sx128x::readBuffer(uint8_t* buffer, size_t size)
-{
+void sx128x::readBuffer(uint8_t* buffer, size_t size) {
     waitOnBusy();
-
     digitalWrite(_ss, LOW);
-
     SPI.beginTransaction(_spiSettings);
     SPI.transfer(OP_FIFO_READ_8X);
     SPI.transfer(_fifo_rx_addr_ptr);
     SPI.transfer(0x00);
-
-    for (int i = 0; i < size; i++)
-    {
-        buffer[i] = SPI.transfer(0x00);
-    }
-
+    for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
     SPI.endTransaction();
-
     digitalWrite(_ss, HIGH);
 }
 
@@ -350,24 +275,19 @@ void sx128x::setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr) {
   // because there is no access to these registers on the sx1280, we have
   // to set all these parameters at once or not at all.
   uint8_t buf[3];
-
   buf[0] = sf << 4;
   buf[1] = bw;
-  buf[2] = cr; 
+  buf[2] = cr;
   executeOpcode(OP_MODULATION_PARAMS_8X, buf, 3);
 
-  if (sf <= 6) {
-      writeRegister(0x925, 0x1E);
-  } else if (sf <= 8) {
-      writeRegister(0x925, 0x37);
-  } else if (sf >= 9) {
-      writeRegister(0x925, 0x32);
-  }
+  if (sf <= 6) {      writeRegister(0x925, 0x1E); }
+  else if (sf <= 8) { writeRegister(0x925, 0x37); }
+  else if (sf >= 9) { writeRegister(0x925, 0x32); }
   writeRegister(0x093C, 0x1);
 }
 
 void sx128x::setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t length, uint8_t crc) {
-  // because there is no access to these registers on the sx1280, we have
+  // Because there is no access to these registers on the sx1280, we have
   // to set all these parameters at once or not at all.
   uint8_t buf[7];
   // calculate exponent and mantissa values for modem
@@ -390,21 +310,16 @@ void sx128x::setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t leng
   buf[1] = headermode;
   buf[2] = length;
   buf[3] = crc;
-  // standard IQ setting (no inversion)
-  buf[4] = 0x40; 
-  // unused params
-  buf[5] = 0x00; 
+  buf[4] = 0x40; // standard IQ setting (no inversion)
+  buf[5] = 0x00; // unused params
   buf[6] = 0x00; 
 
   executeOpcode(OP_PACKET_PARAMS_8X, buf, 7);
 }
 
-int sx128x::begin(unsigned long frequency)
-{
+int sx128x::begin(unsigned long frequency) {
   if (_reset != -1) {
     pinMode(_reset, OUTPUT);
-
-    // perform reset
     digitalWrite(_reset, LOW);
     delay(10);
     digitalWrite(_reset, HIGH);
@@ -424,21 +339,16 @@ int sx128x::begin(unsigned long frequency)
   standby();
   loraMode();
   rxAntEnable();
-
-  Serial.printf("Setting freq to %d\r\n", _frequency);
-  Serial.printf("Should be %d\r\n", frequency);
   setFrequency(frequency);
 
-  // set LNA boost
-  // todo: implement this
+  // TODO: Implement LNA boost
   //writeRegister(REG_LNA, 0x96);
 
   setModulationParams(_sf, _bw, _cr);
   setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
-
   setTxPower(_txp);
 
-  // set base addresses
+  // Set base addresses
   uint8_t basebuf[2] = {0};
   executeOpcode(OP_BUFFER_BASE_ADDR_8X, basebuf, 2);
 
@@ -446,28 +356,19 @@ int sx128x::begin(unsigned long frequency)
   return 1;
 }
 
-void sx128x::end()
-{
-  // put in sleep mode
+void sx128x::end() {
   sleep();
-
-  // stop SPI
   SPI.end();
-
   _bitrate = 0;
   _radio_online = false;
   _preinit_done = false;
 }
 
 int sx128x::beginPacket(int implicitHeader) {
-  // put in standby mode
   standby();
 
-  if (implicitHeader) {
-    implicitHeaderMode();
-  } else {
-    explicitHeaderMode();
-  }
+  if (implicitHeader) { implicitHeaderMode(); }
+  else { explicitHeaderMode(); }
 
   _payloadLength = 0;
   _fifo_tx_addr_ptr = 0;
@@ -476,25 +377,22 @@ int sx128x::beginPacket(int implicitHeader) {
   return 1;
 }
 
-int sx128x::endPacket()
-{
+int sx128x::endPacket() {
   setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
-
   txAntEnable();
 
-  // put in single TX mode
+  // Put in single TX mode
   uint8_t timeout[3] = {0};
   executeOpcode(OP_TX_8X, timeout, 3);
 
   uint8_t buf[2];
-
   buf[0] = 0x00;
   buf[1] = 0x00;
   executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
 
+  // Wait for TX done
   bool timed_out = false;
   uint32_t w_timeout = millis()+LORA_MODEM_TIMEOUT_MS;
-  // wait for TX done
   while ((millis() < w_timeout) && ((buf[1] & IRQ_TX_DONE_MASK_8X) == 0)) {
     buf[0] = 0x00;
     buf[1] = 0x00;
@@ -510,33 +408,24 @@ int sx128x::endPacket()
   mask[1] = IRQ_TX_DONE_MASK_8X;
   executeOpcode(OP_CLEAR_IRQ_STATUS_8X, mask, 2);
   
-  if (timed_out) {
-    return 0;
-  } else {
-    return 1;
-  }
+  if (timed_out) { return 0; }
+  else           { return 1; }
 }
 
 uint8_t sx128x::modemStatus() {
-    // imitate the register status from the sx1276 / 78
+    // Imitate the register status from the sx1276 / 78
     uint8_t buf[2] = {0};
-
     executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
-
     uint8_t clearbuf[2] = {0};
-
     uint8_t byte = 0x00;
 
     if ((buf[0] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
         byte = byte | 0x01 | 0x04;
-        // clear register after reading
+        // Clear register after reading
         clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X;
     }
 
-    if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) {
-        byte = byte | 0x02 | 0x04;
-    }
-
+    if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) { byte = byte | 0x02 | 0x04; }
     executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
 
     return byte;
@@ -563,7 +452,7 @@ uint8_t sx128x::packetRssiRaw() {
 }
 
 int ISR_VECT sx128x::packetRssi(uint8_t pkt_snr_raw) {
-    // may need more calculations here
+    // TODO: May need more calculations here
     uint8_t buf[5] = {0};
     executeOpcodeRead(OP_PACKET_STATUS_8X, buf, 5);
     int pkt_rssi = -buf[0] / 2;
@@ -582,79 +471,63 @@ float ISR_VECT sx128x::packetSnr() {
     return float(buf[1]) * 0.25;
 }
 
-long sx128x::packetFrequencyError()
-{
+long sx128x::packetFrequencyError() {
+  // TODO: implement this, page 120 of sx1280 datasheet
   int32_t freqError = 0;
-  // todo: implement this, page 120 of sx1280 datasheet
   const float fError = 0.0;
   return static_cast<long>(fError);
 }
 
-size_t sx128x::write(uint8_t byte)
-{
-  return write(&byte, sizeof(byte));
-}
+void sx128x::flush() { }
 
-size_t sx128x::write(const uint8_t *buffer, size_t size)
-{
+int ISR_VECT sx128x::available() { return _rxPacketLength - _packetIndex; }
+
+size_t sx128x::write(uint8_t byte) { return write(&byte, sizeof(byte)); }
+
+size_t sx128x::write(const uint8_t *buffer, size_t size) {
   if ((_payloadLength + size) > MAX_PKT_LENGTH) {
       size = MAX_PKT_LENGTH - _payloadLength;
   }
 
-  // write data
   writeBuffer(buffer, size);
   _payloadLength = _payloadLength + size;
   return size;
 }
 
-int ISR_VECT sx128x::available()
-{
-    return _rxPacketLength - _packetIndex;
-}
+int ISR_VECT sx128x::read() {
+  if (!available()) { return -1; }
 
-int ISR_VECT sx128x::read()
-{
-    if (!available()) {
-        return -1;
+  // If received new packet
+  if (_packetIndex == 0) {
+    uint8_t rxbuf[2] = {0};
+    executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
+    int size;
+    
+    // If implicit header mode is enabled, read packet length as payload length instead.
+    // See SX1280 datasheet v3.2, page 92
+    if (_implicitHeaderMode == 0x80) {
+      size = _payloadLength;
+    } else {
+      size = rxbuf[0];
     }
 
-    // if received new packet
-    if (_packetIndex == 0) {
-        uint8_t rxbuf[2] = {0};
-        executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
-        int size;
-        // If implicit header mode is enabled, read packet length as payload length instead.
-        // See SX1280 datasheet v3.2, page 92
-        if (_implicitHeaderMode == 0x80) {
-            size = _payloadLength;
-        } else {
-            size = rxbuf[0];
-        }
-        _fifo_rx_addr_ptr = rxbuf[1];
+    _fifo_rx_addr_ptr = rxbuf[1];
+    if (size > 255) { size = 255; }
 
-        if (size > 255) {
-            size = 255;
-        }
-
-        readBuffer(_packet, size);
-    }
-
-    uint8_t byte = _packet[_packetIndex];
-    _packetIndex++;
-    return byte;
-}
-
-int sx128x::peek()
-{
-  if (!available()) {
-    return -1;
+    readBuffer(_packet, size);
   }
 
+  uint8_t byte = _packet[_packetIndex];
+  _packetIndex++;
+  return byte;
+}
+
+int sx128x::peek() {
+  if (!available()) { return -1; }
   uint8_t b = _packet[_packetIndex];
   return b;
 }
 
-void sx128x::flush() { }
 
 void sx128x::onReceive(void(*callback)(int)) {
   _onReceive = callback;
@@ -662,10 +535,10 @@ void sx128x::onReceive(void(*callback)(int)) {
   if (callback) {
     pinMode(_dio0, INPUT);
 
-    // set preamble and header detection irqs, plus dio0 mask
+    // Set preamble and header detection irqs, plus dio0 mask
     uint8_t buf[8];
 
-    // set irq masks, enable all
+    // Set irq masks, enable all
     buf[0] = 0xFF; 
     buf[1] = 0xFF;
 
@@ -680,11 +553,11 @@ void sx128x::onReceive(void(*callback)(int)) {
     buf[2] = 0x00;
     buf[3] = IRQ_RX_DONE_MASK_8X | IRQ_HEADER_ERROR_MASK_8X; 
 
-    // set dio1 masks
+    // Set dio1 masks
     buf[4] = 0x00; 
     buf[5] = 0x00;
 
-    // set dio2 masks
+    // Set dio2 masks
     buf[6] = 0x00; 
     buf[7] = 0x00;
 
@@ -704,12 +577,10 @@ void sx128x::onReceive(void(*callback)(int)) {
   }
 }
 
-void sx128x::receive(int size)
-{
+void sx128x::receive(int size) {
   if (size > 0) {
     implicitHeaderMode();
-
-    // tell radio payload length
+    // Tell radio payload length
     //_rxPacketLength = size;
     //_payloadLength = size;
     //setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
@@ -719,40 +590,20 @@ void sx128x::receive(int size)
 
   rxAntEnable();
 
-    // On the SX1280, there is a bug which can cause the busy line
-    // to remain high if a high amount of packets are received when
-    // in continuous RX mode. This is documented as Errata 16.1 in
-    // the SX1280 datasheet v3.2 (page 149)
-    // Therefore, the modem is set to single RX mode below instead.
-    uint8_t mode[3] = {0}; // single RX mode
-    executeOpcode(OP_RX_8X, mode, 3);
+  // On the SX1280, there is a bug which can cause the busy line
+  // to remain high if a high amount of packets are received when
+  // in continuous RX mode. This is documented as Errata 16.1 in
+  // the SX1280 datasheet v3.2 (page 149)
+  // Therefore, the modem is set to single RX mode below instead.
+  uint8_t mode[3] = {0}; // single RX mode
+  executeOpcode(OP_RX_8X, mode, 3);
 }
 
-void sx128x::standby()
-{
+void sx128x::standby() {
     uint8_t byte;
-    if (_tcxo) {
-          // STDBY_XOSC
-          byte = 0x01;
-    } else {
-          // STDBY_RC
-          byte = 0x00;
-    }
-      executeOpcode(OP_STANDBY_8X, &byte, 1); 
-}
-
-void sx128x::sleep()
-{
-    uint8_t byte = 0x00;
-    executeOpcode(OP_SLEEP_8X, &byte, 1);
-}
-
-void sx128x::enableTCXO() {
-    // todo: need to check how to implement on sx1280
-}
-
-void sx128x::disableTCXO() {
-    // todo: need to check how to implement on sx1280
+    if (_tcxo) { byte = 0x01; } // STDBY_XOSC
+    else       { byte = 0x00; } // STDBY_RC
+    executeOpcode(OP_STANDBY_8X, &byte, 1); 
 }
 
 void sx128x::setPins(int ss, int reset, int dio0, int busy, int rxen, int txen) {
@@ -766,211 +617,196 @@ void sx128x::setPins(int ss, int reset, int dio0, int busy, int rxen, int txen) 
 
 void sx128x::setTxPower(int level, int outputPin) {
     uint8_t tx_buf[2];
-    #if BOARD_VARIANT == MODEL_13 || BOARD_VARIANT == MODEL_21
+
     // RAK4631 with WisBlock SX1280 module (LIBSYS002)
-    if (level > 27) {
-        level = 27;
-    } else if (level < 0) {
-        level = 0;
-    }
+    #if BOARD_VARIANT == MODEL_13 || BOARD_VARIANT == MODEL_21
+      if (level > 27)     { level = 27; }
+      else if (level < 0) { level = 0; }
 
-    _txp = level;
-
-    int reg_value;
-
-    switch (level) {
+      _txp = level;
+      int reg_value;
+      switch (level) {
         case 0:
-            reg_value = -18;
-            break;
+          reg_value = -18;
+          break;
         case 1:
-            reg_value = -16;
-            break;
+          reg_value = -16;
+          break;
         case 2:
-            reg_value = -15;
-            break;
+          reg_value = -15;
+          break;
         case 3:
-            reg_value = -14;
-            break;
+          reg_value = -14;
+          break;
         case 4:
-            reg_value = -13;
-            break;
+          reg_value = -13;
+          break;
         case 5:
-            reg_value = -12;
-            break;
+          reg_value = -12;
+          break;
         case 6:
-            reg_value = -11;
-            break;
+          reg_value = -11;
+          break;
         case 7:
-            reg_value = -9;
-            break;
+          reg_value = -9;
+          break;
         case 8:
-            reg_value = -8;
-            break;
+          reg_value = -8;
+          break;
         case 9:
-            reg_value = -7;
-            break;
+          reg_value = -7;
+          break;
         case 10:
-            reg_value = -6;
-            break;
+          reg_value = -6;
+          break;
         case 11:
-            reg_value = -5;
-            break;
+          reg_value = -5;
+          break;
         case 12:
-            reg_value = -4;
-            break;
+          reg_value = -4;
+          break;
         case 13:
-            reg_value = -3;
-            break;
+          reg_value = -3;
+          break;
         case 14:
-            reg_value = -2;
-            break;
+          reg_value = -2;
+          break;
         case 15:
-            reg_value = -1;
-            break;
+          reg_value = -1;
+          break;
         case 16:
-            reg_value = 0;
-            break;
+          reg_value = 0;
+          break;
         case 17:
-            reg_value = 1;
-            break;
+          reg_value = 1;
+          break;
         case 18:
-            reg_value = 2;
-            break;
+          reg_value = 2;
+          break;
         case 19:
-            reg_value = 3;
-            break;
+          reg_value = 3;
+          break;
         case 20:
-            reg_value = 4;
-            break;
+          reg_value = 4;
+          break;
         case 21:
-            reg_value = 5;
-            break;
+          reg_value = 5;
+          break;
         case 22:
-            reg_value = 6;
-            break;
+          reg_value = 6;
+          break;
         case 23:
-            reg_value = 7;
-            break;
+          reg_value = 7;
+          break;
         case 24:
-            reg_value = 8;
-            break;
+          reg_value = 8;
+          break;
         case 25:
-            reg_value = 9;
-            break;
+          reg_value = 9;
+          break;
         case 26:
-            reg_value = 12;
-            break;
+          reg_value = 12;
+          break;
         case 27:
-            reg_value = 13;
-            break;
+          reg_value = 13;
+          break;
         default:
-            reg_value = 0;
-            break;
-    }
+          reg_value = 0;
+          break;
+      }
 
-    tx_buf[0] = reg_value + 18;
-    tx_buf[1] = 0xE0; // ramping time - 20 microseconds
+      tx_buf[0] = reg_value + 18;
+      tx_buf[1] = 0xE0; // ramping time - 20 microseconds
+      executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
 
-    executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
-
-    #elif BOARD_VARIANT == MODEL_AC
     // T3S3 SX1280 PA
+    #elif BOARD_VARIANT == MODEL_AC
       if (level > 20) { level = 20; }
       else if (level < 0) { level = 0; }
 
       _txp = level;
-
       int reg_value;
-
       switch (level) {
-          /*case 0:
-              reg_value = -18;
-              break;
-          case 1:
-              reg_value = -17;
-              break;
-          case 2:
-              reg_value = -16;
-              break;
-          case 3:
-              reg_value = -15;
-              break;
-          case 4:
-              reg_value = -14;
-              break;
-          case 5:
-              reg_value = -13;
-              break;
-          case 6:
-              reg_value = -12;
-              break;
-          case 7:
-              reg_value = -10;
-              break;
-          case 8:
-              reg_value = -9;
-              break;
-          case 9:
-              reg_value = -8;
-              break;
-          case 10:
-              reg_value = -7;
-              break;
-          case 11:
-              reg_value = -6;
-              break;
-          case 12:
-              reg_value = -5;
-              break;
-          case 13:
-              reg_value = -4;
-              break;
-          case 14:
-              reg_value = -3;
-              break;
-          case 15:
-              reg_value = -2;
-              break;
-          case 16:
-              reg_value = -1;
-              break;
-          case 17:
-              reg_value = 0;
-              break;
-          case 18:
-              reg_value = 1;
-              break;
-          case 19:
-              reg_value = 2;
-              break;*/
-          case 20:
-              reg_value = 3;
-              break;
-          default:
-              reg_value = 0;
-              break;
+        case 0:
+          reg_value = -18;
+          break;
+        case 1:
+          reg_value = -17;
+          break;
+        case 2:
+          reg_value = -16;
+          break;
+        case 3:
+          reg_value = -15;
+          break;
+        case 4:
+          reg_value = -14;
+          break;
+        case 5:
+          reg_value = -13;
+          break;
+        case 6:
+          reg_value = -12;
+          break;
+        case 7:
+          reg_value = -10;
+          break;
+        case 8:
+          reg_value = -9;
+          break;
+        case 9:
+          reg_value = -8;
+          break;
+        case 10:
+          reg_value = -7;
+          break;
+        case 11:
+          reg_value = -6;
+          break;
+        case 12:
+          reg_value = -5;
+          break;
+        case 13:
+          reg_value = -4;
+          break;
+        case 14:
+          reg_value = -3;
+          break;
+        case 15:
+          reg_value = -2;
+          break;
+        case 16:
+          reg_value = -1;
+          break;
+        case 17:
+          reg_value = 0;
+          break;
+        case 18:
+          reg_value = 1;
+          break;
+        case 19:
+          reg_value = 2;
+          break;
+        case 20:
+          reg_value = 3;
+          break;
+        default:
+          reg_value = 0;
+          break;
       }
-
       tx_buf[0] = reg_value;
       tx_buf[1] = 0xE0; // ramping time - 20 microseconds
-    #else
+
     // For SX1280 boards with no specific PA requirements
-      if (level > 13) {
-          level = 13;
-      } else if (level < -18) {
-          level = -18;
-      }
-
+    #else
+      if (level > 13)       { level = 13; }
+      else if (level < -18) { level = -18; }
       _txp = level;
-
       tx_buf[0] = level + 18;
       tx_buf[1] = 0xE0; // ramping time - 20 microseconds
     #endif
+    
     executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
-}
-
-uint8_t sx128x::getTxPower() {
-      return _txp;
 }
 
 void sx128x::setFrequency(uint32_t frequency) {
@@ -991,135 +827,85 @@ uint32_t sx128x::getFrequency() {
 }
 
 void sx128x::setSpreadingFactor(int sf) {
-  if (sf < 5) {
-      sf = 5;
-  } else if (sf > 12) {
-    sf = 12;
-  }
-
+  if (sf < 5) { sf = 5; }
+  else if (sf > 12) { sf = 12; }
   _sf = sf;
 
   setModulationParams(sf, _bw, _cr);
   handleLowDataRate();
 }
 
-uint8_t sx128x::getSpreadingFactor() { return _sf; }
-
 uint32_t sx128x::getSignalBandwidth() {
   int bw = _bw;
   switch (bw) {
-      case 0x34: return 203.125E3;
-      case 0x26: return 406.25E3;
-      case 0x18: return 812.5E3;
-      case 0x0A: return 1625E3;
+    case 0x34: return 203.125E3;
+    case 0x26: return 406.25E3;
+    case 0x18: return 812.5E3;
+    case 0x0A: return 1625E3;
   }
   
   return 0;
 }
 
-void sx128x::handleLowDataRate(){
-    // todo: do i need this??
-}
+// TODO: Is this needed for SX1280?
+void sx128x::handleLowDataRate() { }
 
-void sx128x::optimizeModemSensitivity(){
-    // todo: check if there's anything the sx1280 can do here
-}
+// TODO: Check if there's anything the sx1280 can do here
+void sx128x::optimizeModemSensitivity() { }
 
-void sx128x::setSignalBandwidth(uint32_t sbw)
-{
-      if (sbw <= 203.125E3) {
-          _bw = 0x34;
-      } else if (sbw <= 406.25E3) {
-          _bw = 0x26;
-      } else if (sbw <= 812.5E3) {
-          _bw = 0x18;
-      } else {
-          _bw = 0x0A;
-      }
+void sx128x::setSignalBandwidth(uint32_t sbw) {
+  if      (sbw <= 203.125E3) { _bw = 0x34; }
+  else if (sbw <= 406.25E3)  { _bw = 0x26; }
+  else if (sbw <= 812.5E3)   { _bw = 0x18; }
+  else                       { _bw = 0x0A; }
 
-      setModulationParams(_sf, _bw, _cr);
-
+  setModulationParams(_sf, _bw, _cr);
   handleLowDataRate();
   optimizeModemSensitivity();
 }
 
-void sx128x::setCodingRate4(int denominator)
-{
-  if (denominator < 5) {
-    denominator = 5;
-  } else if (denominator > 8) {
-    denominator = 8;
-  }
-
+// TODO: add support for new interleaving scheme, see page 117 of sx1280 datasheet
+void sx128x::setCodingRate4(int denominator) {
+  if (denominator < 5) { denominator = 5; }
+  else if (denominator > 8) { denominator = 8; }
   _cr = denominator - 4;
-
-  // todo: add support for new interleaving scheme, see page 117 of sx1280
-  // datasheet
-
-  // update cr values for sx1280's use
-
   setModulationParams(_sf, _bw, _cr);
 }
 
-uint8_t sx128x::getCodingRate4()
-{
-    return _cr + 4;
-}
+uint8_t sx128x::getCodingRate4() { return _cr + 4; }
 
-void sx128x::setPreambleLength(long length)
-{
+void sx128x::setPreambleLength(long length) {
   _preambleLength = length;
   setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
 }
 
-void sx128x::setSyncWord(int sw)
-{
-    // not implemented
-}
+// TODO: Implement
+void sx128x::setSyncWord(int sw) { }
 
-void sx128x::enableCrc() {
-      _crcMode = 0x20;
-      setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
-}
+// TODO: need to check how to implement on sx1280
+void sx128x::enableTCXO() { }
 
-void sx128x::disableCrc() {
-    _crcMode = 0;
-    setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
-}
+// TODO: need to check how to implement on sx1280
+void sx128x::disableTCXO() { }
 
-uint8_t sx128x::random() {
-    // todo: implement
-    return 0x4; //chosen  by fair die roll
-                //guarenteed to be random
-                //https://xkcd.com/221/
-}
+void sx128x::sleep() { uint8_t byte = 0x00; executeOpcode(OP_SLEEP_8X, &byte, 1); }
 
-void sx128x::setSPIFrequency(uint32_t frequency)
-{
-  _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0);
-}
+uint8_t sx128x::getTxPower() { return _txp; }
 
-void sx128x::dumpRegisters(Stream& out)
-{
-  for (int i = 0; i < 128; i++) {
-    out.print("0x");
-    out.print(i, HEX);
-    out.print(": 0x");
-    out.println(readRegister(i), HEX);
-  }
-}
+uint8_t sx128x::getSpreadingFactor() { return _sf; }
 
-void sx128x::explicitHeaderMode()
-{
-  _implicitHeaderMode = 0;
+void sx128x::enableCrc() { _crcMode = 0x20; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
 
-  setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
-}
+void sx128x::disableCrc() { _crcMode = 0; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
 
-void sx128x::implicitHeaderMode()
-{
-    _implicitHeaderMode = 0x80;
-    setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+void sx128x::setSPIFrequency(uint32_t frequency) { _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0); }
+
+void sx128x::explicitHeaderMode() {  _implicitHeaderMode = 0; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
+
+void sx128x::implicitHeaderMode() { _implicitHeaderMode = 0x80; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
+
+void sx128x::dumpRegisters(Stream& out) { 
+  for (int i = 0; i < 128; i++) { out.print("0x"); out.print(i, HEX); out.print(": 0x"); out.println(readRegister(i), HEX); }
 }
 
 sx128x sx128x_modem;
