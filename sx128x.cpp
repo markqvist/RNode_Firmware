@@ -683,11 +683,15 @@ void sx128x::disableTCXO() {
 }
 
 void sx128x::setTxPower(int level, int outputPin) {
+  #if HAS_PA == true
+    if (level > pa_max_input) { level = pa_max_input; }
+  #else
     if (level > 13) {
         level = 13;
     } else if (level < -18) {
         level = -18;
     }
+  #endif
 
     _txp = level;
 

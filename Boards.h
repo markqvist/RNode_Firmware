@@ -46,6 +46,7 @@
   #define MODEL_A5            0xA5 // RNode v2.2, 433 MHz with SX1278
   #define MODEL_A6            0xA6 // RNode v2.2, 868 MHz with SX1262
   #define MODEL_AA            0xAA // RNode v2.2, 868 MHz with SX1276
+  #define MODEL_AB            0xAB // RNode v2.2, 2.4 GHz with SX1280
 
   #define PRODUCT_TBEAM       0xE0 // T-Beam devices
   #define BOARD_TBEAM         0x33
@@ -437,6 +438,17 @@
         const int pin_busy = 34;
         const int pin_dio = 33;
         const int pin_tcxo_enable = -1;
+      #elif MODEM == SX1280
+        #define DIO2_AS_RF_SWITCH true
+        #define HAS_BUSY true
+        #define HAS_TCXO true
+        #define HAS_PA true
+        const int pa_max_input = 3;
+        const int pin_busy = 36;
+        const int pin_dio = 9;
+        const int pin_tcxo_enable = -1;
+        const int pin_rxen = -1;
+        const int pin_txen = -1;
       #else
         const int pin_dio = 9;
       #endif
