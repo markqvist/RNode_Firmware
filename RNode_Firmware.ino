@@ -769,6 +769,12 @@ void serialCallback(uint8_t sbyte) {
         int txp = sbyte;
         #if MODEM == SX1262
           if (txp > 22) txp = 22;
+        #elif MODEM == SX1280
+          #if HAS_PA
+            if (txp > 20) txp = 20;
+          #else
+            if (txp > 13) txp = 13;
+          #endif
         #else
           if (txp > 17) txp = 17;
         #endif

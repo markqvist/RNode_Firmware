@@ -1095,11 +1095,17 @@ void updateBitrate() {
 			if (csma_slot_ms > CSMA_SLOT_MAX_MS) { csma_slot_ms = CSMA_SLOT_MAX_MS; }
 			if (csma_slot_ms < CSMA_SLOT_MIN_MS) { csma_slot_ms = CSMA_SLOT_MIN_MS; }
 			float target_preamble_symbols = (LORA_PREAMBLE_TARGET_MS/lora_symbol_time_ms)-LORA_PREAMBLE_SYMBOLS_HW;
-			if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) {
-				target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN;
-			} else {
-				target_preamble_symbols = ceil(target_preamble_symbols);
-			}
+			
+			#if MODEM == SX1280
+				target_preamble_symbols = 12;
+			#else
+				if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) {
+					target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN;
+				} else {
+					target_preamble_symbols = ceil(target_preamble_symbols);
+				}
+			#endif
+			
 			lora_preamble_symbols = (long)target_preamble_symbols;
 			setPreamble();
 		} else {
