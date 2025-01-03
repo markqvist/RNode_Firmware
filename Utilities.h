@@ -1156,7 +1156,7 @@ void setTXPower() {
 		if (model == MODEL_A8) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_A9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_AA) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_AB) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_AC) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
 		if (model == MODEL_BA) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 		if (model == MODEL_BB) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
@@ -1422,7 +1422,7 @@ bool eeprom_model_valid() {
 	#elif BOARD_MODEL == BOARD_RNODE_NG_21
 	if (model == MODEL_A2 || model == MODEL_A7) {
 	#elif BOARD_MODEL == BOARD_RNODE_NG_22
-	if (model == MODEL_A1 || model == MODEL_A6 || model == MODEL_A5 || model == MODEL_AA || model == MODEL_AB) {
+	if (model == MODEL_A1 || model == MODEL_A6 || model == MODEL_A5 || model == MODEL_AA || model == MODEL_AC) {
 	#elif BOARD_MODEL == BOARD_HMBRW
 	if (model == MODEL_FF || model == MODEL_FE) {
 	#elif BOARD_MODEL == BOARD_TBEAM
