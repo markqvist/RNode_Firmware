@@ -38,6 +38,7 @@
   #define ISR_VECT
 #endif
 
+// SX128x registers
 #define OP_RF_FREQ_8X               0x86
 #define OP_SLEEP_8X                 0x84
 #define OP_STANDBY_8X               0x80
@@ -111,34 +112,52 @@ sx128x::sx128x() :
   setTimeout(0);
 }
 
-void ISR_VECT sx128x::onDio0Rise() { sx128x_modem.handleDio0Rise(); }
-void sx128x::handleDio0Rise() {
+bool ISR_VECT sx128x::getPacketValidity() {
     uint8_t buf[2];
 
     buf[0] = 0x00;
     buf[1] = 0x00;
 
     executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
+
     executeOpcode(OP_CLEAR_IRQ_STATUS_8X, buf, 2);
+
     if ((buf[1] & IRQ_PAYLOAD_CRC_ERROR_MASK_8X) == 0) {
-        // received a packet
-        _packetIndex = 0;
+        return true;
+    } else {
+        return false;
+    }
+}
 
-        uint8_t rxbuf[2] = {0};
-        executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
+void ISR_VECT sx128x::onDio0Rise() {
+    BaseType_t int_status = taskENTER_CRITICAL_FROM_ISR();
+    if (sx128x_modem.getPacketValidity()) { sx128x_modem.handleDio0Rise(); }
+    // On the SX1280, there is a bug which can cause the busy line
+    // to remain high if a high amount of packets are received when
+    // in continuous RX mode. This is documented as Errata 16.1 in
+    // the SX1280 datasheet v3.2 (page 149)
+    // Therefore, the modem is set into receive mode each time a packet is received.
+    sx128x_modem.receive();
+    taskEXIT_CRITICAL_FROM_ISR(int_status);
+}
 
+void sx128x::handleDio0Rise() {
+    // received a packet
+    _packetIndex = 0;
+
+    uint8_t rxbuf[2] = {0};
+    executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
+
+    // If implicit header mode is enabled, read packet length as payload length instead.
+    // See SX1280 datasheet v3.2, page 92
+    if (_implicitHeaderMode == 0x80) {
+        _rxPacketLength = _payloadLength;
+    } else {
         _rxPacketLength = rxbuf[0];
-        _fifo_rx_addr_ptr = rxbuf[1];
-        readBuffer(_packet, _rxPacketLength);
+    }
 
-        // On the SX1280, there is a bug which can cause the busy line
-        // to remain high if a high amount of packets are received when
-        // in continuous RX mode. This is documented as Errata 16.1 in
-        // the SX1280 datasheet v3.2 (page 149)
-        // Therefore, the modem is set into receive mode each time a packet is received.
-        receive(0);
-
-        if (_onReceive) { _onReceive(_rxPacketLength); }
+    if (_onReceive) {
+        _onReceive(_rxPacketLength);
     }
 }
 
@@ -209,14 +228,24 @@ uint8_t ISR_VECT sx128x::singleTransfer(uint8_t opcode, uint16_t address, uint8_
     return response;
 }
 
-void sx128x::rxAntEnable() {
-    if (_txen != -1) { digitalWrite(_txen, LOW); }
-    if (_rxen != -1) { digitalWrite(_rxen, HIGH); }
+void sx128x::rxAntEnable()
+{
+    if (_txen != -1) {
+        digitalWrite(_txen, LOW);
+    }
+    if (_rxen != -1) {
+        digitalWrite(_rxen, HIGH);
+    }
 }
 
-void sx128x::txAntEnable() {
-    if (_txen != -1) { digitalWrite(_txen, HIGH); }
-    if (_rxen != -1) { digitalWrite(_rxen, LOW); }
+void sx128x::txAntEnable()
+{
+    if (_txen != -1) {
+        digitalWrite(_txen, HIGH);
+    }
+    if (_rxen != -1) {
+        digitalWrite(_rxen, LOW);
+    }
 }
 
 void sx128x::loraMode() {
@@ -341,29 +370,23 @@ void sx128x::setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t leng
   // because there is no access to these registers on the sx1280, we have
   // to set all these parameters at once or not at all.
   uint8_t buf[7];
-
   // calculate exponent and mantissa values for modem
-  // uint8_t e = 1;
-  // uint8_t m = 1;
-  // uint32_t preamblelen;
+  uint8_t e = 1;
+  uint8_t m = 1;
+  uint32_t preamblelen;
 
-  // while (e <= 15) {
-  //     while (m <= 15) {
-  //         preamblelen = m * (pow(2,e));
-  //         if (preamblelen >= preamble) break;
-  //         m++;
-  //     }
-  //     if (preamblelen >= preamble) break;
-  //     m = 0;
-  //     e++;
-  // }
+  while (e <= 15) {
+      while (m <= 15) {
+          preamblelen = m * (pow(2,e));
+          if (preamblelen >= preamble) break;
+          m++;
+      }
+      if (preamblelen >= preamble) break;
+      m = 0;
+      e++;
+  }
 
-  // Serial.printf("Calculated preamble: %d\r\n", preamblelen);
-  // Serial.printf("Reg value: %d\r\n", (e << 4) | m);
-
-  // TODO: Remove / clean
-  //buf[0] = (e << 4) | m;
-  buf[0] = 0x1C;
+  buf[0] = (e << 4) | m;
   buf[1] = headermode;
   buf[2] = length;
   buf[3] = crc;
@@ -402,7 +425,9 @@ int sx128x::begin(unsigned long frequency)
   loraMode();
   rxAntEnable();
 
-  setFrequency(_frequency);
+  Serial.printf("Setting freq to %d\r\n", _frequency);
+  Serial.printf("Should be %d\r\n", frequency);
+  setFrequency(frequency);
 
   // set LNA boost
   // todo: implement this
@@ -537,14 +562,6 @@ uint8_t sx128x::packetRssiRaw() {
     return buf[0];
 }
 
-int ISR_VECT sx128x::packetRssi() {
-    // may need more calculations here
-    uint8_t buf[5] = {0};
-    executeOpcodeRead(OP_PACKET_STATUS_8X, buf, 5);
-    int pkt_rssi = -buf[0] / 2;
-    return pkt_rssi;
-}
-
 int ISR_VECT sx128x::packetRssi(uint8_t pkt_snr_raw) {
     // may need more calculations here
     uint8_t buf[5] = {0};
@@ -561,7 +578,7 @@ uint8_t ISR_VECT sx128x::packetSnrRaw() {
 
 float ISR_VECT sx128x::packetSnr() {
     uint8_t buf[5] = {0};
-    executeOpcodeRead(OP_PACKET_STATUS_8X, buf, 3);
+    executeOpcodeRead(OP_PACKET_STATUS_8X, buf, 5);
     return float(buf[1]) * 0.25;
 }
 
@@ -590,17 +607,41 @@ size_t sx128x::write(const uint8_t *buffer, size_t size)
   return size;
 }
 
-int ISR_VECT sx128x::available() { return _rxPacketLength - _packetIndex; }
+int ISR_VECT sx128x::available()
+{
+    return _rxPacketLength - _packetIndex;
+}
 
 int ISR_VECT sx128x::read()
 {
-  if (!available()) {
-    return -1;
-  }
+    if (!available()) {
+        return -1;
+    }
 
-  uint8_t byte = _packet[_packetIndex];
-  _packetIndex++;
-  return byte;
+    // if received new packet
+    if (_packetIndex == 0) {
+        uint8_t rxbuf[2] = {0};
+        executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
+        int size;
+        // If implicit header mode is enabled, read packet length as payload length instead.
+        // See SX1280 datasheet v3.2, page 92
+        if (_implicitHeaderMode == 0x80) {
+            size = _payloadLength;
+        } else {
+            size = rxbuf[0];
+        }
+        _fifo_rx_addr_ptr = rxbuf[1];
+
+        if (size > 255) {
+            size = 255;
+        }
+
+        readBuffer(_packet, size);
+    }
+
+    uint8_t byte = _packet[_packetIndex];
+    _packetIndex++;
+    return byte;
 }
 
 int sx128x::peek()
@@ -650,10 +691,9 @@ void sx128x::onReceive(void(*callback)(int)) {
     executeOpcode(OP_SET_IRQ_FLAGS_8X, buf, 8);
 
     #ifdef SPI_HAS_NOTUSINGINTERRUPT
-      _spiModem->usingInterrupt(digitalPinToInterrupt(_dio0));
+        SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
     #endif
 
-    // extern void onDio0Rise();
     attachInterrupt(digitalPinToInterrupt(_dio0), onDio0Rise, RISING);
 
   } else {
@@ -679,13 +719,13 @@ void sx128x::receive(int size)
 
   rxAntEnable();
 
-  // On the SX1280, there is a bug which can cause the busy line
-  // to remain high if a high amount of packets are received when
-  // in continuous RX mode. This is documented as Errata 16.1 in
-  // the SX1280 datasheet v3.2 (page 149)
-  // Therefore, the modem is set to single RX mode below instead.
-  uint8_t mode[3] = {0}; // single RX mode
-  executeOpcode(OP_RX_8X, mode, 3);
+    // On the SX1280, there is a bug which can cause the busy line
+    // to remain high if a high amount of packets are received when
+    // in continuous RX mode. This is documented as Errata 16.1 in
+    // the SX1280 datasheet v3.2 (page 149)
+    // Therefore, the modem is set to single RX mode below instead.
+    uint8_t mode[3] = {0}; // single RX mode
+    executeOpcode(OP_RX_8X, mode, 3);
 }
 
 void sx128x::standby()
@@ -726,7 +766,7 @@ void sx128x::setPins(int ss, int reset, int dio0, int busy, int rxen, int txen) 
 
 void sx128x::setTxPower(int level, int outputPin) {
     uint8_t tx_buf[2];
-    #if BOARD_VARIANT == MODEL_13
+    #if BOARD_VARIANT == MODEL_13 || BOARD_VARIANT == MODEL_21
     // RAK4631 with WisBlock SX1280 module (LIBSYS002)
     if (level > 27) {
         level = 27;
@@ -743,73 +783,73 @@ void sx128x::setTxPower(int level, int outputPin) {
             reg_value = -18;
             break;
         case 1:
-            reg_value = -17;
-            break;
-        case 2:
             reg_value = -16;
             break;
-        case 3:
+        case 2:
             reg_value = -15;
             break;
-        case 4:
+        case 3:
             reg_value = -14;
             break;
-        case 5:
+        case 4:
             reg_value = -13;
             break;
-        case 6:
+        case 5:
             reg_value = -12;
             break;
-        case 7:
-            reg_value = -10;
+        case 6:
+            reg_value = -11;
             break;
-        case 8:
+        case 7:
             reg_value = -9;
             break;
-        case 9:
+        case 8:
             reg_value = -8;
             break;
-        case 10:
+        case 9:
             reg_value = -7;
             break;
-        case 11:
+        case 10:
             reg_value = -6;
             break;
-        case 12:
+        case 11:
             reg_value = -5;
             break;
-        case 13:
+        case 12:
             reg_value = -4;
             break;
-        case 14:
+        case 13:
             reg_value = -3;
             break;
-        case 15:
+        case 14:
             reg_value = -2;
             break;
-        case 16:
+        case 15:
             reg_value = -1;
             break;
-        case 17:
+        case 16:
             reg_value = 0;
             break;
-        case 18:
+        case 17:
             reg_value = 1;
             break;
-        case 19:
+        case 18:
             reg_value = 2;
             break;
-        case 20:
+        case 19:
             reg_value = 3;
             break;
-        case 21:
+        case 20:
             reg_value = 4;
             break;
-        case 22:
+        case 21:
             reg_value = 5;
             break;
-        case 23:
+        case 22:
             reg_value = 6;
+            break;
+        case 23:
+            reg_value = 7;
             break;
         case 24:
             reg_value = 8;
@@ -828,103 +868,103 @@ void sx128x::setTxPower(int level, int outputPin) {
             break;
     }
 
-    tx_buf[0] = reg_value;
+    tx_buf[0] = reg_value + 18;
     tx_buf[1] = 0xE0; // ramping time - 20 microseconds
 
     executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
-    
+
+    #elif BOARD_VARIANT == MODEL_AC
     // T3S3 SX1280 PA
-    #elif BOARD_VARIANT == MODEL_AB
-        if (level > 20) { level = 20; }
-        else if (level < 0) { level = 0; }
+      if (level > 20) { level = 20; }
+      else if (level < 0) { level = 0; }
 
-        _txp = level;
-        int reg_value;
+      _txp = level;
 
-        switch (level) {
-            /*case 0:
-                reg_value = -18;
-                break;
-            case 1:
-                reg_value = -17;
-                break;
-            case 2:
-                reg_value = -16;
-                break;
-            case 3:
-                reg_value = -15;
-                break;
-            case 4:
-                reg_value = -14;
-                break;
-            case 5:
-                reg_value = -13;
-                break;
-            case 6:
-                reg_value = -12;
-                break;
-            case 7:
-                reg_value = -10;
-                break;
-            case 8:
-                reg_value = -9;
-                break;
-            case 9:
-                reg_value = -8;
-                break;
-            case 10:
-                reg_value = -7;
-                break;
-            case 11:
-                reg_value = -6;
-                break;
-            case 12:
-                reg_value = -5;
-                break;
-            case 13:
-                reg_value = -4;
-                break;
-            case 14:
-                reg_value = -3;
-                break;
-            case 15:
-                reg_value = -2;
-                break;
-            case 16:
-                reg_value = -1;
-                break;
-            case 17:
-                reg_value = 0;
-                break;
-            case 18:
-                reg_value = 1;
-                break;
-            case 19:
-                reg_value = 2;
-                break;*/
-            case 20:
-                reg_value = 3;
-                break;
-            default:
-                reg_value = 0;
-                break;
-        }
+      int reg_value;
 
-        tx_buf[0] = reg_value;
-        tx_buf[1] = 0xE0; // ramping time - 20 microseconds
-    
-    // For SX1280 boards with no specific PA requirements
+      switch (level) {
+          /*case 0:
+              reg_value = -18;
+              break;
+          case 1:
+              reg_value = -17;
+              break;
+          case 2:
+              reg_value = -16;
+              break;
+          case 3:
+              reg_value = -15;
+              break;
+          case 4:
+              reg_value = -14;
+              break;
+          case 5:
+              reg_value = -13;
+              break;
+          case 6:
+              reg_value = -12;
+              break;
+          case 7:
+              reg_value = -10;
+              break;
+          case 8:
+              reg_value = -9;
+              break;
+          case 9:
+              reg_value = -8;
+              break;
+          case 10:
+              reg_value = -7;
+              break;
+          case 11:
+              reg_value = -6;
+              break;
+          case 12:
+              reg_value = -5;
+              break;
+          case 13:
+              reg_value = -4;
+              break;
+          case 14:
+              reg_value = -3;
+              break;
+          case 15:
+              reg_value = -2;
+              break;
+          case 16:
+              reg_value = -1;
+              break;
+          case 17:
+              reg_value = 0;
+              break;
+          case 18:
+              reg_value = 1;
+              break;
+          case 19:
+              reg_value = 2;
+              break;*/
+          case 20:
+              reg_value = 3;
+              break;
+          default:
+              reg_value = 0;
+              break;
+      }
+
+      tx_buf[0] = reg_value;
+      tx_buf[1] = 0xE0; // ramping time - 20 microseconds
     #else
-        if (level > 13) {
-            level = 13;
-        } else if (level < -18) {
-            level = -18;
-        }
+    // For SX1280 boards with no specific PA requirements
+      if (level > 13) {
+          level = 13;
+      } else if (level < -18) {
+          level = -18;
+      }
 
-        _txp = level;
+      _txp = level;
 
-        tx_buf[0] = level;
-        tx_buf[1] = 0xE0; // ramping time - 20 microseconds
+      tx_buf[0] = level + 18;
+      tx_buf[1] = 0xE0; // ramping time - 20 microseconds
     #endif
     executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
 }
@@ -977,13 +1017,16 @@ uint32_t sx128x::getSignalBandwidth() {
   return 0;
 }
 
-// todo: do i need this??
-void sx128x::handleLowDataRate() { }
+void sx128x::handleLowDataRate(){
+    // todo: do i need this??
+}
 
-// todo: check if there's anything the sx1280 can do here
-void sx128x::optimizeModemSensitivity() { }
+void sx128x::optimizeModemSensitivity(){
+    // todo: check if there's anything the sx1280 can do here
+}
 
-void sx128x::setSignalBandwidth(uint32_t sbw) {
+void sx128x::setSignalBandwidth(uint32_t sbw)
+{
       if (sbw <= 203.125E3) {
           _bw = 0x34;
       } else if (sbw <= 406.25E3) {
@@ -1018,9 +1061,13 @@ void sx128x::setCodingRate4(int denominator)
   setModulationParams(_sf, _bw, _cr);
 }
 
-uint8_t sx128x::getCodingRate4() { return _cr + 4; }
+uint8_t sx128x::getCodingRate4()
+{
+    return _cr + 4;
+}
 
-void sx128x::setPreambleLength(long length) {
+void sx128x::setPreambleLength(long length)
+{
   _preambleLength = length;
   setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
 }
@@ -1030,21 +1077,21 @@ void sx128x::setSyncWord(int sw)
     // not implemented
 }
 
-void sx128x::enableCrc()
-{
+void sx128x::enableCrc() {
       _crcMode = 0x20;
       setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 }
 
-void sx128x::disableCrc()
-{
+void sx128x::disableCrc() {
     _crcMode = 0;
     setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 }
 
-byte sx128x::random()
-{
+uint8_t sx128x::random() {
     // todo: implement
+    return 0x4; //chosen  by fair die roll
+                //guarenteed to be random
+                //https://xkcd.com/221/
 }
 
 void sx128x::setSPIFrequency(uint32_t frequency)
@@ -1073,17 +1120,6 @@ void sx128x::implicitHeaderMode()
 {
     _implicitHeaderMode = 0x80;
     setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
-}
-
-void sx128x::clearIRQStatus() {
-    uint8_t buf[2];
-
-    buf[0] = 0x00;
-    buf[1] = 0x00;
-
-    executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
-
-    executeOpcode(OP_CLEAR_IRQ_STATUS_8X, buf, 2);
 }
 
 sx128x sx128x_modem;

@@ -106,6 +106,7 @@ private:
   void explicitHeaderMode();
   void implicitHeaderMode();
 
+  bool getPacketValidity();
   void handleDio0Rise();
 
   uint8_t readRegister(uint16_t address);
