@@ -390,6 +390,9 @@ void fillRect(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colo
 
 // draws a bitmap to the display and auto scales it based on the boards configured DISPLAY_SCALE
 void drawBitmap(int16_t startX, int16_t startY, const uint8_t* bitmap, int16_t bitmapWidth, int16_t bitmapHeight, uint16_t foregroundColour, uint16_t backgroundColour) {
+  #if DISPLAY_SCALE == 1
+    display.drawBitmap(startX, startY, bitmap, bitmapWidth, bitmapHeight, foregroundColour, backgroundColour);
+  #else
     for(int16_t row = 0; row < bitmapHeight; row++){
         for(int16_t col = 0; col < bitmapWidth; col++){
 
@@ -408,6 +411,7 @@ void drawBitmap(int16_t startX, int16_t startY, const uint8_t* bitmap, int16_t b
 
         }
     }
+  #endif
 }
 
 void draw_cable_icon(int px, int py) {
