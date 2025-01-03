@@ -46,6 +46,10 @@ prep-samd:
 prep-nrf:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install rakwireless:nrf52 --config-file arduino-cli.yaml
+	arduino-cli core install Heltec_nRF52:Heltec_nRF52 --config-file arduino-cli.yaml
+	arduino-cli config set library.enable_unsafe_install true
+	arduino-cli lib install --git-url https://github.com/liamcottle/st7789#b8e7e076714b670764139289d3829b0beff67edb
+	arduino-cli lib install --git-url https://github.com/liamcottle/esp8266-oled-ssd1306#e16cee124fe26490cb14880c679321ad8ac89c95
 	pip install adafruit-nrfutil --upgrade
 
 console-site:
@@ -131,6 +135,9 @@ firmware-genericesp32: check_bt_buffers
 
 firmware-rak4631:
 	arduino-cli compile --log --fqbn rakwireless:nrf52:WisCoreRAK4631Board -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x51\""
+
+firmware-heltec-t114:
+	arduino-cli compile --log --fqbn heltec:Heltec_nRF52:HT-n5262 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3C\""
 
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
@@ -232,7 +239,8 @@ upload-featheresp32:
 upload-rak4631:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn rakwireless:nrf52:WisCoreRAK4631Board
 
-
+upload-heltec-t114:
+	arduino-cli upload -p /dev/cu.usbmodem14401 --fqbn heltec:Heltec_nRF52:HT-n5262
 
 release: release-all
 
@@ -435,3 +443,8 @@ release-rak4631:
 	arduino-cli compile --fqbn rakwireless:nrf52:WisCoreRAK4631Board -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x51\""
 	cp build/rakwireless.nrf52.WisCoreRAK4631Board/RNode_Firmware.ino.hex build/rnode_firmware_rak4631.hex
 	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application build/rnode_firmware_rak4631.hex Release/rnode_firmware_rak4631.zip
+
+release-heltec-t114:
+	arduino-cli compile --fqbn heltec:Heltec_nRF52:HT-n5262 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3C\""
+	cp build/heltec.Heltec_nRF52.HT-n5262/RNode_Firmware.ino.hex build/rnode_firmware_heltec_t114.hex
+	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application build/rnode_firmware_heltec_t114.hex Release/rnode_firmware_heltec_t114.zip
