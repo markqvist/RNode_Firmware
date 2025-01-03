@@ -324,7 +324,7 @@ void sx126x::setPacketParams(long preamble, uint8_t headermode, uint8_t length, 
   buf[3] = length;
   buf[4] = crc;
   // standard IQ setting (no inversion)
-  buf[5] = 0x00; 
+  buf[5] = 0x00;
   // unused params
   buf[6] = 0x00; 
   buf[7] = 0x00; 
