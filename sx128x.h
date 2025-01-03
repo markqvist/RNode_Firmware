@@ -17,6 +17,7 @@
 #define LORA_DEFAULT_RXEN_PIN  -1
 #define LORA_DEFAULT_TXEN_PIN  -1
 #define LORA_DEFAULT_BUSY_PIN  -1
+#define LORA_MODEM_TIMEOUT_MS 5E3
 
 #define PA_OUTPUT_RFO_PIN      0
 #define PA_OUTPUT_PA_BOOST_PIN 1
@@ -56,21 +57,24 @@ public:
   void onReceive(void(*callback)(int));
 
   void receive(int size = 0);
-  void idle();
+  void standby();
   void sleep();
 
   bool preInit();
   uint8_t getTxPower();
   void setTxPower(int level, int outputPin = PA_OUTPUT_PA_BOOST_PIN);
   uint32_t getFrequency();
-  void setFrequency(unsigned long frequency);
+  void setFrequency(uint32_t frequency);
   void setSpreadingFactor(int sf);
-  long getSignalBandwidth();
-  void setSignalBandwidth(long sbw);
+  uint8_t getSpreadingFactor();
+  uint32_t getSignalBandwidth();
+  void setSignalBandwidth(uint32_t sbw);
   void setCodingRate4(int denominator);
+  uint8_t getCodingRate4();
   void setPreambleLength(long length);
   void setSyncWord(int sw);
   uint8_t modemStatus();
+  void clearIRQStatus();
   void enableCrc();
   void disableCrc();
   void enableTCXO();
@@ -136,7 +140,10 @@ private:
   int _fifo_rx_addr_ptr;
   uint8_t _packet[256];
   bool _preinit_done;
+  bool _tcxo;
+  bool _radio_online;
   int _rxPacketLength;
+  uint32_t _bitrate;
   void (*_onReceive)(int);
 };
 
