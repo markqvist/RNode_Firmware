@@ -453,8 +453,6 @@
         const int pin_busy = 36;
         const int pin_dio = 9;
         const int pin_tcxo_enable = -1;
-        const int pin_rxen = -1;
-        const int pin_txen = -1;
       #else
         const int pin_dio = 9;
       #endif
