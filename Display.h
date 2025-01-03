@@ -557,8 +557,11 @@ void draw_signal_bars(int px, int py) {
   }
 }
 
-#define WF_TX_SIZE 5
-#define WF_TX_WIDTH 5
+#if MODEM == SX1280
+  #define WF_TX_SIZE 3
+#else
+  #define WF_TX_SIZE 5
+#endif
 #define WF_RSSI_MAX -60
 #define WF_RSSI_MIN -135
 #define WF_RSSI_SPAN (WF_RSSI_MAX-WF_RSSI_MIN)
