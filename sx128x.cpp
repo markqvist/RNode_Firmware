@@ -823,6 +823,7 @@ void sx128x::disableCrc()
 byte sx128x::random()
 {
     // todo: implement
+    return -1;
 }
 
 void sx128x::setPins(int ss, int reset, int dio0, int busy, int rxen, int txen)
