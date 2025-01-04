@@ -161,6 +161,14 @@ void setup() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     init_channel_stats();
 
+    #if BOARD_MODEL == BOARD_RNODE_NG_22
+      #if MODEM == SX1280
+        delay(300);
+        LoRa->reset();
+        delay(100);
+      #endif
+    #endif
+
     // Check installed transceiver chip and
     // probe boot parameters.
     if (LoRa->preInit()) {
