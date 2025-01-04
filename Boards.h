@@ -445,13 +445,14 @@
         const int pin_dio = 33;
         const int pin_tcxo_enable = -1;
       #elif MODEM == SX1280
+        #define CONFIG_QUEUE_SIZE 40960
         #define DIO2_AS_RF_SWITCH false
         #define HAS_BUSY true
         #define HAS_TCXO true
         #define HAS_PA true
         const int pa_max_input = 3;
 
-        #define HAS_RF_SWITCH_RX_TX false
+        #define HAS_RF_SWITCH_RX_TX true
         const int pin_rxen = 21;
         const int pin_txen = 10;
         
@@ -619,6 +620,7 @@
 
       // Following pins are for the sx1262
       const int pin_rxen = 37;
+      const int pin_txen = -1;
       const int pin_reset = 38;
       const int pin_cs = 42;
       const int pin_sclk = 43;

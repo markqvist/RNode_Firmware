@@ -160,11 +160,11 @@ bool sx128x::preInit() {
   
   // todo: check if this change causes issues on any platforms
   #if MCU_VARIANT == MCU_ESP32
-    if (pin_sclk != -1 && pin_miso != -1 && pin_mosi != -1 && pin_cs != -1) {
+    #if BOARD_MODEL == BOARD_RNODE_NG_22 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK
       SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
-    } else {
+    #else
       SPI.begin();
-    }
+    #endif
   #else
     SPI.begin();
   #endif
