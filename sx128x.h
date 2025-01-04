@@ -25,6 +25,7 @@ public:
 
   int begin(unsigned long frequency);
   void end();
+  void reset();
 
   int beginPacket(int implicitHeader = false);
   int endPacket();

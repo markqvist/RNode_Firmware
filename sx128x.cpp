@@ -300,7 +300,7 @@ void sx128x::setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t leng
   executeOpcode(OP_PACKET_PARAMS_8X, buf, 7);
 }
 
-int sx128x::begin(unsigned long frequency) {
+void sx128x::reset() {
   if (_reset != -1) {
     pinMode(_reset, OUTPUT);
     digitalWrite(_reset, LOW);
@@ -308,6 +308,10 @@ int sx128x::begin(unsigned long frequency) {
     digitalWrite(_reset, HIGH);
     delay(10);
   }
+}
+
+int sx128x::begin(unsigned long frequency) {
+  reset();
 
   if (_rxen != -1) { pinMode(_rxen, OUTPUT); }
   if (_txen != -1) { pinMode(_txen, OUTPUT); }
