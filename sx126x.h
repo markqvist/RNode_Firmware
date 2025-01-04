@@ -1,8 +1,5 @@
-// Copyright (c) Sandeep Mistry. All rights reserved.
+// Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
-
-// Modifications and additions copyright 2024 by Mark Qvist
-// Obviously still under the MIT license.
 
 #ifndef SX126X_H
 #define SX126X_H

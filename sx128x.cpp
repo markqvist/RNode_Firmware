@@ -1,11 +1,10 @@
-// Copyright (c) Sandeep Mistry. All rights reserved.
+// Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
 
-// Modifications and additions copyright 2024 by Mark Qvist & Jacob Eva
-// Obviously still under the MIT license.
-
-#include "sx128x.h"
 #include "Boards.h"
+
+#if MODEM == SX1280
+#include "sx128x.h"
 
 #define MCU_1284P 0x91
 #define MCU_2560  0x92
@@ -44,19 +43,19 @@
 #define OP_STANDBY_8X               0x80
 #define OP_TX_8X                    0x83
 #define OP_RX_8X                    0x82
-#define OP_SET_IRQ_FLAGS_8X         0x8D // also provides info such as
+#define OP_SET_IRQ_FLAGS_8X         0x8D // Also provides info such as
                                          // preamble detection, etc for
                                          // knowing when it's safe to switch
                                          // antenna modes
 #define OP_CLEAR_IRQ_STATUS_8X      0x97
 #define OP_GET_IRQ_STATUS_8X        0x15
 #define OP_RX_BUFFER_STATUS_8X      0x17
-#define OP_PACKET_STATUS_8X         0x1D // get snr & rssi of last packet
+#define OP_PACKET_STATUS_8X         0x1D // Get snr & rssi of last packet
 #define OP_CURRENT_RSSI_8X          0x1F
-#define OP_MODULATION_PARAMS_8X     0x8B // bw, sf, cr, etc.
-#define OP_PACKET_PARAMS_8X         0x8C // crc, preamble, payload length, etc.
+#define OP_MODULATION_PARAMS_8X     0x8B // BW, SF, CR, etc.
+#define OP_PACKET_PARAMS_8X         0x8C // CRC, preamble, payload length, etc.
 #define OP_STATUS_8X                0xC0
-#define OP_TX_PARAMS_8X             0x8E // set dbm, etc
+#define OP_TX_PARAMS_8X             0x8E // Set dbm, etc
 #define OP_PACKET_TYPE_8X           0x8A
 #define OP_BUFFER_BASE_ADDR_8X      0x8F
 #define OP_READ_REGISTER_8X         0x19
@@ -73,9 +72,9 @@
 #define OP_FIFO_READ_8X             0x1B
 #define IRQ_PREAMBLE_DET_MASK_8X    0x80
 
-#define REG_PACKET_SIZE            0x901
-#define REG_FIRM_VER_MSB           0x154
-#define REG_FIRM_VER_LSB           0x153
+#define REG_PACKET_SIZE             0x901
+#define REG_FIRM_VER_MSB            0x154
+#define REG_FIRM_VER_LSB            0x153
 
 #define XTAL_FREQ_8X (double)52000000
 #define FREQ_DIV_8X (double)pow(2.0, 18.0)
@@ -93,24 +92,8 @@ extern SPIClass SPI;
 sx128x::sx128x() :
   _spiSettings(8E6, MSBFIRST, SPI_MODE0),
   _ss(LORA_DEFAULT_SS_PIN), _reset(LORA_DEFAULT_RESET_PIN), _dio0(LORA_DEFAULT_DIO0_PIN), _rxen(pin_rxen), _busy(LORA_DEFAULT_BUSY_PIN), _txen(pin_txen),
-  _frequency(0),
-  _txp(0),
-  _sf(0x05),
-  _bw(0x34),
-  _cr(0x01),
-  _packetIndex(0),
-  _implicitHeaderMode(0),
-  _payloadLength(255),
-  _crcMode(0),
-  _fifo_tx_addr_ptr(0),
-  _fifo_rx_addr_ptr(0),
-  _rxPacketLength(0),
-  _preinit_done(false),
-  _tcxo(false)
-{
-  // overide Stream timeout value
-  setTimeout(0);
-}
+  _frequency(0), _txp(0), _sf(0x05), _bw(0x34), _cr(0x01), _packetIndex(0), _implicitHeaderMode(0), _payloadLength(255), _crcMode(0), _fifo_tx_addr_ptr(0),
+  _fifo_rx_addr_ptr(0), _rxPacketLength(0), _preinit_done(false), _tcxo(false) { setTimeout(0); }
 
 bool ISR_VECT sx128x::getPacketValidity() {
     uint8_t buf[2];
@@ -472,23 +455,17 @@ float ISR_VECT sx128x::packetSnr() {
 }
 
 long sx128x::packetFrequencyError() {
-  // TODO: implement this, page 120 of sx1280 datasheet
+  // TODO: Implement this, page 120 of sx1280 datasheet
   int32_t freqError = 0;
   const float fError = 0.0;
   return static_cast<long>(fError);
 }
 
 void sx128x::flush() { }
-
 int ISR_VECT sx128x::available() { return _rxPacketLength - _packetIndex; }
-
 size_t sx128x::write(uint8_t byte) { return write(&byte, sizeof(byte)); }
-
 size_t sx128x::write(const uint8_t *buffer, size_t size) {
-  if ((_payloadLength + size) > MAX_PKT_LENGTH) {
-      size = MAX_PKT_LENGTH - _payloadLength;
-  }
-
+  if ((_payloadLength + size) > MAX_PKT_LENGTH) { size = MAX_PKT_LENGTH - _payloadLength; }
   writeBuffer(buffer, size);
   _payloadLength = _payloadLength + size;
   return size;
@@ -716,7 +693,7 @@ void sx128x::setTxPower(int level, int outputPin) {
       }
 
       tx_buf[0] = reg_value + 18;
-      tx_buf[1] = 0xE0; // ramping time - 20 microseconds
+      tx_buf[1] = 0xE0; // Ramping time, 20 microseconds
       executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
 
     // T3S3 SX1280 PA
@@ -795,7 +772,7 @@ void sx128x::setTxPower(int level, int outputPin) {
           break;
       }
       tx_buf[0] = reg_value;
-      tx_buf[1] = 0xE0; // ramping time - 20 microseconds
+      tx_buf[1] = 0xE0; // Ramping time, 20 microseconds
 
     // For SX1280 boards with no specific PA requirements
     #else
@@ -803,7 +780,7 @@ void sx128x::setTxPower(int level, int outputPin) {
       else if (level < -18) { level = -18; }
       _txp = level;
       tx_buf[0] = level + 18;
-      tx_buf[1] = 0xE0; // ramping time - 20 microseconds
+      tx_buf[1] = 0xE0; // Ramping time, 20 microseconds
     #endif
     
     executeOpcode(OP_TX_PARAMS_8X, tx_buf, 2);
@@ -821,7 +798,7 @@ void sx128x::setFrequency(uint32_t frequency) {
 }
 
 uint32_t sx128x::getFrequency() {
-  // we can't read the frequency on the sx1280
+  // We can't read the frequency on the sx1280
   uint32_t frequency = _frequency;
   return frequency;
 }
@@ -847,12 +824,6 @@ uint32_t sx128x::getSignalBandwidth() {
   return 0;
 }
 
-// TODO: Is this needed for SX1280?
-void sx128x::handleLowDataRate() { }
-
-// TODO: Check if there's anything the sx1280 can do here
-void sx128x::optimizeModemSensitivity() { }
-
 void sx128x::setSignalBandwidth(uint32_t sbw) {
   if      (sbw <= 203.125E3) { _bw = 0x34; }
   else if (sbw <= 406.25E3)  { _bw = 0x26; }
@@ -872,40 +843,22 @@ void sx128x::setCodingRate4(int denominator) {
   setModulationParams(_sf, _bw, _cr);
 }
 
+void sx128x::handleLowDataRate() { } // TODO: Is this needed for SX1280?
+void sx128x::optimizeModemSensitivity() { } // TODO: Check if there's anything the sx1280 can do here
 uint8_t sx128x::getCodingRate4() { return _cr + 4; }
-
-void sx128x::setPreambleLength(long length) {
-  _preambleLength = length;
-  setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
-}
-
-// TODO: Implement
-void sx128x::setSyncWord(int sw) { }
-
-// TODO: need to check how to implement on sx1280
-void sx128x::enableTCXO() { }
-
-// TODO: need to check how to implement on sx1280
-void sx128x::disableTCXO() { }
-
+void sx128x::setPreambleLength(long length) { _preambleLength = length; setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode); }
+void sx128x::setSyncWord(int sw) { } // TODO: Implement
+void sx128x::enableTCXO() { } // TODO: Need to check how to implement on sx1280
+void sx128x::disableTCXO() { } // TODO: Need to check how to implement on sx1280
 void sx128x::sleep() { uint8_t byte = 0x00; executeOpcode(OP_SLEEP_8X, &byte, 1); }
-
 uint8_t sx128x::getTxPower() { return _txp; }
-
 uint8_t sx128x::getSpreadingFactor() { return _sf; }
-
 void sx128x::enableCrc() { _crcMode = 0x20; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
-
 void sx128x::disableCrc() { _crcMode = 0; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
-
 void sx128x::setSPIFrequency(uint32_t frequency) { _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0); }
-
 void sx128x::explicitHeaderMode() {  _implicitHeaderMode = 0; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
-
 void sx128x::implicitHeaderMode() { _implicitHeaderMode = 0x80; setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode); }
-
-void sx128x::dumpRegisters(Stream& out) { 
-  for (int i = 0; i < 128; i++) { out.print("0x"); out.print(i, HEX); out.print(": 0x"); out.println(readRegister(i), HEX); }
-}
+void sx128x::dumpRegisters(Stream& out) { for (int i = 0; i < 128; i++) { out.print("0x"); out.print(i, HEX); out.print(": 0x"); out.println(readRegister(i), HEX); } }
 
 sx128x sx128x_modem;
+#endif

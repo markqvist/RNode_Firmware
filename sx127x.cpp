@@ -1,8 +1,5 @@
-// Copyright (c) Sandeep Mistry. All rights reserved.
+// Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
-
-// Modifications and additions copyright 2024 by Mark Qvist
-// Obviously still under the MIT license.
 
 #include "Boards.h"
 
@@ -81,10 +78,7 @@ extern SPIClass SPI;
 sx127x::sx127x() :
   _spiSettings(8E6, MSBFIRST, SPI_MODE0),
   _ss(LORA_DEFAULT_SS_PIN), _reset(LORA_DEFAULT_RESET_PIN), _dio0(LORA_DEFAULT_DIO0_PIN),
-  _frequency(0),
-  _packetIndex(0),
-  _preinit_done(false),
-  _onReceive(NULL) { setTimeout(0); }
+  _frequency(0), _packetIndex(0), _preinit_done(false), _onReceive(NULL) { setTimeout(0); }
 
 void sx127x::setSPIFrequency(uint32_t frequency) { _spiSettings = SPISettings(frequency, MSBFIRST, SPI_MODE0); }
 void sx127x::setPins(int ss, int reset, int dio0, int busy) { _ss = ss; _reset = reset; _dio0 = dio0; _busy = busy; }
@@ -123,7 +117,6 @@ bool sx127x::preInit() {
   }
 
   if (version != 0x12) { return false; }
-
   _preinit_done = true;
   return true;
 }
@@ -144,8 +137,6 @@ uint8_t ISR_VECT sx127x::singleTransfer(uint8_t address, uint8_t value) {
 int sx127x::begin(long frequency) {
   if (_reset != -1) {
     pinMode(_reset, OUTPUT);
-
-    // Perform reset
     digitalWrite(_reset, LOW);
     delay(10);
     digitalWrite(_reset, HIGH);
@@ -153,19 +144,16 @@ int sx127x::begin(long frequency) {
   }
 
   if (_busy != -1) { pinMode(_busy, INPUT); }
-
-  if (!_preinit_done) {
-    if (!preInit()) { return false; }
-  }
+  if (!_preinit_done) { if (!preInit()) { return false; } }
 
   sleep();
   setFrequency(frequency);
 
-  // set base addresses
+  // Set base addresses
   writeRegister(REG_FIFO_TX_BASE_ADDR_7X, 0);
   writeRegister(REG_FIFO_RX_BASE_ADDR_7X, 0);
 
-  // set LNA boost and auto AGC
+  // Set LNA boost and auto AGC
   writeRegister(REG_LNA_7X, readRegister(REG_LNA_7X) | 0x03);
   writeRegister(REG_MODEM_CONFIG_3_7X, 0x04);
 
@@ -178,20 +166,13 @@ int sx127x::begin(long frequency) {
   return 1;
 }
 
-void sx127x::end() {
-  sleep();
-  SPI.end();
-  _preinit_done = false;
-}
+void sx127x::end() { sleep(); SPI.end(); _preinit_done = false; }
 
 int sx127x::beginPacket(int implicitHeader) {
   standby();
 
-  if (implicitHeader) {
-    implicitHeaderMode();
-  } else {
-    explicitHeaderMode();
-  }
+  if (implicitHeader) { implicitHeaderMode(); }
+  else { explicitHeaderMode(); }
 
   // Reset FIFO address and payload length
   writeRegister(REG_FIFO_ADDR_PTR_7X, 0);
@@ -248,29 +229,24 @@ int ISR_VECT sx127x::packetRssi(uint8_t pkt_snr_raw) {
 }
 
 int ISR_VECT sx127x::packetRssi() {
-    int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE_7X) - RSSI_OFFSET;
-    int pkt_snr = packetSnr();
+  int pkt_rssi = (int)readRegister(REG_PKT_RSSI_VALUE_7X) - RSSI_OFFSET;
+  int pkt_snr = packetSnr();
 
-    if (_frequency < 820E6) pkt_rssi -= 7;
+  if (_frequency < 820E6) pkt_rssi -= 7;
 
-    if (pkt_snr < 0) {
-        pkt_rssi += pkt_snr;
-    } else {
-        // Slope correction is (16/15)*pkt_rssi,
-        // this estimation looses one floating point
-        // operation, and should be precise enough.
-        pkt_rssi = (int)(1.066 * pkt_rssi);
-    }
-    return pkt_rssi;
+  if (pkt_snr < 0) { pkt_rssi += pkt_snr; }
+  else {
+      // Slope correction is (16/15)*pkt_rssi,
+      // this estimation looses one floating point
+      // operation, and should be precise enough.
+      pkt_rssi = (int)(1.066 * pkt_rssi);
+  }
+  return pkt_rssi;
 }
 
-uint8_t ISR_VECT sx127x::packetSnrRaw() {
-    return readRegister(REG_PKT_SNR_VALUE_7X);
-}
+uint8_t ISR_VECT sx127x::packetSnrRaw() { return readRegister(REG_PKT_SNR_VALUE_7X); }
 
-float ISR_VECT sx127x::packetSnr() {
-    return ((int8_t)readRegister(REG_PKT_SNR_VALUE_7X)) * 0.25;
-}
+float ISR_VECT sx127x::packetSnr() { return ((int8_t)readRegister(REG_PKT_SNR_VALUE_7X)) * 0.25; }
 
 long sx127x::packetFrequencyError() {
   int32_t freqError = 0;
@@ -293,17 +269,13 @@ long sx127x::packetFrequencyError() {
 size_t sx127x::write(uint8_t byte) { return write(&byte, sizeof(byte)); }
 
 size_t sx127x::write(const uint8_t *buffer, size_t size) {
-    int currentLength = readRegister(REG_PAYLOAD_LENGTH_7X);
-    if ((currentLength + size) > MAX_PKT_LENGTH) {
-        size = MAX_PKT_LENGTH - currentLength;
-    }
+  int currentLength = readRegister(REG_PAYLOAD_LENGTH_7X);
+  if ((currentLength + size) > MAX_PKT_LENGTH) { size = MAX_PKT_LENGTH - currentLength; }
 
-    for (size_t i = 0; i < size; i++) {
-        writeRegister(REG_FIFO_7X, buffer[i]);
-    }
+  for (size_t i = 0; i < size; i++) { writeRegister(REG_FIFO_7X, buffer[i]); }
+  writeRegister(REG_PAYLOAD_LENGTH_7X, currentLength + size);
 
-    writeRegister(REG_PAYLOAD_LENGTH_7X, currentLength + size);
-    return size;
+  return size;
 }
 
 int ISR_VECT sx127x::available() { return (readRegister(REG_RX_NB_BYTES_7X) - _packetIndex); }

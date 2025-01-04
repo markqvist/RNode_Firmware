@@ -1,8 +1,5 @@
-// Copyright (c) Sandeep Mistry. All rights reserved.
+// Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
-
-// Modifications and additions copyright 2024 by Mark Qvist
-// Obviously still under the MIT license.
 
 #ifndef SX128X_H
 #define SX128X_H
@@ -11,18 +8,16 @@
 #include <SPI.h>
 #include "Modem.h"
 
-#define LORA_DEFAULT_SS_PIN    10
-#define LORA_DEFAULT_RESET_PIN 9
-#define LORA_DEFAULT_DIO0_PIN  2
+#define LORA_DEFAULT_SS_PIN     10
+#define LORA_DEFAULT_RESET_PIN  9
+#define LORA_DEFAULT_DIO0_PIN   2
 #define LORA_DEFAULT_RXEN_PIN  -1
 #define LORA_DEFAULT_TXEN_PIN  -1
 #define LORA_DEFAULT_BUSY_PIN  -1
-#define LORA_MODEM_TIMEOUT_MS 15E3
-
-#define PA_OUTPUT_RFO_PIN      0
-#define PA_OUTPUT_PA_BOOST_PIN 1
-
-#define RSSI_OFFSET 157
+#define LORA_MODEM_TIMEOUT_MS   15E3
+#define PA_OUTPUT_RFO_PIN       0
+#define PA_OUTPUT_PA_BOOST_PIN  1
+#define RSSI_OFFSET             157
 
 class sx128x : public Stream {
 public:
