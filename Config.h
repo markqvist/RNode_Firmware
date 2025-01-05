@@ -70,17 +70,24 @@
 	const int lora_rx_turnaround_ms = 66;
 	const int lora_post_tx_yield_slots = 6;
 	uint32_t post_tx_yield_timeout = 0;
-	#define LORA_PREAMBLE_SYMBOLS_HW  4
-	#define LORA_PREAMBLE_SYMBOLS_MIN 18
-	#define LORA_PREAMBLE_TARGET_MS   15
-	#define LORA_CAD_SYMBOLS 3
-	#define CSMA_SLOT_MAX_MS 100
-	#define CSMA_SLOT_MIN_MS 24
-	int csma_slot_ms = 50;
-	float csma_p_min = 0.15;
-	float csma_p_max = 0.333;
-	float csma_b_speed = 0.15;
-	uint8_t csma_p = 85;
+	#define LORA_PREAMBLE_SYMBOLS_MIN 12
+	#define LORA_PREAMBLE_TARGET_MS   1500
+	#define LORA_CAD_SYMBOLS          3
+	#define CSMA_SLOT_SYMBOLS         12
+	#define CSMA_SLOT_MAX_MS          100
+	#define CSMA_SLOT_MIN_MS          24
+	
+	long lora_preamble_symbols = 12;
+	float lora_symbol_time_ms  = 0.0;
+	float lora_symbol_rate     = 0.0;
+	float lora_us_per_byte     = 0.0;
+	bool lora_low_datarate     = false;
+
+	int csma_slot_ms           = 50;
+	float csma_p_min           = 0.15;
+	float csma_p_max           = 0.333;
+	float csma_b_speed         = 0.15;
+	uint8_t csma_p             = 85;
 
 	int  lora_sf   	           = 0;
 	int  lora_cr               = 5;
@@ -88,10 +95,6 @@
 	uint32_t lora_bw           = 0;
 	uint32_t lora_freq         = 0;
 	uint32_t lora_bitrate      = 0;
-	long lora_preamble_symbols = 6;
-	float lora_symbol_time_ms  = 0.0;
-	float lora_symbol_rate     = 0.0;
-	float lora_us_per_byte     = 0.0;
 
 	// Operational variables
 	bool radio_locked  = true;
