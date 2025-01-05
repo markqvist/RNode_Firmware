@@ -64,7 +64,7 @@
   float bat_state_change_v = 0;
 #elif BOARD_MODEL == BOARD_RNODE_NG_22
   #define BAT_V_MIN       3.15
-  #define BAT_V_MAX       4.3
+  #define BAT_V_MAX       4.217
   #define BAT_V_CHG       4.48
   #define BAT_V_FLOAT     4.33
   #define BAT_SAMPLES     5
@@ -128,9 +128,9 @@ void measure_battery() {
     #if BOARD_MODEL == BOARD_HELTEC32_V3
       float battery_measurement = (float)(analogRead(pin_vbat)) * 0.0041;
     #elif BOARD_MODEL == BOARD_RNODE_NG_22
-      float battery_measurement = (float)(analogRead(pin_vbat)) / 4095.0*2.0*3.3*1.1;
+      float battery_measurement = (float)(analogRead(pin_vbat)) / 4095.0*6.7828;
     #else
-      float battery_measurement = (float)(analogRead(pin_vbat)) / 4095.0*2.0*3.3*1.1;
+      float battery_measurement = (float)(analogRead(pin_vbat)) / 4095.0*7.26;
     #endif
 
     bat_v_samples[bat_samples_count%BAT_SAMPLES] = battery_measurement;
