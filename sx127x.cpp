@@ -440,19 +440,23 @@ void sx127x::setCodingRate4(int denominator) {
   writeRegister(REG_MODEM_CONFIG_1_7X, (readRegister(REG_MODEM_CONFIG_1_7X) & 0xf1) | (cr << 1));
 }
 
-void sx127x::setPreambleLength(long length) { 
+void sx127x::setPreambleLength(long preamble_symbols) {
+  long length = preamble_symbols - 4;
   writeRegister(REG_PREAMBLE_MSB_7X, (uint8_t)(length >> 8));
   writeRegister(REG_PREAMBLE_LSB_7X, (uint8_t)(length >> 0));
 }
 
+extern bool lora_low_datarate;
 void sx127x::handleLowDataRate() {
   int sf = (readRegister(REG_MODEM_CONFIG_2_7X) >> 4);
   if ( long( (1<<sf) / (getSignalBandwidth()/1000)) > 16) {
     // Set auto AGC and LowDataRateOptimize
     writeRegister(REG_MODEM_CONFIG_3_7X, (1<<3)|(1<<2));
+    lora_low_datarate = true;
   } else {
     // Only set auto AGC
     writeRegister(REG_MODEM_CONFIG_3_7X, (1<<2));
+    lora_low_datarate = false;
   }
 }
 

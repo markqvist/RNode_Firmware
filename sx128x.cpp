@@ -269,32 +269,43 @@ void sx128x::setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr) {
   writeRegister(0x093C, 0x1);
 }
 
-void sx128x::setPacketParams(uint32_t preamble, uint8_t headermode, uint8_t length, uint8_t crc) {
-  // Because there is no access to these registers on the sx1280, we have
-  // to set all these parameters at once or not at all.
-  uint8_t buf[7];
-  // calculate exponent and mantissa values for modem
-  uint8_t e = 1;
-  uint8_t m = 1;
-  uint32_t preamblelen;
-
-  while (e <= 15) {
+uint8_t preamble_e = 0;
+uint8_t preamble_m = 0;
+uint32_t last_me_result_target = 0;
+extern long lora_preamble_symbols;
+void sx128x::setPacketParams(uint32_t target_preamble_symbols, uint8_t headermode, uint8_t payload_length, uint8_t crc) {  
+  if (last_me_result_target != target_preamble_symbols) {
+    // Calculate exponent and mantissa values for modem
+    if (target_preamble_symbols >= 0xF000) target_preamble_symbols = 0xF000;
+    uint32_t calculated_preamble_symbols;
+    uint8_t e = 1;
+    uint8_t m = 1;
+    while (e <= 15) {
       while (m <= 15) {
-          preamblelen = m * (pow(2,e));
-          if (preamblelen >= preamble) break;
-          m++;
+        calculated_preamble_symbols = m * (pow(2,e));
+        if (calculated_preamble_symbols >= target_preamble_symbols-4) break;
+        m++;
       }
-      if (preamblelen >= preamble) break;
-      m = 0;
-      e++;
+
+      if (calculated_preamble_symbols >= target_preamble_symbols-4) break;
+      m = 1; e++;
+    }
+
+    last_me_result_target = target_preamble_symbols;
+    lora_preamble_symbols = calculated_preamble_symbols+4;
+    _preambleLength = lora_preamble_symbols;
+
+    preamble_e = e;
+    preamble_m = m;
   }
 
-  buf[0] = (e << 4) | m;
+  uint8_t buf[7];
+  buf[0] = (preamble_e << 4) | preamble_m;
   buf[1] = headermode;
-  buf[2] = length;
+  buf[2] = payload_length;
   buf[3] = crc;
-  buf[4] = 0x40; // standard IQ setting (no inversion)
-  buf[5] = 0x00; // unused params
+  buf[4] = 0x40; // Standard IQ setting (no inversion)
+  buf[5] = 0x00; // Unused params
   buf[6] = 0x00; 
 
   executeOpcode(OP_PACKET_PARAMS_8X, buf, 7);
@@ -847,10 +858,15 @@ void sx128x::setCodingRate4(int denominator) {
   setModulationParams(_sf, _bw, _cr);
 }
 
-void sx128x::handleLowDataRate() { } // TODO: Is this needed for SX1280?
+extern bool lora_low_datarate;
+void sx128x::handleLowDataRate() {
+  if (_sf > 10) { lora_low_datarate = true; }
+  else          { lora_low_datarate = false; }
+}
+
 void sx128x::optimizeModemSensitivity() { } // TODO: Check if there's anything the sx1280 can do here
 uint8_t sx128x::getCodingRate4() { return _cr + 4; }
-void sx128x::setPreambleLength(long length) { _preambleLength = length; setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode); }
+void sx128x::setPreambleLength(long preamble_symbols) { setPacketParams(preamble_symbols, _implicitHeaderMode, _payloadLength, _crcMode); }
 void sx128x::setSyncWord(int sw) { } // TODO: Implement
 void sx128x::enableTCXO() { } // TODO: Need to check how to implement on sx1280
 void sx128x::disableTCXO() { } // TODO: Need to check how to implement on sx1280

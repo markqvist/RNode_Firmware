@@ -557,18 +557,44 @@ void flushQueue(void) {
   #endif
 }
 
-#define PHY_HEADER_LORA_SYMBOLS 8
+#define PHY_HEADER_LORA_SYMBOLS 20
+#define PHY_CRC_LORA_BITS       16
 void add_airtime(uint16_t written) {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+    float lora_symbols = 0;
     float packet_cost_ms = 0.0;
-    float payload_cost_ms = ((float)written * lora_us_per_byte)/1000.0;
-    packet_cost_ms += payload_cost_ms;
-    packet_cost_ms += (lora_preamble_symbols+4.25)*lora_symbol_time_ms;
-    packet_cost_ms += PHY_HEADER_LORA_SYMBOLS * lora_symbol_time_ms;
+    int ldr_opt = 0; if (lora_low_datarate) ldr_opt = 1;
+
+    #if MODEM == SX1276 || MODEM == SX1278
+      lora_symbols += (8*written + PHY_CRC_LORA_BITS - 4*lora_sf + 8 + PHY_HEADER_LORA_SYMBOLS);
+      lora_symbols /=                          4*(lora_sf-2*ldr_opt);
+      lora_symbols *= lora_cr;
+      lora_symbols += lora_preamble_symbols + 0.25 + 8;
+      packet_cost_ms += lora_symbols * lora_symbol_time_ms;
+      
+    #elif MODEM == SX1262 || MODEM == SX1280
+      if (lora_sf < 7) {
+        lora_symbols += (8*written + PHY_CRC_LORA_BITS - 4*lora_sf + PHY_HEADER_LORA_SYMBOLS);
+        lora_symbols /=                              4*lora_sf;
+        lora_symbols *= lora_cr;
+        lora_symbols += lora_preamble_symbols + 2.25 + 8;
+        packet_cost_ms += lora_symbols * lora_symbol_time_ms;
+
+      } else {
+        lora_symbols += (8*written + PHY_CRC_LORA_BITS - 4*lora_sf + 8 + PHY_HEADER_LORA_SYMBOLS);
+        lora_symbols /=                         4*(lora_sf-2*ldr_opt);
+        lora_symbols *= lora_cr;
+        lora_symbols += lora_preamble_symbols + 0.25 + 8;
+        packet_cost_ms += lora_symbols * lora_symbol_time_ms;
+      }
+    
+    #endif
+
     uint16_t cb = current_airtime_bin();
     uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
     airtime_bins[cb] += packet_cost_ms;
     airtime_bins[nb] = 0;
+
   #endif
 }
 

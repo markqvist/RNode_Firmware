@@ -66,7 +66,7 @@ public:
   long getSignalBandwidth();
   void setSignalBandwidth(long sbw);
   void setCodingRate4(int denominator);
-  void setPreambleLength(long length);
+  void setPreambleLength(long preamble_symbols);
   void setSyncWord(uint16_t sw);
   uint8_t modemStatus();
   void enableCrc();
@@ -81,7 +81,7 @@ public:
   void executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size);
   void writeBuffer(const uint8_t* buffer, size_t size);
   void readBuffer(uint8_t* buffer, size_t size);
-  void setPacketParams(long preamble, uint8_t headermode, uint8_t length, uint8_t crc);
+  void setPacketParams(long preamble_symbols, uint8_t headermode, uint8_t payload_length, uint8_t crc);
 
   void setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, int ldro);
 

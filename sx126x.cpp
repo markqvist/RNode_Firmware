@@ -252,14 +252,14 @@ void sx126x::setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, int ldro) {
   executeOpcode(OP_MODULATION_PARAMS_6X, buf, 8);
 }
 
-void sx126x::setPacketParams(long preamble, uint8_t headermode, uint8_t length, uint8_t crc) {
+void sx126x::setPacketParams(long preamble_symbols, uint8_t headermode, uint8_t payload_length, uint8_t crc) {
   // Because there is no access to these registers on the sx1262, we have
   // to set all these parameters at once or not at all.
   uint8_t buf[9];
-  buf[0] = uint8_t((preamble & 0xFF00) >> 8);
-  buf[1] = uint8_t((preamble & 0x00FF));
+  buf[0] = uint8_t((preamble_symbols & 0xFF00) >> 8);
+  buf[1] = uint8_t((preamble_symbols & 0x00FF));
   buf[2] = headermode;
-  buf[3] = length;
+  buf[3] = payload_length;
   buf[4] = crc;
   buf[5] = 0x00; // standard IQ setting (no inversion)
   buf[6] = 0x00; // unused params
@@ -642,12 +642,14 @@ long sx126x::getSignalBandwidth() {
   return 0;
 }
 
-void sx126x::handleLowDataRate(){
-  if ( long( (1<<_sf) / (getSignalBandwidth()/1000)) > 16) { _ldro = 0x01; }
-  else { _ldro = 0x00; }
+extern bool lora_low_datarate;
+void sx126x::handleLowDataRate() {
+  if ( long( (1<<_sf) / (getSignalBandwidth()/1000)) > 16)
+         { _ldro = 0x01; lora_low_datarate = true;  }
+    else { _ldro = 0x00; lora_low_datarate = false; }
 }
 
-// TODO: check if there's anything the sx1262 can do here
+// TODO: Check if there's anything the sx1262 can do here
 void sx126x::optimizeModemSensitivity(){ }
 
 void sx126x::setSignalBandwidth(long sbw) {
@@ -675,9 +677,9 @@ void sx126x::setCodingRate4(int denominator) {
   setModulationParams(_sf, _bw, cr, _ldro);
 }
 
-void sx126x::setPreambleLength(long length) {
-  _preambleLength = length;
-  setPacketParams(length, _implicitHeaderMode, _payloadLength, _crcMode);
+void sx126x::setPreambleLength(long preamble_symbols) {
+  _preambleLength = preamble_symbols;
+  setPacketParams(preamble_symbols, _implicitHeaderMode, _payloadLength, _crcMode);
 }
 
 void sx126x::setSyncWord(uint16_t sw) {
