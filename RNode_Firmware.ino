@@ -64,6 +64,9 @@ void setup() {
   pinMode(PIN_HEADER, OUTPUT);
   pinMode(PIN_DCD, OUTPUT);
   pinMode(PIN_TXSIG, OUTPUT);
+  pinMode(PIN_DIFS, OUTPUT);
+  pinMode(PIN_CW, OUTPUT);
+  pinMode(PIN_FLUSH, OUTPUT);
   ///////////////////////////
 
   #if MCU_VARIANT == MCU_ESP32
@@ -521,7 +524,7 @@ bool queueFull() {
 }
 
 volatile bool queue_flushing = false;
-void flushQueue(void) {
+void flush_queue(void) {
   if (!queue_flushing) {
 
     // TODO: Remove debug
@@ -554,7 +557,6 @@ void flushQueue(void) {
 
     lora_receive();
     led_tx_off();
-    post_tx_yield_timeout = millis()+(lora_post_tx_yield_slots*csma_slot_ms);
   }
 
   queue_height = 0;
@@ -628,7 +630,7 @@ void update_airtime() {
     longterm_channel_util = (float)longterm_channel_util_sum/(float)AIRTIME_BINS;
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-      update_csma_p();
+      update_csma_parameters();
     #endif
     kiss_indicate_channel_stats();
   #endif
@@ -1199,7 +1201,9 @@ void serialCallback(uint8_t sbyte) {
   portMUX_TYPE update_lock = portMUX_INITIALIZER_UNLOCKED;
 #endif
 
-void updateModemStatus() {
+bool medium_free() { update_modem_status(); return !dcd; }
+
+void update_modem_status() {
   #if MCU_VARIANT == MCU_ESP32
     portENTER_CRITICAL(&update_lock);
   #elif MCU_VARIANT == MCU_NRF52
@@ -1225,9 +1229,9 @@ void updateModemStatus() {
                  else              { led_rx_off(); } }
 }
 
-void checkModemStatus() {
+void check_modem_status() {
   if (millis()-last_status_update >= status_interval_ms) {
-    updateModemStatus();
+    update_modem_status();
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       util_samples[dcd_sample] = dcd;
@@ -1385,13 +1389,56 @@ void validate_status() {
   #define _e 2.71828183
   #define _S 12.5
   float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
-  void update_csma_p() {
+  void update_csma_parameters() {
     csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime+csma_b_speed)))*255.0);
   }
 #endif
 
+void tx_queue_handler() {
+  if (!airtime_lock && queue_height > 0) {
+    if (csma_cw == -1) {
+      csma_cw = random(CSMA_CW_MIN, CSMA_CW_MAX);
+      cw_wait_target = csma_cw * csma_slot_ms;
+    }
+
+    // TODO: Remove metering signallers
+    if (difs_wait_start == -1) { digitalWrite(PIN_DIFS, LOW); }
+    if (cw_wait_start == -1) { digitalWrite(PIN_CW, LOW); } else { digitalWrite(PIN_CW, HIGH); }
+    ////////////////////////////////
+
+    if (difs_wait_start == -1) {                                                  // DIFS wait not yet started
+      if (medium_free()) { difs_wait_start = millis(); digitalWrite(PIN_DIFS, HIGH); return; }            // Set DIFS wait start time
+      else               { return; } }                                            // Medium not yet free, continue waiting
+    
+    else {                                                                        // We are waiting for DIFS or CW to pass
+      if (!medium_free()) { difs_wait_start = -1; cw_wait_start = -1; return; }   // Medium became occupied while in DIFS wait, restart waiting when free again
+      else {                                                                      // Medium is free, so continue waiting
+        if (millis() < difs_wait_start+difs_ms) { return; }                       // DIFS has not yet passed, continue waiting
+        else {                                                                    // DIFS has passed, and we are now in CW wait
+          digitalWrite(PIN_DIFS, LOW);
+          if (cw_wait_start == -1) { cw_wait_start = millis(); digitalWrite(PIN_CW, HIGH); return; }    // If we haven't started counting CW wait time, do it from now
+          else {                                                                  // If we are already counting CW wait time, add it to the counter
+            cw_wait_passed += millis()-cw_wait_start; cw_wait_start   = millis();
+            if (cw_wait_passed < cw_wait_target) { return; }                      // Contention window wait time has not yet passed, continue waiting
+            else {                                                                // Wait time has passed, flush the queue
+              digitalWrite(PIN_FLUSH, HIGH);
+              digitalWrite(PIN_CW, LOW);
+              flush_queue();
+              digitalWrite(PIN_FLUSH, LOW);
+              digitalWrite(PIN_DIFS, LOW);
+              cw_wait_passed = 0; csma_cw = -1; difs_wait_start = -1; }
+
+          }
+        }
+      }
+    }
+  }
+}
+
 void loop() {
   if (radio_online) {
+    update_modem_status(); // TODO: Remove debug
+
     #if MCU_VARIANT == MCU_ESP32
       modem_packet_t *modem_packet = NULL;
       if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
@@ -1434,50 +1481,57 @@ void loop() {
 
     #endif
 
-    checkModemStatus();
-    if (!airtime_lock) {
-      if (queue_height > 0) {
-        #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+    update_modem_status(); // TODO: Remove debug
 
-          long check_time = millis();
-          if (check_time > post_tx_yield_timeout) {
-            if (dcd_waiting && (check_time >= dcd_wait_until)) { dcd_waiting = false; }
-            if (!dcd_waiting) {
-              for (uint8_t dcd_i = 0; dcd_i < dcd_threshold*2; dcd_i++) {
-                delay(STATUS_INTERVAL_MS); updateModemStatus();
-              }
+    tx_queue_handler();
 
-              if (!dcd) {
-                uint8_t csma_r = (uint8_t)random(256);
-                if (csma_p >= csma_r) {
-                  flushQueue();
-                } else {
-                  dcd_waiting = true;
-                  dcd_wait_until = millis()+csma_slot_ms;
-                }
-              }
-            }
-          }
+    update_modem_status(); // TODO: Remove debug
+
+    check_modem_status();
+
+    update_modem_status(); // TODO: Remove debug
+
+      // if (queue_height > 0) {
+      //   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+
+      //     long check_time = millis();
+      //     if (check_time > post_tx_yield_timeout) {
+      //       if (dcd_waiting && (check_time >= dcd_wait_until)) { dcd_waiting = false; }
+      //       if (!dcd_waiting) {
+      //         for (uint8_t dcd_i = 0; dcd_i < dcd_threshold*2; dcd_i++) {
+      //           delay(STATUS_INTERVAL_MS); updateModemStatus();
+      //         }
+
+      //         if (!dcd) {
+      //           uint8_t csma_r = (uint8_t)random(256);
+      //           if (csma_p >= csma_r) {
+      //             flushQueue();
+      //           } else {
+      //             dcd_waiting = true;
+      //             dcd_wait_until = millis()+csma_slot_ms;
+      //           }
+      //         }
+      //       }
+      //     }
           
-        #else
-          if (!dcd_waiting) updateModemStatus();
+      //   #else
+      //     if (!dcd_waiting) updateModemStatus();
 
-          if (!dcd) {
-            if (dcd_waiting) delay(lora_rx_turnaround_ms);
+      //     if (!dcd) {
+      //       if (dcd_waiting) delay(lora_rx_turnaround_ms);
 
-            updateModemStatus();
+      //       updateModemStatus();
 
-            if (!dcd) {
-              dcd_waiting = false;
-              flushQueue();
-            }
+      //       if (!dcd) {
+      //         dcd_waiting = false;
+      //         flushQueue();
+      //       }
 
-          } else {
-            dcd_waiting = true;
-          }
-        #endif
-      }
-    }
+      //     } else {
+      //       dcd_waiting = true;
+      //     }
+      //   #endif
+      // }
   
   } else {
     if (hw_ready) {
@@ -1497,26 +1551,40 @@ void loop() {
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       buffer_serial();
+      update_modem_status(); // TODO: Remove debug
+      
       if (!fifo_isempty(&serialFIFO)) serial_poll();
+      
+      update_modem_status(); // TODO: Remove debug
   #else
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif
+
+  update_modem_status(); // TODO: Remove debug
 
   #if HAS_DISPLAY
     if (disp_ready) update_display();
   #endif
 
+  update_modem_status(); // TODO: Remove debug
+
   #if HAS_PMU
     if (pmu_ready) update_pmu();
   #endif
+
+  update_modem_status(); // TODO: Remove debug
 
   #if HAS_BLUETOOTH || HAS_BLE == true
     if (!console_active && bt_ready) update_bt();
   #endif
 
+  update_modem_status(); // TODO: Remove debug
+
   #if HAS_INPUT
     input_read();
   #endif
+
+  update_modem_status(); // TODO: Remove debug
 
   if (memory_low) {
     #if PLATFORM == PLATFORM_ESP32

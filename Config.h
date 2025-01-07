@@ -67,31 +67,41 @@
 	const int  rssi_offset = 157;
 
 	// Default LoRa settings
-	const int lora_rx_turnaround_ms = 66;
-	const int lora_post_tx_yield_slots = 6;
-	uint32_t post_tx_yield_timeout = 0;
 	#define PHY_HEADER_LORA_SYMBOLS   20
 	#define PHY_CRC_LORA_BITS         16
 	#define LORA_PREAMBLE_SYMBOLS_MIN 18
 	#define LORA_PREAMBLE_TARGET_MS   15
 	#define LORA_CAD_SYMBOLS          3
-	#define CSMA_SLOT_SYMBOLS         12
+	long lora_preamble_symbols      = 12;
+	long lora_preamble_time_ms      = 0;
+	long lora_header_time_ms        = 0;
+	float lora_symbol_time_ms       = 0.0;
+	float lora_symbol_rate          = 0.0;
+	float lora_us_per_byte          = 0.0;
+	bool lora_low_datarate          = false;
+
+	// CSMA Parameters
+	#define CSMA_POST_TX_YIELD_SLOTS  3
 	#define CSMA_SLOT_MAX_MS          100
 	#define CSMA_SLOT_MIN_MS          24
-	
-	long lora_preamble_symbols = 12;
-	long lora_preamble_time_ms = 0;
-	long lora_header_time_ms   = 0;
-	float lora_symbol_time_ms  = 0.0;
-	float lora_symbol_rate     = 0.0;
-	float lora_us_per_byte     = 0.0;
-	bool lora_low_datarate     = false;
+	#define CSMA_SLOT_SYMBOLS         12
+	#define CSMA_CW_MIN               0
+	#define CSMA_CW_MAX               15
+	#define CSMA_SIFS_MS              0
+	int csma_slot_ms                = CSMA_SLOT_MIN_MS;
+	long difs_ms                    = CSMA_SIFS_MS + 2*csma_slot_ms; // Distributed interframe space
+	long difs_wait_start            = -1;
+	long cw_wait_start              = -1;
+	long cw_wait_target             = -1;
+	long cw_wait_passed             = 0;
+	int csma_cw                     = -1;
 
-	int csma_slot_ms           = 50;
+	////////////////////////////////////////
 	float csma_p_min           = 0.15;
 	float csma_p_max           = 0.333;
 	float csma_b_speed         = 0.15;
 	uint8_t csma_p             = 85;
+	////////////////////////////////////////
 
 	int  lora_sf   	           = 0;
 	int  lora_cr               = 5;
