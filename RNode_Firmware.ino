@@ -529,9 +529,7 @@ void flush_queue(void) {
     digitalWrite(PIN_TXSIG, HIGH);
 
     queue_flushing = true;
-
-    led_tx_on();
-    uint16_t processed = 0;
+    led_tx_on(); uint16_t processed = 0;
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     while (!fifo16_isempty(&packet_starts)) {
@@ -548,13 +546,11 @@ void flush_queue(void) {
           tbuf[i] = packet_queue[pos];
         }
 
-        transmit(length);
-        processed++;
+        transmit(length); processed++;
       }
     }
 
-    lora_receive();
-    led_tx_off();
+    lora_receive(); led_tx_off();
   }
 
   queue_height = 0;
@@ -682,7 +678,7 @@ void transmit(uint16_t size) {
   } else { kiss_indicate_error(ERROR_TXFAILED); led_indicate_error(5); }
 }
 
-void serialCallback(uint8_t sbyte) {
+void serial_callback(uint8_t sbyte) {
   if (IN_FRAME && sbyte == FEND && command == CMD_DATA) {
     IN_FRAME = false;
 
@@ -691,21 +687,15 @@ void serialCallback(uint8_t sbyte) {
         int16_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
         uint16_t l;
 
-        if (s != e) {
-            l = (s < e) ? e - s + 1 : CONFIG_QUEUE_SIZE - s + e + 1;
-        } else {
-            l = 1;
-        }
+        if (s != e) { l = (s < e) ? e - s + 1 : CONFIG_QUEUE_SIZE - s + e + 1; }
+        else        { l = 1; }
 
         if (l >= MIN_L) {
             queue_height++;
-
             fifo16_push(&packet_starts, s);
             fifo16_push(&packet_lengths, l);
-
             current_packet_start = queue_cursor;
         }
-
     }
 
   } else if (sbyte == FEND) {
@@ -1641,7 +1631,7 @@ void serial_poll() {
   while (!fifo_isempty(&serialFIFO)) {
   #endif
     char sbyte = fifo_pop(&serialFIFO);
-    serialCallback(sbyte);
+    serial_callback(sbyte);
   }
 
   serial_polling = false;
@@ -1703,7 +1693,6 @@ void serial_interrupt_init() {
 
       // Buffer incoming frames every 1ms
       ICR3 = 16000;
-
       TIMSK3 = _BV(ICIE3);
 
   #elif MCU_VARIANT == MCU_2560
@@ -1717,7 +1706,6 @@ void serial_interrupt_init() {
 
       // Buffer incoming frames every 1ms
       ICR3 = 16000;
-
       TIMSK3 = _BV(ICIE3);
 
   #elif MCU_VARIANT == MCU_ESP32
@@ -1727,7 +1715,5 @@ void serial_interrupt_init() {
 }
 
 #if MCU_VARIANT == MCU_1284P || MCU_VARIANT == MCU_2560
-  ISR(TIMER3_CAPT_vect) {
-    buffer_serial();
-  }
+  ISR(TIMER3_CAPT_vect) { buffer_serial(); }
 #endif
