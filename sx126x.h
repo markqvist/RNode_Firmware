@@ -68,7 +68,7 @@ public:
   void setCodingRate4(int denominator);
   void setPreambleLength(long preamble_symbols);
   void setSyncWord(uint16_t sw);
-  uint8_t modemStatus();
+  bool dcd();
   void enableCrc();
   void disableCrc();
   void enableTCXO();

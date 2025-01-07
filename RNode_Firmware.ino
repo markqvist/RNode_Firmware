@@ -59,6 +59,13 @@ char sbuf[128];
 #endif
 
 void setup() {
+  // TODO: Remove debug setup
+  pinMode(PIN_PREAMBLE, OUTPUT);
+  pinMode(PIN_HEADER, OUTPUT);
+  pinMode(PIN_DCD, OUTPUT);
+  pinMode(PIN_TXSIG, OUTPUT);
+  ///////////////////////////
+
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
     EEPROM.begin(EEPROM_SIZE);
@@ -516,6 +523,10 @@ bool queueFull() {
 volatile bool queue_flushing = false;
 void flushQueue(void) {
   if (!queue_flushing) {
+
+    // TODO: Remove debug
+    digitalWrite(PIN_TXSIG, HIGH);
+
     queue_flushing = true;
 
     led_tx_on();
@@ -557,8 +568,6 @@ void flushQueue(void) {
   #endif
 }
 
-#define PHY_HEADER_LORA_SYMBOLS 20
-#define PHY_CRC_LORA_BITS       16
 void add_airtime(uint16_t written) {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     float lora_symbols = 0;
@@ -1197,7 +1206,7 @@ void updateModemStatus() {
     portENTER_CRITICAL();
   #endif
 
-  uint8_t status = LoRa->modemStatus();
+  bool carrier_detected = LoRa->dcd();
   current_rssi = LoRa->currentRssi();
   last_status_update = millis();
 
@@ -1207,47 +1216,13 @@ void updateModemStatus() {
     portEXIT_CRITICAL();
   #endif
 
-  if ((status & SIG_DETECT) == SIG_DETECT) { stat_signal_detected = true; } else { stat_signal_detected = false; }
-  if ((status & SIG_SYNCED) == SIG_SYNCED) { stat_signal_synced = true; } else { stat_signal_synced = false; }
-  if ((status & RX_ONGOING) == RX_ONGOING) { stat_rx_ongoing = true; } else { stat_rx_ongoing = false; }
+  if (carrier_detected) { dcd = true; digitalWrite(PIN_DCD, HIGH); /* TODO: Remove debug */ }
+  else { dcd = false; digitalWrite(PIN_DCD, LOW); /* TODO: Remove debug */ }
 
-  // if (stat_signal_detected || stat_signal_synced || stat_rx_ongoing) {
-  if (stat_signal_detected || stat_signal_synced) {
-    if (stat_rx_ongoing) {
-      if (dcd_count < dcd_threshold) {
-        dcd_count++;
-      } else {
-        last_dcd = last_status_update;
-        dcd_led = true;
-        dcd = true;
-      }
-    }
-  } else {
-    #define DCD_LED_STEP_D 3
-    if (dcd_count == 0) {
-      dcd_led = false;
-    } else if (dcd_count > DCD_LED_STEP_D) {
-      dcd_count -= DCD_LED_STEP_D;
-    } else {
-      dcd_count = 0;
-    }
-
-    if (last_status_update > last_dcd+csma_slot_ms) {
-      dcd = false;
-      dcd_led = false;
-      dcd_count = 0;
-    }
-  }
-
-  if (dcd_led) {
-    led_rx_on();
-  } else {
-    if (airtime_lock) {
-      led_indicate_airtime_lock();
-    } else {
-      led_rx_off();
-    }
-  }
+  dcd_led = dcd;
+  if (dcd_led) { led_rx_on(); }
+  else         { if (airtime_lock) { led_indicate_airtime_lock(); }
+                 else              { led_rx_off(); } }
 }
 
 void checkModemStatus() {
@@ -1463,6 +1438,7 @@ void loop() {
     if (!airtime_lock) {
       if (queue_height > 0) {
         #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+
           long check_time = millis();
           if (check_time > post_tx_yield_timeout) {
             if (dcd_waiting && (check_time >= dcd_wait_until)) { dcd_waiting = false; }
@@ -1486,7 +1462,7 @@ void loop() {
         #else
           if (!dcd_waiting) updateModemStatus();
 
-          if (!dcd && !dcd_led) {
+          if (!dcd) {
             if (dcd_waiting) delay(lora_rx_turnaround_ms);
 
             updateModemStatus();

@@ -864,7 +864,7 @@ void kiss_indicate_phy_stats() {
 		uint16_t lst = (uint16_t)(lora_symbol_time_ms*1000);
 		uint16_t lsr = (uint16_t)(lora_symbol_rate);
 		uint16_t prs = (uint16_t)(lora_preamble_symbols);
-		uint16_t prt = (uint16_t)((lora_preamble_symbols)*lora_symbol_time_ms);
+		uint16_t prt = (uint16_t)(lora_preamble_time_ms);
 		uint16_t cst = (uint16_t)(csma_slot_ms);
 		serial_write(FEND);
 		serial_write(CMD_STAT_PHYPRM);
@@ -1102,6 +1102,8 @@ void updateBitrate() {
 			
 			lora_preamble_symbols = (long)target_preamble_symbols;
 			setPreamble();
+			lora_preamble_time_ms = (ceil)(lora_preamble_symbols * lora_symbol_time_ms);
+			lora_header_time_ms   = (ceil)(PHY_HEADER_LORA_SYMBOLS * lora_symbol_time_ms);
 		} else {
 			lora_bitrate = 0;
 		}

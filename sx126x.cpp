@@ -97,7 +97,7 @@ extern SPIClass SPI;
 #define MAX_PKT_LENGTH 255
 
 sx126x::sx126x() :
-  _spiSettings(8E6, MSBFIRST, SPI_MODE0),
+  _spiSettings(16E6, MSBFIRST, SPI_MODE0),
   _ss(LORA_DEFAULT_SS_PIN), _reset(LORA_DEFAULT_RESET_PIN), _dio0(LORA_DEFAULT_DIO0_PIN), _busy(LORA_DEFAULT_BUSY_PIN), _rxen(LORA_DEFAULT_RXEN_PIN),
   _frequency(0),
   _txp(0),
@@ -293,11 +293,11 @@ void sx126x::calibrate(void) {
 
 void sx126x::calibrate_image(long frequency) {
   uint8_t image_freq[2] = {0};
-  if (frequency >= 430E6 && frequency <= 440E6)      { image_freq[0] = 0x6B; image_freq[1] = 0x6F; }
+  if      (frequency >= 430E6 && frequency <= 440E6) { image_freq[0] = 0x6B; image_freq[1] = 0x6F; }
   else if (frequency >= 470E6 && frequency <= 510E6) { image_freq[0] = 0x75; image_freq[1] = 0x81; }
   else if (frequency >= 779E6 && frequency <= 787E6) { image_freq[0] = 0xC1; image_freq[1] = 0xC5; }
   else if (frequency >= 863E6 && frequency <= 870E6) { image_freq[0] = 0xD7; image_freq[1] = 0xDB; }
-  else if (frequency >= 902E6 && frequency <= 928E6) { image_freq[0] = 0xE1; image_freq[1] = 0xE9; }
+  else if (frequency >= 902E6 && frequency <= 928E6) { image_freq[0] = 0xE1; image_freq[1] = 0xE9; } // TODO: Allow higher freq calibration
   executeOpcode(OP_CALIBRATE_IMAGE_6X, image_freq, 2);
   waitOnBusy();
 }
@@ -372,6 +372,9 @@ int sx126x::endPacket() {
     yield();
   }
 
+  // TODO: Remove debug
+  digitalWrite(PIN_TXSIG, LOW);
+
   if (!(millis() < w_timeout)) { timed_out = true; }
 
   // Clear IRQs
@@ -382,26 +385,40 @@ int sx126x::endPacket() {
   if (timed_out) { return 0; } else { return 1; }
 }
 
-uint8_t sx126x::modemStatus() {
-  // Imitate the register status from the sx1276 / 78
-  uint8_t buf[2] = {0};
-  executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
-  uint8_t clearbuf[2] = {0};
-  uint8_t byte = 0x00;
+unsigned long preamble_detected_at = 0;
+unsigned long header_detected_at = 0;
+extern long lora_preamble_time_ms;
+extern long lora_header_time_ms;
+bool sx126x::dcd() {
+  bool carrier_detected = false;
+  uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
 
   if ((buf[1] & IRQ_PREAMBLE_DET_MASK_6X) != 0) {
-    byte = byte | 0x01 | 0x04;
-    clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X; // Clear register after reading
+    carrier_detected = true;
+    if (preamble_detected_at == 0) preamble_detected_at = millis();
+    if (millis() - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
+      preamble_detected_at = 0;
+      uint8_t clearbuf[2] = {0};
+      clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X;
+      executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
+    }
+    // TODO: Remove
+    digitalWrite(PIN_PREAMBLE, HIGH);
+  } else {
+    digitalWrite(PIN_PREAMBLE, LOW);
   }
 
   if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) {
-    byte = byte | 0x02 | 0x04;
+    carrier_detected = true;
+    header_detected_at = millis();
+    // TODO: Remove
+    digitalWrite(PIN_HEADER, HIGH);
+  } else {
+    digitalWrite(PIN_HEADER, LOW);
   }
 
-  executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
-  return byte; 
+  return carrier_detected;
 }
-
 
 uint8_t sx126x::currentRssiRaw() {
   uint8_t byte = 0;

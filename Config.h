@@ -70,6 +70,8 @@
 	const int lora_rx_turnaround_ms = 66;
 	const int lora_post_tx_yield_slots = 6;
 	uint32_t post_tx_yield_timeout = 0;
+	#define PHY_HEADER_LORA_SYMBOLS   20
+	#define PHY_CRC_LORA_BITS         16
 	#define LORA_PREAMBLE_SYMBOLS_MIN 18
 	#define LORA_PREAMBLE_TARGET_MS   15
 	#define LORA_CAD_SYMBOLS          3
@@ -78,6 +80,8 @@
 	#define CSMA_SLOT_MIN_MS          24
 	
 	long lora_preamble_symbols = 12;
+	long lora_preamble_time_ms = 0;
+	long lora_header_time_ms   = 0;
 	float lora_symbol_time_ms  = 0.0;
 	float lora_symbol_rate     = 0.0;
 	float lora_us_per_byte     = 0.0;
