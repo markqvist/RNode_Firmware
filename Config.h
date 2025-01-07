@@ -96,13 +96,7 @@
 	long cw_wait_passed             = 0;
 	int csma_cw                     = -1;
 
-	////////////////////////////////////////
-	float csma_p_min           = 0.15;
-	float csma_p_max           = 0.333;
-	float csma_b_speed         = 0.15;
-	uint8_t csma_p             = 85;
-	////////////////////////////////////////
-
+	// LoRa settings
 	int  lora_sf   	           = 0;
 	int  lora_cr               = 5;
 	int  lora_txp              = 0xFF;

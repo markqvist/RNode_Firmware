@@ -519,9 +519,7 @@ void update_radio_lock() {
   }
 }
 
-bool queueFull() {
-  return (queue_height >= CONFIG_QUEUE_MAX_LENGTH || queued_bytes >= CONFIG_QUEUE_SIZE);
-}
+bool queue_full() { return (queue_height >= CONFIG_QUEUE_MAX_LENGTH || queued_bytes >= CONFIG_QUEUE_SIZE); }
 
 volatile bool queue_flushing = false;
 void flush_queue(void) {
@@ -561,10 +559,13 @@ void flush_queue(void) {
 
   queue_height = 0;
   queued_bytes = 0;
+
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     update_airtime();
   #endif
+
   queue_flushing = false;
+
   #if HAS_DISPLAY
     display_tx = true;
   #endif
@@ -614,24 +615,20 @@ void update_airtime() {
     uint16_t cb = current_airtime_bin();
     uint16_t pb = cb-1; if (cb-1 < 0) { pb = AIRTIME_BINS-1; }
     uint16_t nb = cb+1; if (nb == AIRTIME_BINS) { nb = 0; }
-    airtime_bins[nb] = 0;
-    airtime = (float)(airtime_bins[cb]+airtime_bins[pb])/(2.0*AIRTIME_BINLEN_MS);
+    airtime_bins[nb] = 0; airtime = (float)(airtime_bins[cb]+airtime_bins[pb])/(2.0*AIRTIME_BINLEN_MS);
 
     uint32_t longterm_airtime_sum = 0;
-    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) {
-      longterm_airtime_sum += airtime_bins[bin];
-    }
+    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) { longterm_airtime_sum += airtime_bins[bin]; }
     longterm_airtime = (float)longterm_airtime_sum/(float)AIRTIME_LONGTERM_MS;
 
     float longterm_channel_util_sum = 0.0;
-    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) {
-      longterm_channel_util_sum += longterm_bins[bin];
-    }
+    for (uint16_t bin = 0; bin < AIRTIME_BINS; bin++) { longterm_channel_util_sum += longterm_bins[bin]; }
     longterm_channel_util = (float)longterm_channel_util_sum/(float)AIRTIME_BINS;
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       update_csma_parameters();
     #endif
+
     kiss_indicate_channel_stats();
   #endif
 }
@@ -641,18 +638,13 @@ void transmit(uint16_t size) {
     if (!promisc) {
       uint16_t  written = 0;
       uint8_t header  = random(256) & 0xF0;
-
-      if (size > SINGLE_MTU - HEADER_L) {
-        header = header | FLAG_SPLIT;
-      }
+      if (size > SINGLE_MTU - HEADER_L) { header = header | FLAG_SPLIT; }
 
       LoRa->beginPacket();
       LoRa->write(header); written++;
 
       for (uint16_t i=0; i < size; i++) {
-        LoRa->write(tbuf[i]);
-
-        written++;
+        LoRa->write(tbuf[i]); written++;
 
         if (written == 255 && isSplitPacket(header)) {
           if (!LoRa->endPacket()) {
@@ -661,6 +653,7 @@ void transmit(uint16_t size) {
             led_indicate_error(5);
             hard_reset();
           }
+
           add_airtime(written);
           LoRa->beginPacket();
           LoRa->write(header);
@@ -674,39 +667,19 @@ void transmit(uint16_t size) {
         led_indicate_error(5);
         hard_reset();
       }
+
       add_airtime(written);
 
     } else {
-      // In promiscuous mode, we only send out
-      // plain raw LoRa packets with a maximum
-      // payload of 255 bytes
-      led_tx_on();
-      uint16_t  written = 0;
-      
-      // Cap packets at 255 bytes
-      if (size > SINGLE_MTU) {
-        size = SINGLE_MTU;
-      }
-
-      // If implicit header mode has been set,
-      // set packet length to payload data length
-      if (!implicit) {
-        LoRa->beginPacket();
-      } else {
-        LoRa->beginPacket(size);
-      }
-
-      for (uint16_t i=0; i < size; i++) {
-        LoRa->write(tbuf[i]);
-
-        written++;
-      }
+      led_tx_on(); uint16_t written = 0;
+      if (size > SINGLE_MTU) { size = SINGLE_MTU; }
+      if (!implicit) { LoRa->beginPacket(); }
+      else           { LoRa->beginPacket(size); }
+      for (uint16_t i=0; i < size; i++) { LoRa->write(tbuf[i]); written++; }
       LoRa->endPacket(); add_airtime(written);
     }
-  } else {
-    kiss_indicate_error(ERROR_TXFAILED);
-    led_indicate_error(5);
-  }
+
+  } else { kiss_indicate_error(ERROR_TXFAILED); led_indicate_error(5); }
 }
 
 void serialCallback(uint8_t sbyte) {
@@ -950,7 +923,7 @@ void serialCallback(uint8_t sbyte) {
       }
       kiss_indicate_promisc();
     } else if (command == CMD_READY) {
-      if (!queueFull()) {
+      if (!queue_full()) {
         kiss_indicate_ready();
       } else {
         kiss_indicate_not_ready();
@@ -1390,7 +1363,7 @@ void validate_status() {
   #define _S 12.5
   float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
   void update_csma_parameters() {
-    csma_p = (uint8_t)((1.0-(csma_p_min+(csma_p_max-csma_p_min)*csma_slope(airtime+csma_b_speed)))*255.0);
+    // TODO: Implement
   }
 #endif
 
