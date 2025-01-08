@@ -86,7 +86,6 @@ uint8_t ISR_VECT sx127x::readRegister(uint8_t address) { return singleTransfer(a
 void sx127x::writeRegister(uint8_t address, uint8_t value) { singleTransfer(address | 0x80, value); }
 void sx127x::standby() { writeRegister(REG_OP_MODE_7X, MODE_LONG_RANGE_MODE_7X | MODE_STDBY_7X); }
 void sx127x::sleep() { writeRegister(REG_OP_MODE_7X, MODE_LONG_RANGE_MODE_7X | MODE_SLEEP_7X); }
-uint8_t sx127x::modemStatus() { return readRegister(REG_MODEM_STAT_7X); }
 void sx127x::setSyncWord(uint8_t sw) { writeRegister(REG_SYNC_WORD_7X, sw); }
 void sx127x::enableCrc() { writeRegister(REG_MODEM_CONFIG_2_7X, readRegister(REG_MODEM_CONFIG_2_7X) | 0x04); }
 void sx127x::disableCrc() { writeRegister(REG_MODEM_CONFIG_2_7X, readRegister(REG_MODEM_CONFIG_2_7X) & 0xfb); }
@@ -193,6 +192,14 @@ int sx127x::endPacket() {
   // Clear TX complete IRQ
   writeRegister(REG_IRQ_FLAGS_7X, IRQ_TX_DONE_MASK_7X);
   return 1;
+}
+
+bool sx127x::dcd() {
+  bool carrier_detected = false;
+  uint8_t status = readRegister(REG_MODEM_STAT_7X);
+  if ((status & SIG_DETECT) == SIG_DETECT) { carrier_detected = true; }
+  if ((status & SIG_SYNCED) == SIG_SYNCED) { carrier_detected = true; }
+  return carrier_detected;
 }
 
 uint8_t sx127x::currentRssiRaw() {

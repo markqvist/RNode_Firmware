@@ -410,23 +410,31 @@ int sx128x::endPacket() {
   else           { return 1; }
 }
 
-uint8_t sx128x::modemStatus() {
-    // Imitate the register status from the sx1276 / 78
-    uint8_t buf[2] = {0};
-    executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
-    uint8_t clearbuf[2] = {0};
-    uint8_t byte = 0x00;
+unsigned long preamble_detected_at = 0;
+unsigned long header_detected_at = 0;
+extern long lora_preamble_time_ms;
+extern long lora_header_time_ms;
+bool sx128x::dcd() {
+  bool carrier_detected = false;
+  uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
 
-    if ((buf[0] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
-        byte = byte | 0x01 | 0x04;
-        // Clear register after reading
-        clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X;
+  if ((buf[1] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
+    carrier_detected = true;
+    if (preamble_detected_at == 0) preamble_detected_at = millis();
+    if (millis() - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
+      preamble_detected_at = 0;
+      uint8_t clearbuf[2] = {0};
+      clearbuf[1] = IRQ_PREAMBLE_DET_MASK_8X;
+      executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
     }
+  }
 
-    if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) { byte = byte | 0x02 | 0x04; }
-    executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
+  if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) {
+    carrier_detected = true;
+    header_detected_at = millis();
+  }
 
-    return byte;
+  return carrier_detected;
 }
 
 

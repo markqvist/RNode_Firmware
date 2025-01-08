@@ -69,7 +69,7 @@ public:
   uint8_t getCodingRate4();
   void setPreambleLength(long preamble_symbols);
   void setSyncWord(int sw);
-  uint8_t modemStatus();
+  bool dcd();
   void clearIRQStatus();
   void enableCrc();
   void disableCrc();
