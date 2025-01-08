@@ -138,7 +138,7 @@ private:
   bool _radio_online;
   int _rxPacketLength;
   uint32_t _bitrate;
-  void (*_onReceive)(int);
+  void (*_receive_callback)(int);
 };
 
 extern sx128x sx128x_modem;

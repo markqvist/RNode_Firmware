@@ -1,6 +1,14 @@
 // Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
 
+// TODO: Remove debug
+#define PIN_PREAMBLE 16
+#define PIN_HEADER   15
+#define PIN_CAD      18
+#define PIN_DCD      12
+#define PIN_TXSIG    48
+/////////////////////////
+
 #include "Boards.h"
 
 #if MODEM == SX1280
@@ -123,19 +131,26 @@ void sx128x::handleDio0Rise() {
     uint8_t rxbuf[2] = {0};
     executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
 
-    // If implicit header mode is enabled, read packet length as payload length instead.
+    // If implicit header mode is enabled, use pre-set packet length as payload length instead.
     // See SX1280 datasheet v3.2, page 92
     if (_implicitHeaderMode == 0x80) { _rxPacketLength = _payloadLength; }
     else                             { _rxPacketLength = rxbuf[0]; }
 
-    if (_onReceive) { _onReceive(_rxPacketLength); }
+    if (_receive_callback) { _receive_callback(_rxPacketLength); }
 }
 
 bool sx128x::preInit() {
+  // TODO: Remove debug
+  pinMode(PIN_PREAMBLE, OUTPUT);
+  pinMode(PIN_HEADER, OUTPUT);
+  pinMode(PIN_CAD, OUTPUT);
+  pinMode(PIN_DCD, OUTPUT);
+  pinMode(PIN_TXSIG, OUTPUT);
+  //////////////////////
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
-  // todo: check if this change causes issues on any platforms
+  // TODO: Check if this change causes issues on any platforms
   #if MCU_VARIANT == MCU_ESP32
     #if BOARD_MODEL == BOARD_RNODE_NG_22 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK
       SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
@@ -146,11 +161,11 @@ bool sx128x::preInit() {
     SPI.begin();
   #endif
 
-  // Detect modem (retry for up to 2 seconds)
+  // Detect modem (retry for up to 500ms)
   long start = millis();
   uint8_t version_msb;
   uint8_t version_lsb;
-  while (((millis() - start) < 2000) && (millis() >= start)) {
+  while (((millis() - start) < 500) && (millis() >= start)) {
       version_msb = readRegister(REG_FIRM_VER_MSB);
       version_lsb = readRegister(REG_FIRM_VER_LSB);
       if ((version_msb == 0xB7 && version_lsb == 0xA9) || (version_msb == 0xB5 && version_lsb == 0xA9)) { break; }
@@ -357,6 +372,7 @@ void sx128x::end() {
 }
 
 int sx128x::beginPacket(int implicitHeader) {
+  digitalWrite(PIN_TXSIG, HIGH); // TODO: Remove debug
   standby();
 
   if (implicitHeader) { implicitHeaderMode(); }
@@ -399,6 +415,8 @@ int sx128x::endPacket() {
   mask[0] = 0x00;
   mask[1] = IRQ_TX_DONE_MASK_8X;
   executeOpcode(OP_CLEAR_IRQ_STATUS_8X, mask, 2);
+
+  digitalWrite(PIN_TXSIG, LOW); // TODO: Remove debug
   
   if (timed_out) { return 0; }
   else           { return 1; }
@@ -412,20 +430,33 @@ bool sx128x::dcd() {
   bool carrier_detected = false;
   uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
 
-  if ((buf[1] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
+  if ((buf[0] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
+    digitalWrite(PIN_PREAMBLE, HIGH); // TODO: Remove debug
     carrier_detected = true;
     if (preamble_detected_at == 0) preamble_detected_at = millis();
     if (millis() - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
       preamble_detected_at = 0;
       uint8_t clearbuf[2] = {0};
-      clearbuf[1] = IRQ_PREAMBLE_DET_MASK_8X;
+      clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X;
       executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
     }
+  } else {
+    digitalWrite(PIN_PREAMBLE, LOW); // TODO: Remove debug
   }
 
   if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) {
+    digitalWrite(PIN_HEADER, HIGH); // TODO: Remove debug
     carrier_detected = true;
     header_detected_at = millis();
+  } else {
+    digitalWrite(PIN_HEADER, LOW); // TODO: Remove debug
+  }
+
+  // TODO: Remove debug
+  if (carrier_detected) {
+    digitalWrite(PIN_DCD, HIGH); // TODO: Remove debug
+  } else {
+    digitalWrite(PIN_DCD, LOW); // TODO: Remove debug
   }
 
   return carrier_detected;
@@ -524,7 +555,7 @@ int sx128x::peek() {
 
 
 void sx128x::onReceive(void(*callback)(int)) {
-  _onReceive = callback;
+  _receive_callback = callback;
 
   if (callback) {
     pinMode(_dio0, INPUT);
@@ -589,6 +620,8 @@ void sx128x::receive(int size) {
   // in continuous RX mode. This is documented as Errata 16.1 in
   // the SX1280 datasheet v3.2 (page 149)
   // Therefore, the modem is set to single RX mode below instead.
+
+  // uint8_t mode[3] = {0x03, 0xFF, 0xFF}; // Countinuous RX mode
   uint8_t mode[3] = {0}; // single RX mode
   executeOpcode(OP_RX_8X, mode, 3);
 }
