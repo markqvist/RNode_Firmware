@@ -594,9 +594,7 @@ void sx128x::receive(int size) {
 }
 
 void sx128x::standby() {
-    uint8_t byte;
-    if (_tcxo) { byte = 0x01; } // STDBY_XOSC
-    else       { byte = 0x00; } // STDBY_RC
+    uint8_t byte = 0x01; // Always use STDBY_XOSC
     executeOpcode(OP_STANDBY_8X, &byte, 1); 
 }
 
