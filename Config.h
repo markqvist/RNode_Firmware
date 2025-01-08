@@ -67,42 +67,47 @@
 	const int  rssi_offset = 157;
 
 	// Default LoRa settings
-	#define PHY_HEADER_LORA_SYMBOLS   20
-	#define PHY_CRC_LORA_BITS         16
-	#define LORA_PREAMBLE_SYMBOLS_MIN 18
-	#define LORA_PREAMBLE_TARGET_MS   15
-	#define LORA_CAD_SYMBOLS          3
-	long lora_preamble_symbols      = 12;
-	long lora_preamble_time_ms      = 0;
-	long lora_header_time_ms        = 0;
-	float lora_symbol_time_ms       = 0.0;
-	float lora_symbol_rate          = 0.0;
-	float lora_us_per_byte          = 0.0;
-	bool lora_low_datarate          = false;
+	#define PHY_HEADER_LORA_SYMBOLS    20
+	#define PHY_CRC_LORA_BITS          16
+	#define LORA_PREAMBLE_SYMBOLS_MIN  18
+	#define LORA_PREAMBLE_TARGET_MS    24
+	long lora_preamble_symbols      =  LORA_PREAMBLE_SYMBOLS_MIN;
+	long lora_preamble_time_ms      =  0;
+	long lora_header_time_ms        =  0;
+	float lora_symbol_time_ms       =  0.0;
+	float lora_symbol_rate          =  0.0;
+	float lora_us_per_byte          =  0.0;
+	bool lora_low_datarate          =  false;
 
 	// CSMA Parameters
-	#define CSMA_POST_TX_YIELD_SLOTS  3
-	#define CSMA_SLOT_MAX_MS          100
-	#define CSMA_SLOT_MIN_MS          24
-	#define CSMA_SLOT_SYMBOLS         12
-	#define CSMA_CW_MIN               0
-	#define CSMA_CW_MAX               15
-	#define CSMA_SIFS_MS              0
-	int csma_slot_ms                = CSMA_SLOT_MIN_MS;
-	long difs_ms                    = CSMA_SIFS_MS + 2*csma_slot_ms; // Distributed interframe space
+	#define CSMA_SIFS_MS               0
+	#define CSMA_POST_TX_YIELD_SLOTS   3
+	#define CSMA_SLOT_MAX_MS           100
+	#define CSMA_SLOT_MIN_MS           24
+	#define CSMA_SLOT_SYMBOLS          12
+	#define CSMA_CW_BANDS              4
+	#define CSMA_CW_MIN                0
+	#define CSMA_CW_PER_BAND_WINDOWS   15
+	#define CSMA_BAND_1_MAX_AIRTIME    6
+	#define CSMA_BAND_N_MIN_AIRTIME    85
+	int csma_slot_ms                =  CSMA_SLOT_MIN_MS;
+	long difs_ms                    =  CSMA_SIFS_MS + 2*csma_slot_ms;
 	long difs_wait_start            = -1;
 	long cw_wait_start              = -1;
 	long cw_wait_target             = -1;
-	long cw_wait_passed             = 0;
+	long cw_wait_passed             =  0;
 	int csma_cw                     = -1;
+	uint8_t cw_band                 =  1;
+	uint8_t cw_min                  =  0;
+	uint8_t cw_max                  =  CSMA_CW_PER_BAND_WINDOWS;
 
 	// LoRa settings
-	int  lora_sf   	           = 0;
-	int  lora_cr               = 5;
-	int  lora_txp              = 0xFF;
-	uint32_t lora_bw           = 0;
-	uint32_t lora_freq         = 0;
-	uint32_t lora_bitrate      = 0;
+	int  lora_sf   	                =  0;
+	int  lora_cr                    =  5;
+	int  lora_txp                   =  0xFF;
+	uint32_t lora_bw                =  0;
+	uint32_t lora_freq              =  0;
+	uint32_t lora_bitrate           =  0;
 
 	// Operational variables
 	bool radio_locked  = true;
