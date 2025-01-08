@@ -107,34 +107,28 @@ bool ISR_VECT sx128x::getPacketValidity() {
 
 void ISR_VECT sx128x::onDio0Rise() {
     BaseType_t int_status = taskENTER_CRITICAL_FROM_ISR();
-    if (sx128x_modem.getPacketValidity()) { sx128x_modem.handleDio0Rise(); }
     // On the SX1280, there is a bug which can cause the busy line
     // to remain high if a high amount of packets are received when
     // in continuous RX mode. This is documented as Errata 16.1 in
     // the SX1280 datasheet v3.2 (page 149)
     // Therefore, the modem is set into receive mode each time a packet is received.
-    sx128x_modem.receive();
+    if (sx128x_modem.getPacketValidity()) { sx128x_modem.receive(); sx128x_modem.handleDio0Rise(); }
+    else                                  { sx128x_modem.receive(); }
+
     taskEXIT_CRITICAL_FROM_ISR(int_status);
 }
 
 void sx128x::handleDio0Rise() {
-    // received a packet
     _packetIndex = 0;
-
     uint8_t rxbuf[2] = {0};
     executeOpcodeRead(OP_RX_BUFFER_STATUS_8X, rxbuf, 2);
 
     // If implicit header mode is enabled, read packet length as payload length instead.
     // See SX1280 datasheet v3.2, page 92
-    if (_implicitHeaderMode == 0x80) {
-        _rxPacketLength = _payloadLength;
-    } else {
-        _rxPacketLength = rxbuf[0];
-    }
+    if (_implicitHeaderMode == 0x80) { _rxPacketLength = _payloadLength; }
+    else                             { _rxPacketLength = rxbuf[0]; }
 
-    if (_onReceive) {
-        _onReceive(_rxPacketLength);
-    }
+    if (_onReceive) { _onReceive(_rxPacketLength); }
 }
 
 bool sx128x::preInit() {

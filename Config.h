@@ -88,7 +88,7 @@
 	#define CSMA_CW_BANDS              4
 	#define CSMA_CW_MIN                0
 	#define CSMA_CW_PER_BAND_WINDOWS   15
-	#define CSMA_BAND_1_MAX_AIRTIME    6
+	#define CSMA_BAND_1_MAX_AIRTIME    7
 	#define CSMA_BAND_N_MIN_AIRTIME    85
 	int csma_slot_ms                =  CSMA_SLOT_MIN_MS;
 	long difs_ms                    =  CSMA_SIFS_MS + 2*csma_slot_ms;

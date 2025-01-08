@@ -558,7 +558,7 @@ void draw_signal_bars(int px, int py) {
 }
 
 #if MODEM == SX1280
-  #define WF_TX_SIZE 3
+  #define WF_TX_SIZE 5
 #else
   #define WF_TX_SIZE 5
 #endif
