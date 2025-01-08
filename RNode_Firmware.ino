@@ -1349,18 +1349,30 @@ void validate_status() {
 }
 
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-  #define _e 2.71828183
-  #define _S 12.5
-  float csma_slope(float u) { return (pow(_e,_S*u-_S/2.0))/(pow(_e,_S*u-_S/2.0)+1.0); }
   void update_csma_parameters() {
-    // TODO: Implement
+    int airtime_pct = (int)(airtime*100);
+    int new_cw_band = cw_band;
+
+    if (airtime_pct <= CSMA_BAND_1_MAX_AIRTIME) { new_cw_band = 1; }
+    else {
+      int at = airtime_pct + CSMA_BAND_1_MAX_AIRTIME;
+      new_cw_band = map(at, CSMA_BAND_1_MAX_AIRTIME, CSMA_BAND_N_MIN_AIRTIME, 2, CSMA_CW_BANDS);
+    }
+
+    if (new_cw_band > CSMA_CW_BANDS) { new_cw_band = CSMA_CW_BANDS; }
+    if (new_cw_band != cw_band) { 
+      cw_band = (uint8_t)(new_cw_band);
+      cw_min  = (cw_band-1) * CSMA_CW_PER_BAND_WINDOWS;
+      cw_max  = (cw_band) * CSMA_CW_PER_BAND_WINDOWS - 1;
+      kiss_indicate_csma_stats();
+    }
   }
 #endif
 
 void tx_queue_handler() {
   if (!airtime_lock && queue_height > 0) {
     if (csma_cw == -1) {
-      csma_cw = random(CSMA_CW_MIN, CSMA_CW_MAX);
+      csma_cw = random(cw_min, cw_max);
       cw_wait_target = csma_cw * csma_slot_ms;
     }
 
@@ -1400,8 +1412,6 @@ void tx_queue_handler() {
 
 void loop() {
   if (radio_online) {
-    update_modem_status(); // TODO: Remove debug
-
     #if MCU_VARIANT == MCU_ESP32
       modem_packet_t *modem_packet = NULL;
       if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
@@ -1444,15 +1454,8 @@ void loop() {
 
     #endif
 
-    update_modem_status(); // TODO: Remove debug
-
     tx_queue_handler();
-
-    update_modem_status(); // TODO: Remove debug
-
     check_modem_status();
-
-    update_modem_status(); // TODO: Remove debug
 
       // if (queue_height > 0) {
       //   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
@@ -1514,40 +1517,26 @@ void loop() {
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       buffer_serial();
-      update_modem_status(); // TODO: Remove debug
-      
       if (!fifo_isempty(&serialFIFO)) serial_poll();
-      
-      update_modem_status(); // TODO: Remove debug
   #else
     if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
   #endif
-
-  update_modem_status(); // TODO: Remove debug
 
   #if HAS_DISPLAY
     if (disp_ready) update_display();
   #endif
 
-  update_modem_status(); // TODO: Remove debug
-
   #if HAS_PMU
     if (pmu_ready) update_pmu();
   #endif
-
-  update_modem_status(); // TODO: Remove debug
 
   #if HAS_BLUETOOTH || HAS_BLE == true
     if (!console_active && bt_ready) update_bt();
   #endif
 
-  update_modem_status(); // TODO: Remove debug
-
   #if HAS_INPUT
     input_read();
   #endif
-
-  update_modem_status(); // TODO: Remove debug
 
   if (memory_low) {
     #if PLATFORM == PLATFORM_ESP32

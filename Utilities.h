@@ -859,6 +859,17 @@ void kiss_indicate_channel_stats() {
 	#endif
 }
 
+void kiss_indicate_csma_stats() {
+	#if MCU_VARIANT == MCU_ESP32
+		serial_write(FEND);
+		serial_write(CMD_STAT_CSMA);
+		escaped_serial_write(cw_band);
+		escaped_serial_write(cw_min);
+		escaped_serial_write(cw_max);
+		serial_write(FEND);
+	#endif
+}
+
 void kiss_indicate_phy_stats() {
 	#if MCU_VARIANT == MCU_ESP32
 		uint16_t lst = (uint16_t)(lora_symbol_time_ms*1000);
@@ -866,18 +877,15 @@ void kiss_indicate_phy_stats() {
 		uint16_t prs = (uint16_t)(lora_preamble_symbols);
 		uint16_t prt = (uint16_t)(lora_preamble_time_ms);
 		uint16_t cst = (uint16_t)(csma_slot_ms);
+		uint16_t dft = (uint16_t)(difs_ms);
 		serial_write(FEND);
 		serial_write(CMD_STAT_PHYPRM);
-		escaped_serial_write(lst>>8);
-		escaped_serial_write(lst);
-		escaped_serial_write(lsr>>8);
-		escaped_serial_write(lsr);
-		escaped_serial_write(prs>>8);
-		escaped_serial_write(prs);
-		escaped_serial_write(prt>>8);
-		escaped_serial_write(prt);
-		escaped_serial_write(cst>>8);
-		escaped_serial_write(cst);
+		escaped_serial_write(lst>>8);	escaped_serial_write(lst);
+		escaped_serial_write(lsr>>8);	escaped_serial_write(lsr);
+		escaped_serial_write(prs>>8);	escaped_serial_write(prs);
+		escaped_serial_write(prt>>8);	escaped_serial_write(prt);
+		escaped_serial_write(cst>>8);	escaped_serial_write(cst);
+		escaped_serial_write(dft>>8); escaped_serial_write(dft);
 		serial_write(FEND);
 	#endif
 }
@@ -1086,7 +1094,8 @@ void setPreamble() {
 
 void updateBitrate() {
 	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-		if (radio_online) {
+		if (!radio_online) { lora_bitrate = 0; }
+		else {
 			lora_symbol_rate = (float)lora_bw/(float)(pow(2, lora_sf));
 			lora_symbol_time_ms = (1.0/lora_symbol_rate)*1000.0;
 			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
@@ -1095,17 +1104,15 @@ void updateBitrate() {
 			csma_slot_ms = lora_symbol_time_ms*CSMA_SLOT_SYMBOLS;
 			if (csma_slot_ms > CSMA_SLOT_MAX_MS) { csma_slot_ms = CSMA_SLOT_MAX_MS; }
 			if (csma_slot_ms < CSMA_SLOT_MIN_MS) { csma_slot_ms = CSMA_SLOT_MIN_MS; }
+			difs_ms = CSMA_SIFS_MS + 2*csma_slot_ms;
 			
 			float target_preamble_symbols = LORA_PREAMBLE_TARGET_MS/lora_symbol_time_ms;
 			if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) { target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN; }
 			else { target_preamble_symbols = (ceil)(target_preamble_symbols); }
 			
-			lora_preamble_symbols = (long)target_preamble_symbols;
-			setPreamble();
+			lora_preamble_symbols = (long)target_preamble_symbols; setPreamble();
 			lora_preamble_time_ms = (ceil)(lora_preamble_symbols * lora_symbol_time_ms);
 			lora_header_time_ms   = (ceil)(PHY_HEADER_LORA_SYMBOLS * lora_symbol_time_ms);
-		} else {
-			lora_bitrate = 0;
 		}
 	#endif
 }
