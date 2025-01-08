@@ -1470,48 +1470,6 @@ void loop() {
 
     tx_queue_handler();
     check_modem_status();
-
-      // if (queue_height > 0) {
-      //   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-
-      //     long check_time = millis();
-      //     if (check_time > post_tx_yield_timeout) {
-      //       if (dcd_waiting && (check_time >= dcd_wait_until)) { dcd_waiting = false; }
-      //       if (!dcd_waiting) {
-      //         for (uint8_t dcd_i = 0; dcd_i < dcd_threshold*2; dcd_i++) {
-      //           delay(STATUS_INTERVAL_MS); updateModemStatus();
-      //         }
-
-      //         if (!dcd) {
-      //           uint8_t csma_r = (uint8_t)random(256);
-      //           if (csma_p >= csma_r) {
-      //             flushQueue();
-      //           } else {
-      //             dcd_waiting = true;
-      //             dcd_wait_until = millis()+csma_slot_ms;
-      //           }
-      //         }
-      //       }
-      //     }
-          
-      //   #else
-      //     if (!dcd_waiting) updateModemStatus();
-
-      //     if (!dcd) {
-      //       if (dcd_waiting) delay(lora_rx_turnaround_ms);
-
-      //       updateModemStatus();
-
-      //       if (!dcd) {
-      //         dcd_waiting = false;
-      //         flushQueue();
-      //       }
-
-      //     } else {
-      //       dcd_waiting = true;
-      //     }
-      //   #endif
-      // }
   
   } else {
     if (hw_ready) {
