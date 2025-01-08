@@ -71,6 +71,9 @@
 	#define PHY_CRC_LORA_BITS          16
 	#define LORA_PREAMBLE_SYMBOLS_MIN  18
 	#define LORA_PREAMBLE_TARGET_MS    24
+	#define LORA_PREAMBLE_FAST_DELTA   18
+	#define LORA_FAST_THRESHOLD_BPS    30E3
+	#define LORA_LIMIT_THRESHOLD_BPS   60E3
 	long lora_preamble_symbols      =  LORA_PREAMBLE_SYMBOLS_MIN;
 	long lora_preamble_time_ms      =  0;
 	long lora_header_time_ms        =  0;
@@ -78,12 +81,14 @@
 	float lora_symbol_rate          =  0.0;
 	float lora_us_per_byte          =  0.0;
 	bool lora_low_datarate          =  false;
+	bool lora_limit_rate            =  false;
 
 	// CSMA Parameters
 	#define CSMA_SIFS_MS               0
 	#define CSMA_POST_TX_YIELD_SLOTS   3
 	#define CSMA_SLOT_MAX_MS           100
 	#define CSMA_SLOT_MIN_MS           24
+	#define CSMA_SLOT_MIN_FAST_DELTA   18
 	#define CSMA_SLOT_SYMBOLS          12
 	#define CSMA_CW_BANDS              4
 	#define CSMA_CW_MIN                0

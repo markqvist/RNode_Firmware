@@ -445,7 +445,7 @@
         const int pin_dio = 33;
         const int pin_tcxo_enable = -1;
       #elif MODEM == SX1280
-        #define CONFIG_QUEUE_SIZE 40960
+        #define CONFIG_QUEUE_SIZE 6144
         #define DIO2_AS_RF_SWITCH false
         #define HAS_BUSY true
         #define HAS_TCXO true

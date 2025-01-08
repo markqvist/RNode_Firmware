@@ -553,6 +553,45 @@ void flush_queue(void) {
   #endif
 }
 
+void pop_queue() {
+  if (!queue_flushing) {
+    queue_flushing = true;
+    led_tx_on(); uint16_t processed = 0;
+
+    #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+    if (!fifo16_isempty(&packet_starts)) {
+    #else
+    if (!fifo16_isempty_locked(&packet_starts)) {
+    #endif
+
+      uint16_t start = fifo16_pop(&packet_starts);
+      uint16_t length = fifo16_pop(&packet_lengths);
+      if (length >= MIN_L && length <= MTU) {
+        for (uint16_t i = 0; i < length; i++) {
+          uint16_t pos = (start+i)%CONFIG_QUEUE_SIZE;
+          tbuf[i] = packet_queue[pos];
+        }
+
+        transmit(length); processed++;
+      }
+      queue_height -= processed;
+      queued_bytes -= length;
+    }
+
+    lora_receive(); led_tx_off();
+  }
+
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+    update_airtime();
+  #endif
+
+  queue_flushing = false;
+
+  #if HAS_DISPLAY
+    display_tx = true;
+  #endif
+}
+
 void add_airtime(uint16_t written) {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     float lora_symbols = 0;
@@ -1376,9 +1415,8 @@ void tx_queue_handler() {
             cw_wait_passed += millis()-cw_wait_start; cw_wait_start   = millis();
             if (cw_wait_passed < cw_wait_target) { return; }                      // Contention window wait time has not yet passed, continue waiting
             else {                                                                // Wait time has passed, flush the queue
-              flush_queue();
+              if (!lora_limit_rate) { flush_queue(); } else { pop_queue(); }
               cw_wait_passed = 0; csma_cw = -1; difs_wait_start = -1; }
-
           }
         }
       }

@@ -1101,12 +1101,20 @@ void updateBitrate() {
 			lora_bitrate = (uint32_t)(lora_sf * ( (4.0/(float)lora_cr) / ((float)(pow(2, lora_sf))/((float)lora_bw/1000.0)) ) * 1000.0);
 			lora_us_per_byte = 1000000.0/((float)lora_bitrate/8.0);
 			
+			bool fast_rate   = lora_bitrate > LORA_FAST_THRESHOLD_BPS;
+			lora_limit_rate  = lora_bitrate > LORA_LIMIT_THRESHOLD_BPS;
+
+			int csma_slot_min_ms = CSMA_SLOT_MIN_MS;
+			float lora_preamble_target_ms = LORA_PREAMBLE_TARGET_MS;
+			if (fast_rate) { csma_slot_min_ms        -= CSMA_SLOT_MIN_FAST_DELTA;
+											 lora_preamble_target_ms -= LORA_PREAMBLE_FAST_DELTA; }
+			
 			csma_slot_ms = lora_symbol_time_ms*CSMA_SLOT_SYMBOLS;
 			if (csma_slot_ms > CSMA_SLOT_MAX_MS) { csma_slot_ms = CSMA_SLOT_MAX_MS; }
-			if (csma_slot_ms < CSMA_SLOT_MIN_MS) { csma_slot_ms = CSMA_SLOT_MIN_MS; }
+			if (csma_slot_ms < CSMA_SLOT_MIN_MS) { csma_slot_ms = csma_slot_min_ms; }
 			difs_ms = CSMA_SIFS_MS + 2*csma_slot_ms;
 			
-			float target_preamble_symbols = LORA_PREAMBLE_TARGET_MS/lora_symbol_time_ms;
+			float target_preamble_symbols = lora_preamble_target_ms/lora_symbol_time_ms;
 			if (target_preamble_symbols < LORA_PREAMBLE_SYMBOLS_MIN) { target_preamble_symbols = LORA_PREAMBLE_SYMBOLS_MIN; }
 			else { target_preamble_symbols = (ceil)(target_preamble_symbols); }
 			
