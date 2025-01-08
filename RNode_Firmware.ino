@@ -1371,17 +1371,12 @@ void tx_queue_handler() {
       else {                                                                      // Medium is free, so continue waiting
         if (millis() < difs_wait_start+difs_ms) { return; }                       // DIFS has not yet passed, continue waiting
         else {                                                                    // DIFS has passed, and we are now in CW wait
-          digitalWrite(PIN_DIFS, LOW);
           if (cw_wait_start == -1) { cw_wait_start = millis(); return; }          // If we haven't started counting CW wait time, do it from now
           else {                                                                  // If we are already counting CW wait time, add it to the counter
             cw_wait_passed += millis()-cw_wait_start; cw_wait_start   = millis();
             if (cw_wait_passed < cw_wait_target) { return; }                      // Contention window wait time has not yet passed, continue waiting
             else {                                                                // Wait time has passed, flush the queue
-              digitalWrite(PIN_FLUSH, HIGH);
-              digitalWrite(PIN_CW, LOW);
               flush_queue();
-              digitalWrite(PIN_FLUSH, LOW);
-              digitalWrite(PIN_DIFS, LOW);
               cw_wait_passed = 0; csma_cw = -1; difs_wait_start = -1; }
 
           }

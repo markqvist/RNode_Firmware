@@ -183,11 +183,6 @@
 	uint32_t last_status_update = 0;
 	uint32_t last_dcd = 0;
 
-	// Status flags
-	const uint8_t SIG_DETECT = 0x01;
-	const uint8_t SIG_SYNCED = 0x02;
-	const uint8_t RX_ONGOING = 0x04;
-
     // Power management
     #define BATTERY_STATE_UNKNOWN     0x00
     #define BATTERY_STATE_DISCHARGING 0x01
