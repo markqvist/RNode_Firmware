@@ -372,9 +372,6 @@ int sx126x::endPacket() {
     yield();
   }
 
-  // TODO: Remove debug
-  digitalWrite(PIN_TXSIG, LOW);
-
   if (!(millis() < w_timeout)) { timed_out = true; }
 
   // Clear IRQs
@@ -402,19 +399,11 @@ bool sx126x::dcd() {
       clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X;
       executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
     }
-    // TODO: Remove
-    digitalWrite(PIN_PREAMBLE, HIGH);
-  } else {
-    digitalWrite(PIN_PREAMBLE, LOW);
   }
 
   if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) {
     carrier_detected = true;
     header_detected_at = millis();
-    // TODO: Remove
-    digitalWrite(PIN_HEADER, HIGH);
-  } else {
-    digitalWrite(PIN_HEADER, LOW);
   }
 
   return carrier_detected;

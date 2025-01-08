@@ -13,21 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-// TODO: Remove debug setup
-#define PIN_PREAMBLE 7
-#define PIN_HEADER   6
-#define PIN_DCD      5
-#define PIN_TXSIG    4
-
-// #define PIN_DIFS  7
-// #define PIN_CW    6
-// #define PIN_FLUSH 5
-
-#define PIN_DIFS  3
-#define PIN_CW    3
-#define PIN_FLUSH 3
-///////////////////////////
-
 #include "Modem.h"
 
 #ifndef BOARDS_H

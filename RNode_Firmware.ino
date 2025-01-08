@@ -59,16 +59,6 @@ char sbuf[128];
 #endif
 
 void setup() {
-  // TODO: Remove debug setup
-  pinMode(PIN_PREAMBLE, OUTPUT);
-  pinMode(PIN_HEADER, OUTPUT);
-  pinMode(PIN_DCD, OUTPUT);
-  pinMode(PIN_TXSIG, OUTPUT);
-  pinMode(PIN_DIFS, OUTPUT);
-  pinMode(PIN_CW, OUTPUT);
-  pinMode(PIN_FLUSH, OUTPUT);
-  ///////////////////////////
-
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
     EEPROM.begin(EEPROM_SIZE);
@@ -524,10 +514,6 @@ bool queue_full() { return (queue_height >= CONFIG_QUEUE_MAX_LENGTH || queued_by
 volatile bool queue_flushing = false;
 void flush_queue(void) {
   if (!queue_flushing) {
-
-    // TODO: Remove debug
-    digitalWrite(PIN_TXSIG, HIGH);
-
     queue_flushing = true;
     led_tx_on(); uint16_t processed = 0;
 
@@ -1183,8 +1169,8 @@ void update_modem_status() {
     portEXIT_CRITICAL();
   #endif
 
-  if (carrier_detected) { dcd = true; digitalWrite(PIN_DCD, HIGH); /* TODO: Remove debug */ }
-  else { dcd = false; digitalWrite(PIN_DCD, LOW); /* TODO: Remove debug */ }
+  if (carrier_detected) { dcd = true; }
+  else { dcd = false; }
 
   dcd_led = dcd;
   if (dcd_led) { led_rx_on(); }
@@ -1376,13 +1362,8 @@ void tx_queue_handler() {
       cw_wait_target = csma_cw * csma_slot_ms;
     }
 
-    // TODO: Remove metering signallers
-    if (difs_wait_start == -1) { digitalWrite(PIN_DIFS, LOW); }
-    if (cw_wait_start == -1) { digitalWrite(PIN_CW, LOW); } else { digitalWrite(PIN_CW, HIGH); }
-    ////////////////////////////////
-
     if (difs_wait_start == -1) {                                                  // DIFS wait not yet started
-      if (medium_free()) { difs_wait_start = millis(); digitalWrite(PIN_DIFS, HIGH); return; }            // Set DIFS wait start time
+      if (medium_free()) { difs_wait_start = millis(); return; }                  // Set DIFS wait start time
       else               { return; } }                                            // Medium not yet free, continue waiting
     
     else {                                                                        // We are waiting for DIFS or CW to pass
@@ -1391,7 +1372,7 @@ void tx_queue_handler() {
         if (millis() < difs_wait_start+difs_ms) { return; }                       // DIFS has not yet passed, continue waiting
         else {                                                                    // DIFS has passed, and we are now in CW wait
           digitalWrite(PIN_DIFS, LOW);
-          if (cw_wait_start == -1) { cw_wait_start = millis(); digitalWrite(PIN_CW, HIGH); return; }    // If we haven't started counting CW wait time, do it from now
+          if (cw_wait_start == -1) { cw_wait_start = millis(); return; }          // If we haven't started counting CW wait time, do it from now
           else {                                                                  // If we are already counting CW wait time, add it to the counter
             cw_wait_passed += millis()-cw_wait_start; cw_wait_start   = millis();
             if (cw_wait_passed < cw_wait_target) { return; }                      // Contention window wait time has not yet passed, continue waiting
