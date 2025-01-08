@@ -1,14 +1,6 @@
 // Copyright Sandeep Mistry, Mark Qvist and Jacob Eva.
 // Licensed under the MIT license.
 
-// TODO: Remove debug
-#define PIN_PREAMBLE 16
-#define PIN_HEADER   15
-#define PIN_CAD      18
-#define PIN_DCD      12
-#define PIN_TXSIG    48
-/////////////////////////
-
 #include "Boards.h"
 
 #if MODEM == SX1280
@@ -140,13 +132,6 @@ void sx128x::handleDio0Rise() {
 }
 
 bool sx128x::preInit() {
-  // TODO: Remove debug
-  pinMode(PIN_PREAMBLE, OUTPUT);
-  pinMode(PIN_HEADER, OUTPUT);
-  pinMode(PIN_CAD, OUTPUT);
-  pinMode(PIN_DCD, OUTPUT);
-  pinMode(PIN_TXSIG, OUTPUT);
-  //////////////////////
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
@@ -372,7 +357,6 @@ void sx128x::end() {
 }
 
 int sx128x::beginPacket(int implicitHeader) {
-  digitalWrite(PIN_TXSIG, HIGH); // TODO: Remove debug
   standby();
 
   if (implicitHeader) { implicitHeaderMode(); }
@@ -415,8 +399,6 @@ int sx128x::endPacket() {
   mask[0] = 0x00;
   mask[1] = IRQ_TX_DONE_MASK_8X;
   executeOpcode(OP_CLEAR_IRQ_STATUS_8X, mask, 2);
-
-  digitalWrite(PIN_TXSIG, LOW); // TODO: Remove debug
   
   if (timed_out) { return 0; }
   else           { return 1; }
@@ -431,7 +413,6 @@ bool sx128x::dcd() {
   uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
 
   if ((buf[0] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
-    digitalWrite(PIN_PREAMBLE, HIGH); // TODO: Remove debug
     carrier_detected = true;
     if (preamble_detected_at == 0) preamble_detected_at = millis();
     if (millis() - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
@@ -440,23 +421,11 @@ bool sx128x::dcd() {
       clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X;
       executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
     }
-  } else {
-    digitalWrite(PIN_PREAMBLE, LOW); // TODO: Remove debug
   }
 
   if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) {
-    digitalWrite(PIN_HEADER, HIGH); // TODO: Remove debug
     carrier_detected = true;
     header_detected_at = millis();
-  } else {
-    digitalWrite(PIN_HEADER, LOW); // TODO: Remove debug
-  }
-
-  // TODO: Remove debug
-  if (carrier_detected) {
-    digitalWrite(PIN_DCD, HIGH); // TODO: Remove debug
-  } else {
-    digitalWrite(PIN_DCD, LOW); // TODO: Remove debug
   }
 
   return carrier_detected;
