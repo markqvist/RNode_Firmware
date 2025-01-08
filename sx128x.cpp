@@ -43,19 +43,16 @@
 #define OP_STANDBY_8X               0x80
 #define OP_TX_8X                    0x83
 #define OP_RX_8X                    0x82
-#define OP_SET_IRQ_FLAGS_8X         0x8D // Also provides info such as
-                                         // preamble detection, etc for
-                                         // knowing when it's safe to switch
-                                         // antenna modes
+#define OP_SET_IRQ_FLAGS_8X         0x8D
 #define OP_CLEAR_IRQ_STATUS_8X      0x97
 #define OP_GET_IRQ_STATUS_8X        0x15
 #define OP_RX_BUFFER_STATUS_8X      0x17
-#define OP_PACKET_STATUS_8X         0x1D // Get snr & rssi of last packet
+#define OP_PACKET_STATUS_8X         0x1D
 #define OP_CURRENT_RSSI_8X          0x1F
-#define OP_MODULATION_PARAMS_8X     0x8B // BW, SF, CR, etc.
-#define OP_PACKET_PARAMS_8X         0x8C // CRC, preamble, payload length, etc.
+#define OP_MODULATION_PARAMS_8X     0x8B
+#define OP_PACKET_PARAMS_8X         0x8C
 #define OP_STATUS_8X                0xC0
-#define OP_TX_PARAMS_8X             0x8E // Set dbm, etc
+#define OP_TX_PARAMS_8X             0x8E
 #define OP_PACKET_TYPE_8X           0x8A
 #define OP_BUFFER_BASE_ADDR_8X      0x8F
 #define OP_READ_REGISTER_8X         0x19
