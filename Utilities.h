@@ -752,7 +752,7 @@ void kiss_indicate_stat_tx() {
 }
 
 void kiss_indicate_stat_rssi() {
-    uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
+  uint8_t packet_rssi_val = (uint8_t)(last_rssi+rssi_offset);
 	serial_write(FEND);
 	serial_write(CMD_STAT_RSSI);
 	escaped_serial_write(packet_rssi_val);
@@ -845,6 +845,8 @@ void kiss_indicate_channel_stats() {
 		uint16_t atl = (uint16_t)(longterm_airtime*100*100);
 		uint16_t cls = (uint16_t)(total_channel_util*100*100);
 		uint16_t cll = (uint16_t)(longterm_channel_util*100*100);
+		uint8_t  crs = (uint8_t)(current_rssi+rssi_offset);
+		uint8_t  nfl = (uint8_t)(noise_floor+rssi_offset);
 		serial_write(FEND);
 		serial_write(CMD_STAT_CHTM);
 		escaped_serial_write(ats>>8);
@@ -855,6 +857,8 @@ void kiss_indicate_channel_stats() {
 		escaped_serial_write(cls);
 		escaped_serial_write(cll>>8);
 		escaped_serial_write(cll);
+		escaped_serial_write(crs);
+		escaped_serial_write(nfl);
 		serial_write(FEND);
 	#endif
 }

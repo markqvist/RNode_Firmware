@@ -1191,6 +1191,30 @@ void serial_callback(uint8_t sbyte) {
 
 bool medium_free() { update_modem_status(); return !dcd; }
 
+bool noise_floor_sampled = false;
+int  noise_floor_sample  = 0;
+int  noise_floor_buffer[NOISE_FLOOR_SAMPLES] = {0};
+void update_noise_floor() {
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+    if (!dcd) {
+      if (!noise_floor_sampled || current_rssi < noise_floor + CSMA_INFR_THRESHOLD_DB) {
+        noise_floor_buffer[noise_floor_sample] = current_rssi;
+        noise_floor_sample = noise_floor_sample+1;
+        if (noise_floor_sample >= NOISE_FLOOR_SAMPLES) {
+          noise_floor_sample %= NOISE_FLOOR_SAMPLES;
+          noise_floor_sampled = true;
+        }
+
+        if (noise_floor_sampled) {
+          noise_floor = 0;
+          for (int ni = 0; ni < NOISE_FLOOR_SAMPLES; ni++) { noise_floor += noise_floor_buffer[ni]; }
+          noise_floor /= NOISE_FLOOR_SAMPLES;
+        }
+      }
+    }
+  #endif
+}
+
 void update_modem_status() {
   #if MCU_VARIANT == MCU_ESP32
     portENTER_CRITICAL(&update_lock);
@@ -1220,6 +1244,7 @@ void update_modem_status() {
 void check_modem_status() {
   if (millis()-last_status_update >= status_interval_ms) {
     update_modem_status();
+    update_noise_floor();
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       util_samples[dcd_sample] = dcd;
