@@ -4,7 +4,7 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.8.8-py3-none-any.whl",
+    "rns": "rns-0.8.9-py3-none-any.whl",
     "nomadnet": "nomadnet-0.5.6-py3-none-any.whl",
     "lxmf": "lxmf-0.5.8-py3-none-any.whl",
     "rnsh": "rnsh-0.1.4-py3-none-any.whl",
