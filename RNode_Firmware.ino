@@ -241,8 +241,13 @@ void setup() {
     #if MODEM == SX1280
       avoid_interference = false;
     #else
-      if (EEPROM.read(eeprom_addr(ADDR_CONF_DIA)) == 0x01) { avoid_interference = false; }
-      else                                                 { avoid_interference = true; }
+      #if HAS_EEPROM
+        if (EEPROM.read(eeprom_addr(ADDR_CONF_DIA)) == 0x01) { avoid_interference = false; }
+        else                                                 { avoid_interference = true; }
+      #elif MCU_VARIANT == MCU_NRF52
+        if (eeprom_read(eeprom_addr(ADDR_CONF_DIA)) == 0x01) { avoid_interference = false; }
+        else                                                 { avoid_interference = true; }
+      #endif
     #endif
   #endif
 

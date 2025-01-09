@@ -90,7 +90,6 @@
   #define MODEL_C5            0xC5 // Heltec Lora32 v3, 433 MHz
   #define MODEL_CA            0xCA // Heltec Lora32 v3, 868 MHz
 
-  // https://resource.heltec.cn/download/Mesh_Node_T114/Datasheet.pdf
   #define PRODUCT_HELTEC_T114 0xC2 // Heltec Mesh Node T114
   #define BOARD_HELTEC_T114   0x3C
   #define MODEL_C6            0xC6 // Heltec Mesh Node T114, 470-510 MHz (HT-n5262-LF)
