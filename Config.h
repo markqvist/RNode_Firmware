@@ -96,11 +96,11 @@
 	#define CSMA_BAND_1_MAX_AIRTIME    7
 	#define CSMA_BAND_N_MIN_AIRTIME    85
 	int csma_slot_ms                =  CSMA_SLOT_MIN_MS;
-	long difs_ms                    =  CSMA_SIFS_MS + 2*csma_slot_ms;
-	long difs_wait_start            = -1;
-	long cw_wait_start              = -1;
-	long cw_wait_target             = -1;
-	long cw_wait_passed             =  0;
+	unsigned long difs_ms           =  CSMA_SIFS_MS + 2*csma_slot_ms;
+	unsigned long difs_wait_start   = -1;
+	unsigned long cw_wait_start     = -1;
+	unsigned long cw_wait_target    = -1;
+	unsigned long cw_wait_passed    =  0;
 	int csma_cw                     = -1;
 	uint8_t cw_band                 =  1;
 	uint8_t cw_min                  =  0;
