@@ -531,8 +531,13 @@ void draw_quality_bars(int px, int py) {
   }
 }
 
-#define S_RSSI_MIN -135.0
-#define S_RSSI_MAX -75.0
+#if MODE == SX1280
+  #define S_RSSI_MIN -105.0
+  #define S_RSSI_MAX -65.0
+#else
+  #define S_RSSI_MIN -135.0
+  #define S_RSSI_MAX -75.0
+#endif
 #define S_RSSI_SPAN (S_RSSI_MAX-S_RSSI_MIN)
 void draw_signal_bars(int px, int py) {
   stat_area.fillRect(px, py, 13, 7, SSD1306_BLACK);
