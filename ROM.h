@@ -23,7 +23,7 @@
   #define ADDR_HW_REV    0x02
   #define ADDR_SERIAL    0x03
   #define ADDR_MADE      0x07
-  #define ADDR_CHKSUM     0x0B
+  #define ADDR_CHKSUM    0x0B
   #define ADDR_SIGNATURE 0x1B
   #define ADDR_INFO_LOCK 0x9B
 
@@ -43,6 +43,7 @@
   #define ADDR_CONF_PSET 0xB5
   #define ADDR_CONF_PINT 0xB6
   #define ADDR_CONF_BSET 0xB7
+  #define ADDR_CONF_DIA  0xB9
 
   #define INFO_LOCK_BYTE 0x73
   #define CONF_OK_BYTE   0x73

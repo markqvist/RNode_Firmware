@@ -165,53 +165,73 @@ uint8_t boot_vector = 0x00;
 	void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 	void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 	void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+	void led_id_on()  { }
+	void led_id_off() { }
 #elif MCU_VARIANT == MCU_ESP32
 	#if HAS_NP == true
 		void led_rx_on()  { npset(0, 0, 0xFF); }
 		void led_rx_off() {	npset(0, 0, 0); }
 		void led_tx_on()  { npset(0xFF, 0x50, 0x00); }
 		void led_tx_off() { npset(0, 0, 0); }
+		void led_id_on()  { npset(0x90, 0, 0x70); }
+		void led_id_off() { npset(0, 0, 0); }
 	#elif BOARD_MODEL == BOARD_RNODE_NG_20
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_RNODE_NG_21
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_RNODE_NG_22
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_TBEAM
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
 		void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_TDECK
 		void led_rx_on()  { }
 		void led_rx_off() {	}
 		void led_tx_on()  { }
 		void led_tx_off() { }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_TBEAM_S_V1
 		void led_rx_on()  { }
 		void led_rx_off() {	}
 		void led_tx_on()  { }
 		void led_tx_off() { }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_LORA32_V1_0
 		#if defined(EXTERNAL_LEDS)
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+			void led_id_on()  { }
+			void led_id_off() { }
 		#else
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+			void led_id_on()  { }
+			void led_id_off() { }
 		#endif
 	#elif BOARD_MODEL == BOARD_LORA32_V2_0
 		#if defined(EXTERNAL_LEDS)
@@ -219,11 +239,15 @@ uint8_t boot_vector = 0x00;
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+			void led_id_on()  { }
+			void led_id_off() { }
 		#else
 			void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
 			void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+			void led_id_on()  { }
+			void led_id_off() { }
 		#endif
 	#elif BOARD_MODEL == BOARD_HELTEC32_V2
 		#if defined(EXTERNAL_LEDS)
@@ -231,50 +255,68 @@ uint8_t boot_vector = 0x00;
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+			void led_id_on()  { }
+			void led_id_off() { }
 		#else
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+			void led_id_on()  { }
+			void led_id_off() { }
 		#endif
 	#elif BOARD_MODEL == BOARD_HELTEC32_V3
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 			void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 			void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 			void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+			void led_id_on()  { }
+			void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_LORA32_V2_1
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_HUZZAH32
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_GENERIC_ESP32
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#endif
 #elif MCU_VARIANT == MCU_NRF52
     #if HAS_NP == true
-        void led_rx_on()  { npset(0, 0, 0xFF); }
-        void led_rx_off() {	npset(0, 0, 0); }
-        void led_tx_on()  { npset(0xFF, 0x50, 0x00); }
-        void led_tx_off() { npset(0, 0, 0); }
+      void led_rx_on()  { npset(0, 0, 0xFF); }
+      void led_rx_off() {	npset(0, 0, 0); }
+      void led_tx_on()  { npset(0xFF, 0x50, 0x00); }
+      void led_tx_off() { npset(0, 0, 0); }
+			void led_id_on()  { npset(0x90, 0, 0x70); }
+			void led_id_off() { npset(0, 0, 0); }
     #elif BOARD_MODEL == BOARD_RAK4631
 		void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
 		void led_rx_off() {	digitalWrite(pin_led_rx, LOW); }
 		void led_tx_on()  { digitalWrite(pin_led_tx, HIGH); }
 		void led_tx_off() { digitalWrite(pin_led_tx, LOW); }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_HELTEC_T114
-        // Heltec T114 pulls pins LOW to turn on
-        void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
-        void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
-        void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
-        void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+    // Heltec T114 pulls pins LOW to turn on
+    void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
+    void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+    void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
+    void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+		void led_id_on()  { }
+		void led_id_off() { }
     #endif
 #endif
 
@@ -1554,6 +1596,12 @@ void drot_conf_save(uint8_t val) {
 			hard_reset();
 		}
 	#endif
+}
+
+void dia_conf_save(uint8_t val) {
+	if (val > 0x00)  { eeprom_update(eeprom_addr(ADDR_CONF_DIA), 0x01); }
+	else             { eeprom_update(eeprom_addr(ADDR_CONF_DIA), 0x00); }
+	hard_reset();
 }
 
 void np_int_conf_save(uint8_t p_int) {

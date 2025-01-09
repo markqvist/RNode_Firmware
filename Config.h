@@ -96,6 +96,8 @@
 	#define CSMA_BAND_1_MAX_AIRTIME    7
 	#define CSMA_BAND_N_MIN_AIRTIME    85
 	#define CSMA_INFR_THRESHOLD_DB     12
+	bool interference_detected      =  false;
+	bool avoid_interference         =  true;
 	int csma_slot_ms                =  CSMA_SLOT_MIN_MS;
 	unsigned long difs_ms           =  CSMA_SIFS_MS + 2*csma_slot_ms;
 	unsigned long difs_wait_start   = -1;

@@ -62,6 +62,7 @@
   #define CMD_NP_INT      0x65
   #define CMD_BT_CTRL     0x46
   #define CMD_BT_PIN      0x62
+  #define CMD_DIS_IA      0x69
 
   #define CMD_BOARD       0x47
   #define CMD_PLATFORM    0x48

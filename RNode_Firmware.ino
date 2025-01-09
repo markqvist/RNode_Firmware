@@ -237,6 +237,15 @@ void setup() {
     }
   #endif
 
+  #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+    #if MODEM == SX1280
+      avoid_interference = false;
+    #else
+      if (EEPROM.read(eeprom_addr(ADDR_CONF_DIA)) == 0x01) { avoid_interference = false; }
+      else                                                 { avoid_interference = true; }
+    #endif
+  #endif
+
   // Validate board health, EEPROM and config
   validate_status();
 
@@ -1152,6 +1161,17 @@ void serial_callback(uint8_t sbyte) {
             display_unblank();
         }
       #endif
+    } else if (command == CMD_DIS_IA) {
+      if (sbyte == FESC) {
+          ESCAPE = true;
+      } else {
+          if (ESCAPE) {
+              if (sbyte == TFEND) sbyte = FEND;
+              if (sbyte == TFESC) sbyte = FESC;
+              ESCAPE = false;
+          }
+          dia_conf_save(sbyte);
+      }
     } else if (command == CMD_DISP_RCND) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
@@ -1189,7 +1209,11 @@ void serial_callback(uint8_t sbyte) {
   portMUX_TYPE update_lock = portMUX_INITIALIZER_UNLOCKED;
 #endif
 
-bool medium_free() { update_modem_status(); return !dcd; }
+bool medium_free() {
+  update_modem_status();
+  if (avoid_interference && interference_detected) { return false; }
+  return !dcd;
+}
 
 bool noise_floor_sampled = false;
 int  noise_floor_sample  = 0;
@@ -1215,6 +1239,8 @@ void update_noise_floor() {
   #endif
 }
 
+#define LED_ID_TRIG 16
+uint8_t led_id_filter = 0;
 void update_modem_status() {
   #if MCU_VARIANT == MCU_ESP32
     portENTER_CRITICAL(&update_lock);
@@ -1232,13 +1258,22 @@ void update_modem_status() {
     portEXIT_CRITICAL();
   #endif
 
-  if (carrier_detected) { dcd = true; }
-  else { dcd = false; }
+  interference_detected = current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB);
+  if (interference_detected) { if (led_id_filter < LED_ID_TRIG) { led_id_filter += 1; } }
+  else                       { if (led_id_filter > 0) {led_id_filter -= 1; } }
+
+  if (carrier_detected) { dcd = true; } else { dcd = false; }
 
   dcd_led = dcd;
   if (dcd_led) { led_rx_on(); }
-  else         { if (airtime_lock) { led_indicate_airtime_lock(); }
-                 else              { led_rx_off(); } }
+  else {
+    if (interference_detected) {
+      if (led_id_filter >= LED_ID_TRIG && noise_floor_sampled) { led_id_on(); }
+    } else {
+      if (airtime_lock) { led_indicate_airtime_lock(); }
+      else              { led_rx_off(); led_id_off(); }
+    }
+  }
 }
 
 void check_modem_status() {
