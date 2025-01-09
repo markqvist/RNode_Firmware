@@ -71,8 +71,10 @@ The RNode Firmware supports the following boards:
 - LilyGO LoRa32 v2.1 devices (with and without TCXO)
 - LilyGO T3S3 devices with SX1276/8 LoRa chips
 - LilyGO T3S3 devices with SX1262/8 LoRa chips
+- LilyGO T3S3 devices with SX1280 LoRa chips
 - Heltec LoRa32 v2 devices
 - Heltec LoRa32 v3 devices
+- Heltec T114 devices
 - RAK4631 devices
 - Homebrew RNodes based on ATmega1284p boards
 - Homebrew RNodes based on ATmega2560 boards
