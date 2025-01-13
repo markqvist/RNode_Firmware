@@ -889,7 +889,7 @@ void kiss_indicate_channel_stats() {
 		uint16_t cll = (uint16_t)(longterm_channel_util*100*100);
 		uint8_t  crs = (uint8_t)(current_rssi+rssi_offset);
 		uint8_t  nfl = (uint8_t)(noise_floor+rssi_offset);
-		uint8_t  ntf = 0xFF; if (interference_detected) { (uint8_t)(current_rssi+rssi_offset); }
+		uint8_t  ntf = 0xFF; if (interference_detected) { ntf = (uint8_t)(current_rssi+rssi_offset); }
 		serial_write(FEND);
 		serial_write(CMD_STAT_CHTM);
 		escaped_serial_write(ats>>8);
