@@ -383,6 +383,8 @@ char bt_devname[11];
     }
   }
 
+  void bt_flush() { if (bt_state == BT_STATE_CONNECTED) { SerialBT.flushTXD(); } }
+
   void bt_disable_pairing() {
     bt_allow_pairing = false;
     bt_ssp_pin = 0;
