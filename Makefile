@@ -48,7 +48,6 @@ prep-nrf:
 	arduino-cli core install rakwireless:nrf52 --config-file arduino-cli.yaml
 	arduino-cli core install Heltec_nRF52:Heltec_nRF52 --config-file arduino-cli.yaml
 	arduino-cli config set library.enable_unsafe_install true
-	arduino-cli lib install --git-url https://github.com/liamcottle/st7789#b8e7e076714b670764139289d3829b0beff67edb
 	arduino-cli lib install --git-url https://github.com/liamcottle/esp8266-oled-ssd1306#e16cee124fe26490cb14880c679321ad8ac89c95
 	pip install adafruit-nrfutil --upgrade
 
