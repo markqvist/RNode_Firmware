@@ -242,11 +242,13 @@ void setup() {
       avoid_interference = false;
     #else
       #if HAS_EEPROM
-        if (EEPROM.read(eeprom_addr(ADDR_CONF_DIA)) == 0x01) { avoid_interference = false; }
-        else                                                 { avoid_interference = true; }
+        uint8_t ia_conf = EEPROM.read(eeprom_addr(ADDR_CONF_DIA));
+        if (ia_conf == 0x00) { avoid_interference = true; }
+        else                 { avoid_interference = false; }
       #elif MCU_VARIANT == MCU_NRF52
-        if (eeprom_read(eeprom_addr(ADDR_CONF_DIA)) == 0x01) { avoid_interference = false; }
-        else                                                 { avoid_interference = true; }
+        uint8_t ia_conf == eeprom_read(eeprom_addr(ADDR_CONF_DIA));
+        if (ia_conf == 0x00) { avoid_interference = true; }
+        else                 { avoid_interference = false; }
       #endif
     #endif
   #endif
@@ -1263,7 +1265,7 @@ void update_modem_status() {
     portEXIT_CRITICAL();
   #endif
 
-  interference_detected = current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB);
+  interference_detected = !carrier_detected && (current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB));
   if (interference_detected) { if (led_id_filter < LED_ID_TRIG) { led_id_filter += 1; } }
   else                       { if (led_id_filter > 0) {led_id_filter -= 1; } }
 
