@@ -19,7 +19,7 @@
 #if BOARD_MODEL == BOARD_TDECK
   #include <Adafruit_ST7789.h>
 #elif BOARD_MODEL == BOARD_HELTEC_T114
-  #include "ST7789Spi.h"
+  #include "ST7789.h"
   #define COLOR565(r, g, b) (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3))
 #elif BOARD_MODEL == BOARD_TBEAM_S_V1
   #include <Adafruit_SH110X.h>
@@ -127,17 +127,31 @@ GFXcanvas1 stat_area(64, 64);
 GFXcanvas1 disp_area(64, 64);
 
 void update_area_positions() {
-  if (disp_mode == DISP_MODE_PORTRAIT) {
-    p_ad_x = 0 * DISPLAY_SCALE;
-    p_ad_y = 0 * DISPLAY_SCALE;
-    p_as_x = 0 * DISPLAY_SCALE;
-    p_as_y = 64 * DISPLAY_SCALE;
-  } else if (disp_mode == DISP_MODE_LANDSCAPE) {
-    p_ad_x = 0 * DISPLAY_SCALE;
-    p_ad_y = 0 * DISPLAY_SCALE;
-    p_as_x = 64 * DISPLAY_SCALE;
-    p_as_y = 0 * DISPLAY_SCALE;
-  }
+  #if BOARD_MODEL != BOARD_HELTEC_T114
+    if (disp_mode == DISP_MODE_PORTRAIT) {
+      p_ad_x = 0 * DISPLAY_SCALE;
+      p_ad_y = 0 * DISPLAY_SCALE;
+      p_as_x = 0 * DISPLAY_SCALE;
+      p_as_y = 64 * DISPLAY_SCALE;
+    } else if (disp_mode == DISP_MODE_LANDSCAPE) {
+      p_ad_x = 0 * DISPLAY_SCALE;
+      p_ad_y = 0 * DISPLAY_SCALE;
+      p_as_x = 64 * DISPLAY_SCALE;
+      p_as_y = 0 * DISPLAY_SCALE;
+    }
+  #else
+    if (disp_mode == DISP_MODE_PORTRAIT) {
+      p_ad_x = 16;
+      p_ad_y = 64;
+      p_as_x = 16;
+      p_as_y = p_ad_y+126;
+    } else if (disp_mode == DISP_MODE_LANDSCAPE) {
+      p_ad_x = 0;
+      p_ad_y = 96;
+      p_as_x = 126;
+      p_as_y = p_ad_y;
+    }
+  #endif
 }
 
 uint8_t display_contrast = 0x00;
@@ -282,9 +296,7 @@ bool display_init() {
         } else {
           disp_mode = DISP_MODE_PORTRAIT;
         }
-        #if BOARD_MODEL != BOARD_HELTEC_T114
         display.setRotation(display_rotation);
-        #endif
       } else {
         #if BOARD_MODEL == BOARD_RNODE_NG_20
           disp_mode = DISP_MODE_PORTRAIT;
@@ -314,7 +326,8 @@ bool display_init() {
           disp_mode = DISP_MODE_PORTRAIT;
           display.setRotation(1);
         #elif BOARD_MODEL == BOARD_HELTEC_T114
-          disp_mode = DISP_MODE_LANDSCAPE;
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(1);
         #elif BOARD_MODEL == BOARD_RAK4631
           disp_mode = DISP_MODE_LANDSCAPE;
           display.setRotation(0);
