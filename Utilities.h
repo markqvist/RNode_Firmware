@@ -882,13 +882,14 @@ void kiss_indicate_lt_alock() {
 }
 
 void kiss_indicate_channel_stats() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		uint16_t ats = (uint16_t)(airtime*100*100);
 		uint16_t atl = (uint16_t)(longterm_airtime*100*100);
 		uint16_t cls = (uint16_t)(total_channel_util*100*100);
 		uint16_t cll = (uint16_t)(longterm_channel_util*100*100);
 		uint8_t  crs = (uint8_t)(current_rssi+rssi_offset);
 		uint8_t  nfl = (uint8_t)(noise_floor+rssi_offset);
+		uint8_t  ntf = 0xFF; if (interference_detected) { (uint8_t)(current_rssi+rssi_offset); }
 		serial_write(FEND);
 		serial_write(CMD_STAT_CHTM);
 		escaped_serial_write(ats>>8);
@@ -901,12 +902,13 @@ void kiss_indicate_channel_stats() {
 		escaped_serial_write(cll);
 		escaped_serial_write(crs);
 		escaped_serial_write(nfl);
+		escaped_serial_write(ntf);
 		serial_write(FEND);
 	#endif
 }
 
 void kiss_indicate_csma_stats() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		serial_write(FEND);
 		serial_write(CMD_STAT_CSMA);
 		escaped_serial_write(cw_band);
@@ -917,7 +919,7 @@ void kiss_indicate_csma_stats() {
 }
 
 void kiss_indicate_phy_stats() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		uint16_t lst = (uint16_t)(lora_symbol_time_ms*1000);
 		uint16_t lsr = (uint16_t)(lora_symbol_rate);
 		uint16_t prs = (uint16_t)(lora_preamble_symbols);
@@ -937,7 +939,7 @@ void kiss_indicate_phy_stats() {
 }
 
 void kiss_indicate_battery() {
-	#if MCU_VARIANT == MCU_ESP32
+	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 		serial_write(FEND);
 		serial_write(CMD_STAT_BAT);
 		escaped_serial_write(battery_state);
