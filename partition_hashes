@@ -20,6 +20,7 @@ import sys
 import RNS
 import json
 import hashlib
+import subprocess
 
 major_version = None
 minor_version = None
@@ -27,9 +28,23 @@ target_version = None
 
 target_file = os.path.join(sys.argv[1])
 
-firmware_data = open(target_file, "rb").read()
-calc_hash = hashlib.sha256(firmware_data[0:-32]).digest()
-part_hash = firmware_data[-32:]
+if sys.argv[1] == "from_device":
+    from_device = True
+else:
+    from_device = False
 
-if calc_hash == part_hash:
-    print(RNS.hexrep(part_hash, delimit=False))
+if not from_device:
+    firmware_data = open(target_file, "rb").read()
+    calc_hash = hashlib.sha256(firmware_data[0:-32]).digest()
+    part_hash = firmware_data[-32:]
+
+    if calc_hash == part_hash:
+        print(RNS.hexrep(part_hash, delimit=False))
+
+else:
+    try:
+        cmdresult = subprocess.run(["rnodeconf", sys.argv[2], "-L"], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        part_hash = cmdresult.split("The actual firmware hash is: ")[1].replace("\n", "")
+        print(part_hash)
+    except Exception as e:
+        print("Could not get partition hash from device: "+str(e))

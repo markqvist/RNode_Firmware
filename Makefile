@@ -238,9 +238,13 @@ upload-featheresp32:
 
 upload-rak4631:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn rakwireless:nrf52:WisCoreRAK4631Board
+	@sleep 1
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes from_device /dev/ttyACM0)
 
 upload-heltec_t114:
-	arduino-cli upload -p /dev/cu.usbmodem14401 --fqbn heltec:Heltec_nRF52:HT-n5262
+	arduino-cli upload -p /dev/ttyACM0 --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262
+	@sleep 1
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes from_device /dev/ttyACM0)
 
 release: release-all
 
