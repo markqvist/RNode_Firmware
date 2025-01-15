@@ -643,7 +643,7 @@
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_CONSOLE false
-      #define HAS_PMU false
+      #define HAS_PMU true
       #define HAS_NP false
       #define HAS_SD false
       #define HAS_TCXO true
@@ -664,7 +664,14 @@
       #define HAS_DISPLAY true
       #define HAS_BACKLIGHT true
       #define DISPLAY_SCALE 1
+
+      #define LED_ON LOW
+      #define LED_OFF HIGH
+      #define PIN_LED_GREEN _PINNUM(1, 1)
+      #define PIN_LED_RED   _PINNUM(1, 3)
+      #define PIN_LED_BLUE  _PINNUM(0, 14)
       #define PIN_VEXT_EN _PINNUM(0, 12)
+
       const int pin_disp_cs = 30;
       const int pin_disp_dc = 28;
       const int pin_disp_reset = 2;
@@ -675,7 +682,8 @@
       const int pin_disp_miso = -1;
       const int pin_backlight = 43;
 
-      const int pin_btn_usr1 = 42;
+      const int pin_btn_usr1 = _PINNUM(1, 10);
+      const int pin_btn_touch = _PINNUM(0, 11);
 
       const int pin_reset = 25;
       const int pin_cs = 24;
@@ -685,8 +693,8 @@
       const int pin_busy = 17;
       const int pin_dio = 20;
       const int pin_tcxo_enable = 21;
-      const int pin_led_rx = 14;
-      const int pin_led_tx = 14;
+      const int pin_led_rx = PIN_LED_BLUE;
+      const int pin_led_tx = PIN_LED_RED;
 
     #elif BOARD_MODEL == BOARD_HELTEC_T114
       #define MODEM SX1262
@@ -783,6 +791,14 @@
 
   #ifndef HAS_BUSY
     const int pin_busy = -1;
+  #endif
+
+  #ifndef LED_ON
+    #define LED_ON HIGH
+  #endif
+  
+  #ifndef LED_OFF
+    #define LED_OFF LOW
   #endif
 
   #ifndef DIO2_AS_RF_SWITCH
