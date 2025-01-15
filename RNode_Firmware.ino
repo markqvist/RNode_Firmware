@@ -75,18 +75,22 @@ void setup() {
 
       pinMode(DISPLAY_BL_PIN, OUTPUT);
     #endif
-
-    #if BOARD_MODEL == BOARD_TECHO
-      pinMode(PIN_VEXT_EN, OUTPUT);
-      digitalWrite(PIN_VEXT_EN, HIGH);
-    #endif
-
   #endif
 
   #if MCU_VARIANT == MCU_NRF52
-    if (!eeprom_begin()) {
-        Serial.write("EEPROM initialisation failed.\r\n");
-    }
+    #if BOARD_MODEL == BOARD_TECHO
+      delay(200);
+      pinMode(PIN_VEXT_EN, OUTPUT);
+      digitalWrite(PIN_VEXT_EN, HIGH);
+      pinMode(pin_btn_usr1, INPUT_PULLUP);
+      pinMode(pin_btn_touch, INPUT_PULLUP);
+      pinMode(PIN_LED_RED, OUTPUT);
+      pinMode(PIN_LED_GREEN, OUTPUT);
+      pinMode(PIN_LED_BLUE, OUTPUT);
+      delay(200);
+    #endif
+
+    if (!eeprom_begin()) { Serial.write("EEPROM initialisation failed.\r\n"); }
   #endif
 
   // Seed the PRNG for CSMA R-value selection
@@ -1133,7 +1137,6 @@ void serial_callback(uint8_t sbyte) {
             di_conf_save(display_intensity);
             display_unblank();
         }
-
       #endif
     } else if (command == CMD_DISP_ADDR) {
       #if HAS_DISPLAY
