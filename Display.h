@@ -75,7 +75,7 @@
   #define SCL_OLED 17
   #define SDA_OLED 18
 #elif BOARD_MODEL == BOARD_TECHO
-  SPIClass displaySPI = SPIClass(NRF_SPIM0, pin_disp_miso, pin_disp_sck, pin_disp_mosi);
+  SPIClass displaySPI = SPIClass(NRF_SPIM3, pin_disp_miso, pin_disp_sck, pin_disp_mosi);
   #define DISP_W 128
   #define DISP_H 64
   #define DISP_ADDR -1
@@ -200,7 +200,10 @@ uint8_t display_contrast = 0x00;
 #elif BOARD_MODEL == BOARD_HELTEC_T114
   void set_contrast(ST7789Spi *display, uint8_t value) { }
 #elif BOARD_MODEL == BOARD_TECHO
-  void set_contrast(uint8_t value) { }
+  void set_contrast(void *display, uint8_t value) {
+    if (value == 0) { digitalWrite(pin_backlight, LOW); }
+    else            { analogWrite(pin_backlight, value); }
+  }
 #elif BOARD_MODEL == BOARD_TDECK
   void set_contrast(Adafruit_ST7789 *display, uint8_t value) {
     static uint8_t level = 0;
@@ -267,10 +270,11 @@ bool display_init() {
       digitalWrite(PIN_T114_TFT_EN, LOW);
     #elif BOARD_MODEL == BOARD_TECHO
       display.init(0, true, 10, false, displaySPI, SPISettings(4000000, MSBFIRST, SPI_MODE0));
+      display.setPartialWindow(0, 0, DISP_W, DISP_H);
       display.epd2.setBusyCallback(busyCallback);
       #if HAS_BACKLIGHT
-        pinMode(pin_backlight, INPUT_PULLUP);
-        digitalWrite(pin_backlight, HIGH);
+        pinMode(pin_backlight, OUTPUT);
+        digitalWrite(pin_backlight, LOW);
       #endif
     #elif BOARD_MODEL == BOARD_TBEAM_S_V1
       Wire.begin(SDA_OLED, SCL_OLED);
@@ -285,9 +289,9 @@ bool display_init() {
 
     #if DISP_CUSTOM_ADDR == true
       #if HAS_EEPROM
-      uint8_t display_address = EEPROM.read(eeprom_addr(ADDR_CONF_DADR));
+        uint8_t display_address = EEPROM.read(eeprom_addr(ADDR_CONF_DADR));
       #elif MCU_VARIANT == MCU_NRF52
-      uint8_t display_address = eeprom_read(eeprom_addr(ADDR_CONF_DADR));
+        uint8_t display_address = eeprom_read(eeprom_addr(ADDR_CONF_DADR));
       #endif
       if (display_address == 0xFF) display_address = DISP_ADDR;
     #else
@@ -297,6 +301,16 @@ bool display_init() {
     #if HAS_EEPROM
       if (EEPROM.read(eeprom_addr(ADDR_CONF_BSET)) == CONF_OK_BYTE) {
         uint8_t db_timeout = EEPROM.read(eeprom_addr(ADDR_CONF_DBLK));
+        if (db_timeout == 0x00) {
+          display_blanking_enabled = false;
+        } else {
+          display_blanking_enabled = true;
+          display_blanking_timeout = db_timeout*1000;
+        }
+      }
+    #elif MCU_VARIANT == MCU_NRF52
+      if (eeprom_read(eeprom_addr(ADDR_CONF_BSET)) == CONF_OK_BYTE) {
+        uint8_t db_timeout = eeprom_read(eeprom_addr(ADDR_CONF_DBLK));
         if (db_timeout == 0x00) {
           display_blanking_enabled = false;
         } else {
@@ -324,9 +338,7 @@ bool display_init() {
     #endif
       return false;
     } else {
-      #if BOARD_MODEL != BOARD_TECHO
-        set_contrast(&display, display_contrast);
-      #endif
+      set_contrast(&display, display_contrast);
       if (display_rotation != 0xFF) {
         if (display_rotation == 0 || display_rotation == 2) {
           disp_mode = DISP_MODE_LANDSCAPE;
@@ -381,9 +393,6 @@ bool display_init() {
       }
 
       update_area_positions();
-      #if BOARD_MODEL == BOARD_TECHO
-        display.setPartialWindow(p_ad_x, p_ad_y, 64, 128);
-      #endif
 
       for (int i = 0; i < WATERFALL_SIZE; i++) { waterfall[i] = 0; }
 
@@ -397,10 +406,16 @@ bool display_init() {
       #endif
 
       #if HAS_EEPROM
-        #if MCU_VARIANT != MCU_NRF52
-          display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
-        #else
-          display_intensity = eeprom_read(eeprom_addr(ADDR_CONF_DINT));
+        display_intensity = EEPROM.read(eeprom_addr(ADDR_CONF_DINT));
+      #elif MCU_VARIANT == MCU_NRF52
+        display_intensity = eeprom_read(eeprom_addr(ADDR_CONF_DINT));
+      #endif
+      display_unblank_intensity = display_intensity;
+
+      #if BOARD_MODEL == BOARD_TECHO
+        #if HAS_BACKLIGHT
+          if (display_intensity == 0) { digitalWrite(pin_backlight, LOW); }
+          else                        { analogWrite(pin_backlight, display_intensity); }
         #endif
       #endif
 
@@ -889,6 +904,7 @@ void display_recondition() {
   #endif
 }
 
+bool epd_blanked = false;
 void update_display(bool blank = false) {
   display_updating = true;
   if (blank == true) {
@@ -914,14 +930,16 @@ void update_display(bool blank = false) {
     if (millis()-last_disp_update >= disp_update_interval) {
       if (display_contrast != display_intensity) {
         display_contrast = display_intensity;
-        #if BOARD_MODEL != BOARD_TECHO
-          set_contrast(&display, display_contrast);
-        #endif
+        set_contrast(&display, display_contrast);
       }
 
       #if BOARD_MODEL == BOARD_TECHO
-        display.setFullWindow();
-        display.fillScreen(SSD1306_WHITE);
+        if (!epd_blanked) {
+          display.setFullWindow();
+          display.fillScreen(SSD1306_WHITE);
+          display.display(true);
+          epd_blanked = true;
+        }
       #endif
 
       #if BOARD_MODEL == BOARD_HELTEC_T114
@@ -942,9 +960,7 @@ void update_display(bool blank = false) {
       uint32_t current = millis();
       if (display_contrast != display_intensity) {
         display_contrast = display_intensity;
-        #if BOARD_MODEL != BOARD_TECHO
-          set_contrast(&display, display_contrast);
-        #endif
+        set_contrast(&display, display_contrast);
       }
 
       #if BOARD_MODEL == BOARD_HELTEC_T114
@@ -959,7 +975,7 @@ void update_display(bool blank = false) {
         display_recondition();
       } else {
         #if BOARD_MODEL == BOARD_TECHO
-          display.setPartialWindow(p_ad_x, p_ad_y, 64, 128);
+          display.setFullWindow();
           display.fillScreen(SSD1306_WHITE);
         #endif
 
@@ -972,6 +988,7 @@ void update_display(bool blank = false) {
           if (current-last_epd_full_refresh >= REFRESH_PERIOD) { display.display(false); last_epd_full_refresh = millis(); }
           else { display.display(true); }
           last_epd_refresh = millis();
+          epd_blanked = false;
         }
       #elif BOARD_MODEL != BOARD_TDECK
         display.display();
