@@ -105,7 +105,7 @@ void setup() {
     led_init();
   #endif
 
-  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114  && BOARD_MODEL != BOARD_RNODE_NG_22 && BOARD_MODEL != BOARD_TBEAM_S_V1
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114  && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1
   // Some boards need to wait until the hardware UART is set up before booting
   // the full firmware. In the case of the RAK4631 and Heltec T114, the line below will wait
   // until a serial connection is actually established with a master. Thus, it
@@ -161,7 +161,7 @@ void setup() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     init_channel_stats();
 
-    #if BOARD_MODEL == BOARD_RNODE_NG_22
+    #if BOARD_MODEL == BOARD_T3S3
       #if MODEM == SX1280
         delay(300);
         LoRa->reset();
@@ -246,7 +246,7 @@ void setup() {
         if (ia_conf == 0x00) { avoid_interference = true; }
         else                 { avoid_interference = false; }
       #elif MCU_VARIANT == MCU_NRF52
-        uint8_t ia_conf == eeprom_read(eeprom_addr(ADDR_CONF_DIA));
+        uint8_t ia_conf = eeprom_read(eeprom_addr(ADDR_CONF_DIA));
         if (ia_conf == 0x00) { avoid_interference = true; }
         else                 { avoid_interference = false; }
       #endif
@@ -1592,22 +1592,34 @@ void loop() {
 
 void sleep_now() {
   #if HAS_SLEEP == true
-    #if BOARD_MODEL == BOARD_RNODE_NG_22
-      display_intensity = 0;
-      update_display(true);
+    #if PLATFORM == PLATFORM_ESP32
+      #if BOARD_MODEL == BOARD_T3S3
+        display_intensity = 0;
+        update_display(true);
+      #endif
+      #if PIN_DISP_SLEEP >= 0
+        pinMode(PIN_DISP_SLEEP, OUTPUT);
+        digitalWrite(PIN_DISP_SLEEP, DISP_SLEEP_LEVEL);
+      #endif
+      #if HAS_BLUETOOTH
+        if (bt_state == BT_STATE_CONNECTED) {
+          bt_stop();
+          delay(100);
+        }
+      #endif
+      esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
+      esp_deep_sleep_start();
+    #elif PLATFORM == PLATFORM_NRF52
+      #if BOARD_MODEL == BOARD_HELTEC_T114
+        npset(0,0,0);
+        digitalWrite(PIN_T114_VEXT_EN, LOW);
+        digitalWrite(PIN_T114_TFT_BLGT, HIGH);
+        digitalWrite(PIN_T114_TFT_EN, HIGH);
+      #endif
+      sd_power_gpregret_set(0, 0x6d);
+      nrf_gpio_cfg_sense_input(pin_btn_usr1, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);
+      NRF_POWER->SYSTEMOFF = 1;
     #endif
-    #if PIN_DISP_SLEEP >= 0
-      pinMode(PIN_DISP_SLEEP, OUTPUT);
-      digitalWrite(PIN_DISP_SLEEP, DISP_SLEEP_LEVEL);
-    #endif
-    #if HAS_BLUETOOTH
-      if (bt_state == BT_STATE_CONNECTED) {
-        bt_stop();
-        delay(100);
-      }
-    #endif
-    esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
-    esp_deep_sleep_start();
   #endif
 }
 
