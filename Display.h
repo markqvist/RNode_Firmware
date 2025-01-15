@@ -745,7 +745,7 @@ void draw_disp_area() {
           if (!modem_installed) {
             disp_area.drawBitmap(0, 37, bm_no_radio, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           } else {
-            disp_area.drawBitmap(0, 37, bm_hwfail, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
+            disp_area.drawBitmap(0, 37, bm_conf_missing, disp_area.width(), 27, SSD1306_WHITE, SSD1306_BLACK);
           }
         }
       } else if (bt_state == BT_STATE_PAIRING and bt_ssp_pin != 0) {
