@@ -147,9 +147,6 @@ uint32_t retrieve_application_size() {
     uint8_t bytes[4];
     memcpy(bytes, (const void*)IMG_SIZE_START, 4);
     uint32_t fw_len = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
-    Serial.println("FIRMWARE LEN:");
-    Serial.print(fw_len);
-    Serial.flush();
     return fw_len;
 }
 
