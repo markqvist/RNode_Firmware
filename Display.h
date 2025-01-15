@@ -905,6 +905,14 @@ void display_recondition() {
 }
 
 bool epd_blanked = false;
+#if BOARD_MODEL == BOARD_TECHO
+  void epd_blank() {
+    display.setFullWindow();
+    display.fillScreen(SSD1306_WHITE);
+    display.display(true);
+  }
+#endif
+
 void update_display(bool blank = false) {
   display_updating = true;
   if (blank == true) {
@@ -935,9 +943,7 @@ void update_display(bool blank = false) {
 
       #if BOARD_MODEL == BOARD_TECHO
         if (!epd_blanked) {
-          display.setFullWindow();
-          display.fillScreen(SSD1306_WHITE);
-          display.display(true);
+          epd_blank();
           epd_blanked = true;
         }
       #endif
