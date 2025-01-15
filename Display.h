@@ -57,7 +57,7 @@
 #elif BOARD_MODEL == BOARD_RNODE_NG_21
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
-#elif BOARD_MODEL == BOARD_RNODE_NG_22
+#elif BOARD_MODEL == BOARD_T3S3
   #define DISP_RST 21
   #define DISP_ADDR 0x3C
   #define SCL_OLED 17
@@ -125,6 +125,8 @@ int p_as_y = 0;
 
 GFXcanvas1 stat_area(64, 64);
 GFXcanvas1 disp_area(64, 64);
+
+void fillRect(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colour);
 
 void update_area_positions() {
   #if BOARD_MODEL != BOARD_HELTEC_T114
@@ -200,7 +202,7 @@ bool display_init() {
       digitalWrite(pin_display_en, LOW);
       delay(50);
       digitalWrite(pin_display_en, HIGH);
-    #elif BOARD_MODEL == BOARD_RNODE_NG_22
+    #elif BOARD_MODEL == BOARD_T3S3
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC32_V2
       Wire.begin(SDA_OLED, SCL_OLED);
@@ -223,23 +225,8 @@ bool display_init() {
       digitalWrite(pin_display_en, HIGH);
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_HELTEC_T114
-
-      // enable vext (not required for screen to work, but is done in Heltec example)
-      digitalWrite(PIN_T114_VEXT_EN, HIGH);
-      pinMode(PIN_T114_VEXT_EN, OUTPUT);
-
-      // enable power to display
-      digitalWrite(PIN_T114_TFT_EN, LOW);
       pinMode(PIN_T114_TFT_EN, OUTPUT);
-
-      // enable backlight led (display is always black without this)
-      digitalWrite(PIN_T114_TFT_BLGT, LOW);
-      pinMode(PIN_T114_TFT_BLGT, OUTPUT);
-
-      // enable adc (not required for screen to work, but is done in Heltec example)
-      digitalWrite(PIN_T114_ADC_EN, HIGH);
-      pinMode(PIN_T114_ADC_EN, OUTPUT);
-
+      digitalWrite(PIN_T114_TFT_EN, LOW);
     #elif BOARD_MODEL == BOARD_TBEAM_S_V1
       Wire.begin(SDA_OLED, SCL_OLED);
     #endif
@@ -366,6 +353,14 @@ bool display_init() {
         display.fillScreen(SSD1306_BLACK);
       #endif
 
+      #if BOARD_MODEL == BOARD_HELTEC_T114
+        // Enable backlight led (display is always black without this)
+        fillRect(p_ad_x, p_ad_y, 128, 128, SSD1306_BLACK);
+        fillRect(p_as_x, p_as_y, 128, 128, SSD1306_BLACK);
+        pinMode(PIN_T114_TFT_BLGT, OUTPUT);
+        digitalWrite(PIN_T114_TFT_BLGT, LOW);
+      #endif
+
       return true;
     }
   #else
@@ -373,7 +368,7 @@ bool display_init() {
   #endif
 }
 
-// draws a line on the screen
+// Draws a line on the screen
 void drawLine(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colour) {
   #if BOARD_MODEL == BOARD_HELTEC_T114
   if(colour == SSD1306_WHITE){
@@ -387,7 +382,7 @@ void drawLine(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colo
   #endif
 }
 
-// draws a filled rectangle on the screen
+// Draws a filled rectangle on the screen
 void fillRect(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colour) {
   #if BOARD_MODEL == BOARD_HELTEC_T114
   if(colour == SSD1306_WHITE){
@@ -401,7 +396,7 @@ void fillRect(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colo
   #endif
 }
 
-// draws a bitmap to the display and auto scales it based on the boards configured DISPLAY_SCALE
+// Draws a bitmap to the display and auto scales it based on the boards configured DISPLAY_SCALE
 void drawBitmap(int16_t startX, int16_t startY, const uint8_t* bitmap, int16_t bitmapWidth, int16_t bitmapHeight, uint16_t foregroundColour, uint16_t backgroundColour) {
   #if DISPLAY_SCALE == 1
     display.drawBitmap(startX, startY, bitmap, bitmapWidth, bitmapHeight, foregroundColour, backgroundColour);
