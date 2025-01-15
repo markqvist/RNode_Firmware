@@ -59,16 +59,6 @@ char sbuf[128];
 #endif
 
 void setup() {
-
-  pinMode(pin_led_rx, OUTPUT);
-  pinMode(pin_led_tx, OUTPUT);
-  while (true) {
-    delay(300);
-    led_rx_on();
-    delay(300);
-    led_rx_off();
-  }
-  
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
     EEPROM.begin(EEPROM_SIZE);
