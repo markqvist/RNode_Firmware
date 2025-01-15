@@ -100,7 +100,7 @@ bool sx127x::preInit() {
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
-  #if BOARD_MODEL == BOARD_RNODE_NG_22
+  #if BOARD_MODEL == BOARD_T3S3
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
   #else
     SPI.begin();

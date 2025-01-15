@@ -62,7 +62,7 @@
   bool bat_voltage_dropping = false;
   float bat_delay_v = 0;
   float bat_state_change_v = 0;
-#elif BOARD_MODEL == BOARD_RNODE_NG_22
+#elif BOARD_MODEL == BOARD_T3S3
   #define BAT_V_MIN       3.15
   #define BAT_V_MAX       4.217
   #define BAT_V_CHG       4.48
@@ -138,13 +138,13 @@ uint8_t pmu_rc = 0;
 void kiss_indicate_battery();
 
 void measure_battery() {
-  #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_RNODE_NG_22 || BOARD_MODEL == BOARD_HELTEC_T114
+  #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC_T114
     battery_installed = true;
     battery_indeterminate = true;
 
     #if BOARD_MODEL == BOARD_HELTEC32_V3
       float battery_measurement = (float)(analogRead(pin_vbat)) * 0.0041;
-    #elif BOARD_MODEL == BOARD_RNODE_NG_22
+    #elif BOARD_MODEL == BOARD_T3S3
       float battery_measurement = (float)(analogRead(pin_vbat)) / 4095.0*6.7828;
     #elif BOARD_MODEL == BOARD_HELTEC_T114
       float battery_measurement = (float)(analogRead(pin_vbat)) * 0.017165;
@@ -322,7 +322,7 @@ void update_pmu() {
 }
 
 bool init_pmu() {
-  #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL ==BOARD_RNODE_NG_22
+  #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL ==BOARD_T3S3
     pinMode(pin_vbat, INPUT);
     return true;
   #elif BOARD_MODEL == BOARD_HELTEC32_V3

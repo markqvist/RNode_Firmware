@@ -41,12 +41,12 @@
   #define MODEL_A2            0xA2 // RNode v2.1, 433 MHz
   #define MODEL_A7            0xA7 // RNode v2.1, 868 MHz
 
-  #define BOARD_RNODE_NG_22   0x42 // RNode hardware revision v2.2 (T3S3)
-  #define MODEL_A1            0xA1 // RNode v2.2, 433 MHz with SX1268
-  #define MODEL_A5            0xA5 // RNode v2.2, 433 MHz with SX1278
-  #define MODEL_A6            0xA6 // RNode v2.2, 868 MHz with SX1262
-  #define MODEL_AA            0xAA // RNode v2.2, 868 MHz with SX1276
-  #define MODEL_AC            0xAC // RNode v2.2, 2.4 GHz with SX1280 and PA
+  #define BOARD_T3S3          0x42 // T3S3 devices
+  #define MODEL_A1            0xA1 // T3S3, 433 MHz with SX1268
+  #define MODEL_A5            0xA5 // T3S3, 433 MHz with SX1278
+  #define MODEL_A6            0xA6 // T3S3, 868 MHz with SX1262
+  #define MODEL_AA            0xAA // T3S3, 868 MHz with SX1276
+  #define MODEL_AC            0xAC // T3S3, 2.4 GHz with SX1280 and PA
 
   #define PRODUCT_TBEAM       0xE0 // T-Beam devices
   #define BOARD_TBEAM         0x33
@@ -92,8 +92,8 @@
 
   #define PRODUCT_HELTEC_T114 0xC2 // Heltec Mesh Node T114
   #define BOARD_HELTEC_T114   0x3C
-  #define MODEL_C6            0xC6 // Heltec Mesh Node T114, 470-510 MHz (HT-n5262-LF)
-  #define MODEL_C7            0xC7 // Heltec Mesh Node T114, 863-928 MHz (HT-n5262-HF)
+  #define MODEL_C6            0xC6 // Heltec Mesh Node T114, 470-510 MHz
+  #define MODEL_C7            0xC7 // Heltec Mesh Node T114, 863-928 MHz
 
   #define PRODUCT_RAK4631     0x10
   #define BOARD_RAK4631       0x51
@@ -413,7 +413,7 @@
         #endif
       #endif
 
-    #elif BOARD_MODEL == BOARD_RNODE_NG_22
+    #elif BOARD_MODEL == BOARD_T3S3
       #define IS_ESP32S3 true
       #define HAS_DISPLAY true
       #define HAS_CONSOLE true
@@ -644,6 +644,7 @@
       #define HAS_TCXO true
       #define HAS_BUSY true
       #define HAS_INPUT true
+      #define HAS_SLEEP true
       #define DIO2_AS_RF_SWITCH true
       #define CONFIG_UART_BUFFER_SIZE 6144
       #define CONFIG_QUEUE_SIZE 6144
