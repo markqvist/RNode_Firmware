@@ -1285,35 +1285,32 @@ void promisc_disable() {
 }
 
 #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
-    bool eeprom_begin() {
-        InternalFS.begin();
-
-        file.open(EEPROM_FILE, FILE_O_READ);
-
-        // if file doesn't exist
-        if (!file) {
-            if (file.open(EEPROM_FILE, FILE_O_WRITE)) {
-                // initialise the file with empty content
-                uint8_t empty_content[EEPROM_SIZE] = {0};
-                file.write(empty_content, EEPROM_SIZE);
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            file.close();
-            file.open(EEPROM_FILE, FILE_O_WRITE);
-            return true;
-        }
+  bool eeprom_begin() {
+    InternalFS.begin();
+    
+    file.open(EEPROM_FILE, FILE_O_READ);
+    if (!file) {
+      if (file.open(EEPROM_FILE, FILE_O_WRITE)) {
+      	for (uint32_t mapped_addr = 0; mapped_addr < EEPROM_SIZE; mapped_addr++) { file.seek(mapped_addr); file.write(0xFF); }
+        eeprom_flush();
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      file.close();
+      file.open(EEPROM_FILE, FILE_O_WRITE);
+      return true;
     }
+  }
 
-    uint8_t eeprom_read(uint32_t mapped_addr) {
-        uint8_t byte;
-        void* byte_ptr = &byte;
-        file.seek(mapped_addr);
-        file.read(byte_ptr, 1);
-        return byte;
-    }
+  uint8_t eeprom_read(uint32_t mapped_addr) {
+      uint8_t byte;
+      void* byte_ptr = &byte;
+      file.seek(mapped_addr);
+      file.read(byte_ptr, 1);
+      return byte;
+  }
 #endif
 
 bool eeprom_info_locked() {
@@ -1423,9 +1420,13 @@ void eeprom_write(uint8_t addr, uint8_t byte) {
 }
 
 void eeprom_erase() {
-	for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
-		eeprom_update(eeprom_addr(addr), 0xFF);
-	}
+	#if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+		InternalFS.format();
+	#else
+		for (int addr = 0; addr < EEPROM_RESERVED; addr++) {
+			eeprom_update(eeprom_addr(addr), 0xFF);
+		}
+	#endif
 	hard_reset();
 }
 
