@@ -47,6 +47,8 @@ prep-nrf:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install rakwireless:nrf52 --config-file arduino-cli.yaml
 	arduino-cli core install Heltec_nRF52:Heltec_nRF52 --config-file arduino-cli.yaml
+	arduino-cli core install adafruit:nrf52 --config-file arduino-cli.yaml
+	arduino-cli lib install "GxEPD2"
 	arduino-cli config set library.enable_unsafe_install true
 	arduino-cli lib install --git-url https://github.com/liamcottle/esp8266-oled-ssd1306#e16cee124fe26490cb14880c679321ad8ac89c95
 	pip install adafruit-nrfutil --upgrade
@@ -137,6 +139,9 @@ firmware-rak4631:
 
 firmware-heltec_t114:
 	arduino-cli compile --log --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3C\""
+
+firmware-techo:
+	arduino-cli compile --log --fqbn adafruit:nrf52:pca10056 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x44\""
 
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
@@ -243,6 +248,11 @@ upload-rak4631:
 upload-heltec_t114:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn Heltec_nRF52:Heltec_nRF52:HT-n5262
 	@sleep 1
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes from_device /dev/ttyACM0)
+
+upload-techo:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn adafruit:nrf52:pca10056
+	@sleep 6
 	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes from_device /dev/ttyACM0)
 
 release: release-all

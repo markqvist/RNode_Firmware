@@ -59,6 +59,16 @@ char sbuf[128];
 #endif
 
 void setup() {
+
+  pinMode(pin_led_rx, OUTPUT);
+  pinMode(pin_led_tx, OUTPUT);
+  while (true) {
+    delay(300);
+    led_rx_on();
+    delay(300);
+    led_rx_off();
+  }
+  
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
     EEPROM.begin(EEPROM_SIZE);
@@ -75,6 +85,12 @@ void setup() {
 
       pinMode(DISPLAY_BL_PIN, OUTPUT);
     #endif
+
+    #if BOARD_MODEL == BOARD_TECHO
+      pinMode(PIN_VEXT_EN, OUTPUT);
+      digitalWrite(PIN_VEXT_EN, HIGH);
+    #endif
+
   #endif
 
   #if MCU_VARIANT == MCU_NRF52
@@ -105,11 +121,11 @@ void setup() {
     led_init();
   #endif
 
-  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114  && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1
-  // Some boards need to wait until the hardware UART is set up before booting
-  // the full firmware. In the case of the RAK4631 and Heltec T114, the line below will wait
-  // until a serial connection is actually established with a master. Thus, it
-  // is disabled on this platform.
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114 && BOARD_MODEL != BOARD_TECHO && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1
+    // Some boards need to wait until the hardware UART is set up before booting
+    // the full firmware. In the case of the RAK4631 and Heltec T114, the line below will wait
+    // until a serial connection is actually established with a master. Thus, it
+    // is disabled on this platform.
     while (!Serial);
   #endif
 
@@ -211,6 +227,10 @@ void setup() {
       eeprom_update(eeprom_addr(ADDR_CONF_DSET), CONF_OK_BYTE);
       eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
     }
+    #if BOARD_MODEL == BOARD_TECHO
+      display_add_callback(work_while_waiting);
+    #endif
+
     display_unblank();
     disp_ready = display_init();
     update_display();
@@ -1491,6 +1511,8 @@ void tx_queue_handler() {
   }
 }
 
+void work_while_waiting() { loop(); }
+
 void loop() {
   if (radio_online) {
     #if MCU_VARIANT == MCU_ESP32
@@ -1562,7 +1584,7 @@ void loop() {
   #endif
 
   #if HAS_DISPLAY
-    if (disp_ready) update_display();
+    if (disp_ready && !display_updating) update_display();
   #endif
 
   #if HAS_PMU
@@ -1612,9 +1634,12 @@ void sleep_now() {
     #elif PLATFORM == PLATFORM_NRF52
       #if BOARD_MODEL == BOARD_HELTEC_T114
         npset(0,0,0);
-        digitalWrite(PIN_T114_VEXT_EN, LOW);
+        digitalWrite(PIN_VEXT_EN, LOW);
         digitalWrite(PIN_T114_TFT_BLGT, HIGH);
         digitalWrite(PIN_T114_TFT_EN, HIGH);
+      #elif BOARD_MODEL == BOARD_TECHO
+        digitalWrite(PIN_VEXT_EN, LOW);
+        digitalWrite(pin_backlight, LOW);
       #endif
       sd_power_gpregret_set(0, 0x6d);
       nrf_gpio_cfg_sense_input(pin_btn_usr1, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);

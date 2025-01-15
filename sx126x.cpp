@@ -87,7 +87,11 @@
 #define FREQ_DIV_6X  (double)pow(2.0, 25.0)
 #define FREQ_STEP_6X (double)(XTAL_FREQ_6X / FREQ_DIV_6X)
 
-#if defined(NRF52840_XXAA)
+#if BOARD_MODEL == BOARD_TECHO
+  SPIClass spim3 = SPIClass(NRF_SPIM3, pin_miso, pin_sclk, pin_mosi) ;
+  #define SPI spim3
+
+#elif defined(NRF52840_XXAA)
   extern SPIClass spiModem;
   #define SPI spiModem
 #endif
@@ -123,6 +127,9 @@ bool sx126x::preInit() {
   
   #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
+  #elif BOARD_MODEL == BOARD_TECHO
+    SPI.setPins(pin_miso, pin_sclk, pin_mosi);
+    SPI.begin();
   #else
     SPI.begin();
   #endif
@@ -568,6 +575,8 @@ void sx126x::enableTCXO() {
     #elif BOARD_MODEL == BOARD_T3S3
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #elif BOARD_MODEL == BOARD_HELTEC_T114
+      uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
+    #elif BOARD_MODEL == BOARD_TECHO
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #endif
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);

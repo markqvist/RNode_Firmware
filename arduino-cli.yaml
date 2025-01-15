@@ -3,4 +3,5 @@ board_manager:
   - https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
   - https://raw.githubusercontent.com/RAKwireless/RAKwireless-Arduino-BSP-Index/main/package_rakwireless_index.json
   - https://github.com/HelTecAutomation/Heltec_nRF52/releases/download/1.7.0/package_heltec_nrf_index.json
+  - https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
   - http://unsigned.io/arduino/package_unsignedio_UnsignedBoards_index.json

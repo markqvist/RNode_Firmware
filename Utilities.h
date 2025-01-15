@@ -121,8 +121,8 @@ uint8_t boot_vector = 0x00;
   void led_init() {
   	#if BOARD_MODEL == BOARD_HELTEC_T114
   		// Enable vext power supply to neopixel
-  		pinMode(PIN_T114_VEXT_EN, OUTPUT);
-  		digitalWrite(PIN_T114_VEXT_EN, HIGH);
+  		pinMode(PIN_VEXT_EN, OUTPUT);
+  		digitalWrite(PIN_VEXT_EN, HIGH);
   	#endif
 
     #if MCU_VARIANT == MCU_NRF52
@@ -323,7 +323,14 @@ uint8_t boot_vector = 0x00;
     void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
 		void led_id_on()  { }
 		void led_id_off() { }
-    #endif
+  #elif BOARD_MODEL == BOARD_TECHO
+		void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
+		void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+		void led_id_on()  { }
+		void led_id_off() { }
+	#endif
 #endif
 
 void hard_reset(void) {
@@ -1287,7 +1294,7 @@ void promisc_disable() {
 #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
   bool eeprom_begin() {
     InternalFS.begin();
-    
+
     file.open(EEPROM_FILE, FILE_O_READ);
     if (!file) {
       if (file.open(EEPROM_FILE, FILE_O_WRITE)) {
@@ -1454,7 +1461,7 @@ bool eeprom_product_valid() {
 	#elif PLATFORM == PLATFORM_ESP32
 	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3 || rval == PRODUCT_TDECK_V1 || rval == PRODUCT_TBEAM_S_V1) {
 	#elif PLATFORM == PLATFORM_NRF52
-	if (rval == PRODUCT_RAK4631 || rval == PRODUCT_HELTEC_T114 || rval == PRODUCT_HMBRW) {
+	if (rval == PRODUCT_RAK4631 || rval == PRODUCT_HELTEC_T114 || rval == PRODUCT_TECHO || rval == PRODUCT_HMBRW) {
 	#else
 	if (false) {
 	#endif
@@ -1484,6 +1491,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_E4 || model == MODEL_E9 || model == MODEL_E3 || model == MODEL_E8) {
 	#elif BOARD_MODEL == BOARD_TDECK
 	if (model == MODEL_D4 || model == MODEL_D9) {
+	#elif BOARD_MODEL == BOARD_TECHO
+	if (model == MODEL_16 || model == MODEL_17) {
 	#elif BOARD_MODEL == BOARD_TBEAM_S_V1
 	if (model == MODEL_DB || model == MODEL_DC) {
 	#elif BOARD_MODEL == BOARD_LORA32_V1_0
