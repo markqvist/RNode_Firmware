@@ -15,7 +15,7 @@
 
 #include "Config.h"
 
-#if HAS_EEPROM 
+#if HAS_EEPROM
     #include <EEPROM.h>
 #elif PLATFORM == PLATFORM_NRF52
     #include <Adafruit_LittleFS.h>
@@ -324,10 +324,10 @@ uint8_t boot_vector = 0x00;
 		void led_id_on()  { }
 		void led_id_off() { }
   #elif BOARD_MODEL == BOARD_TECHO
-		void led_rx_on()  { digitalWrite(pin_led_rx, LOW); }
-		void led_rx_off() {	digitalWrite(pin_led_rx, HIGH); }
-		void led_tx_on()  { digitalWrite(pin_led_tx, LOW); }
-		void led_tx_off() { digitalWrite(pin_led_tx, HIGH); }
+		void led_rx_on()  { digitalWrite(pin_led_rx, LED_ON); }
+		void led_rx_off() {	digitalWrite(pin_led_rx, LED_OFF); }
+		void led_tx_on()  { digitalWrite(pin_led_tx, LED_ON); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LED_OFF); }
 		void led_id_on()  { }
 		void led_id_off() { }
 	#endif
@@ -471,6 +471,19 @@ void led_indicate_warning(int cycles) {
 		  led_rx_off();
 		}
 	#elif BOARD_MODEL == BOARD_LORA32_V2_0
+		void led_indicate_info(int cycles) {
+			bool forever = (cycles == 0) ? true : false;
+			cycles = forever ? 1 : cycles;
+			while(cycles > 0) {
+		    led_rx_off();
+		    delay(100);
+		    led_rx_on();
+		    delay(100);
+		    if (!forever) cycles--;
+		  }
+		  led_rx_off();
+		}
+	#elif BOARD_MODEL == BOARD_TECHO
 		void led_indicate_info(int cycles) {
 			bool forever = (cycles == 0) ? true : false;
 			cycles = forever ? 1 : cycles;
@@ -636,9 +649,17 @@ int8_t  led_standby_direction = 0;
 				}
 				led_standby_value += led_standby_direction;
 				if (led_standby_value > 253) {
-					led_tx_on();
+					#if BOARD_MODEL == BOARD_TECHO
+						led_rx_on();
+					#else
+						led_tx_on();
+					#endif
 				} else {
-					led_tx_off();
+					#if BOARD_MODEL == BOARD_TECHO
+						led_rx_off();
+					#else
+						led_tx_off();
+					#endif
 				}
 				#if BOARD_MODEL == BOARD_LORA32_V2_1
 					#if defined(EXTERNAL_LEDS)
