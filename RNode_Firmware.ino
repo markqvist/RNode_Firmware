@@ -1631,8 +1631,10 @@ void sleep_now() {
         digitalWrite(PIN_T114_TFT_BLGT, HIGH);
         digitalWrite(PIN_T114_TFT_EN, HIGH);
       #elif BOARD_MODEL == BOARD_TECHO
-        digitalWrite(pin_backlight, LOW);
-        epd_blank();
+        for (uint8_t i = display_intensity; i > 0; i--) { analogWrite(pin_backlight, i-1); delay(1); }
+        epd_black(true); delay(300); epd_black(true);
+        analogWrite(PIN_VEXT_EN, 0);
+        delay(100);
       #endif
       sd_power_gpregret_set(0, 0x6d);
       nrf_gpio_cfg_sense_input(pin_btn_usr1, NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_SENSE_LOW);

@@ -201,7 +201,7 @@ uint8_t display_contrast = 0x00;
   void set_contrast(ST7789Spi *display, uint8_t value) { }
 #elif BOARD_MODEL == BOARD_TECHO
   void set_contrast(void *display, uint8_t value) {
-    if (value == 0) { digitalWrite(pin_backlight, LOW); }
+    if (value == 0) { analogWrite(pin_backlight, 0); }
     else            { analogWrite(pin_backlight, value); }
   }
 #elif BOARD_MODEL == BOARD_TDECK
@@ -274,7 +274,7 @@ bool display_init() {
       display.epd2.setBusyCallback(busyCallback);
       #if HAS_BACKLIGHT
         pinMode(pin_backlight, OUTPUT);
-        digitalWrite(pin_backlight, LOW);
+        analogWrite(pin_backlight, 0);
       #endif
     #elif BOARD_MODEL == BOARD_TBEAM_S_V1
       Wire.begin(SDA_OLED, SCL_OLED);
@@ -414,7 +414,7 @@ bool display_init() {
 
       #if BOARD_MODEL == BOARD_TECHO
         #if HAS_BACKLIGHT
-          if (display_intensity == 0) { digitalWrite(pin_backlight, LOW); }
+          if (display_intensity == 0) { analogWrite(pin_backlight, 0); }
           else                        { analogWrite(pin_backlight, display_intensity); }
         #endif
       #endif
@@ -906,10 +906,16 @@ void display_recondition() {
 
 bool epd_blanked = false;
 #if BOARD_MODEL == BOARD_TECHO
-  void epd_blank() {
+  void epd_blank(bool full_update = true) {
     display.setFullWindow();
     display.fillScreen(SSD1306_WHITE);
-    display.display(true);
+    display.display(full_update);
+  }
+
+  void epd_black(bool full_update = true) {
+    display.setFullWindow();
+    display.fillScreen(SSD1306_BLACK);
+    display.display(full_update);
   }
 #endif
 
