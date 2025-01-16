@@ -88,8 +88,8 @@
 #define FREQ_STEP_6X (double)(XTAL_FREQ_6X / FREQ_DIV_6X)
 
 #if BOARD_MODEL == BOARD_TECHO
-  SPIClass spim0 = SPIClass(NRF_SPIM0, pin_miso, pin_sclk, pin_mosi) ;
-  #define SPI spim0
+  SPIClass spim3 = SPIClass(NRF_SPIM3, pin_miso, pin_sclk, pin_mosi) ;
+  #define SPI spim3
 
 #elif defined(NRF52840_XXAA)
   extern SPIClass spiModem;

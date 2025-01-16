@@ -75,7 +75,7 @@
   #define SCL_OLED 17
   #define SDA_OLED 18
 #elif BOARD_MODEL == BOARD_TECHO
-  SPIClass displaySPI = SPIClass(NRF_SPIM3, pin_disp_miso, pin_disp_sck, pin_disp_mosi);
+  SPIClass displaySPI = SPIClass(NRF_SPIM0, pin_disp_miso, pin_disp_sck, pin_disp_mosi);
   #define DISP_W 128
   #define DISP_H 64
   #define DISP_ADDR -1
