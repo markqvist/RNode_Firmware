@@ -390,29 +390,35 @@ int sx126x::endPacket() {
 }
 
 unsigned long preamble_detected_at = 0;
-unsigned long header_detected_at = 0;
 extern long lora_preamble_time_ms;
 extern long lora_header_time_ms;
+bool false_preamble_detected = false;
+
 bool sx126x::dcd() {
-  bool carrier_detected = false;
   uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
+  uint32_t now = millis();
+
+  bool header_detected = false;
+  bool carrier_detected = false;
+
+  if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) { header_detected = true; carrier_detected = true; }
+  else { header_detected = false; }
 
   if ((buf[1] & IRQ_PREAMBLE_DET_MASK_6X) != 0) {
     carrier_detected = true;
-    if (preamble_detected_at == 0) preamble_detected_at = millis();
-    if (millis() - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
+    if (preamble_detected_at == 0) { preamble_detected_at = now; }
+    if (now - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
       preamble_detected_at = 0;
+      if (!header_detected) { false_preamble_detected = true; }
       uint8_t clearbuf[2] = {0};
       clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X;
       executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
     }
   }
 
-  if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) {
-    carrier_detected = true;
-    header_detected_at = millis();
-  }
-
+  // TODO: Maybe there's a way of unlatching the RSSI
+  // status without re-activating receive mode?
+  if (false_preamble_detected) { sx126x_modem.receive(); false_preamble_detected = false; }
   return carrier_detected;
 }
 
