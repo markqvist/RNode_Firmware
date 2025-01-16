@@ -219,7 +219,11 @@ void setup() {
     if (eeprom_read(eeprom_addr(ADDR_CONF_DSET)) != CONF_OK_BYTE) {
     #endif
       eeprom_update(eeprom_addr(ADDR_CONF_DSET), CONF_OK_BYTE);
-      eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
+      #if BOARD_MODEL == BOARD_TECHO
+        eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0x03);
+      #else
+        eeprom_update(eeprom_addr(ADDR_CONF_DINT), 0xFF);
+      #endif
     }
     #if BOARD_MODEL == BOARD_TECHO
       display_add_callback(work_while_waiting);
