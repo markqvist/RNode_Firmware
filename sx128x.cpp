@@ -86,11 +86,6 @@ extern SPIClass SPI;
 
 #define MAX_PKT_LENGTH           255
 
-// #define PIN_PREAMBLE 38
-// #define PIN_HEADER   16
-// #define PIN_CAD      15
-// #define PIN_TRIG     39
-
 sx128x::sx128x() :
   _spiSettings(8E6, MSBFIRST, SPI_MODE0),
   _ss(LORA_DEFAULT_SS_PIN), _reset(LORA_DEFAULT_RESET_PIN), _dio0(LORA_DEFAULT_DIO0_PIN), _rxen(pin_rxen), _busy(LORA_DEFAULT_BUSY_PIN), _txen(pin_txen),
@@ -134,12 +129,6 @@ void sx128x::handleDio0Rise() {
 }
 
 bool sx128x::preInit() {
-  // pinMode(PIN_PREAMBLE, OUTPUT);
-  // pinMode(PIN_HEADER, OUTPUT);
-  // pinMode(PIN_CAD, OUTPUT);
-  // pinMode(PIN_TRIG, OUTPUT);
-  //////////////////////////
-
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
@@ -417,48 +406,28 @@ extern long lora_preamble_time_ms;
 extern long lora_header_time_ms;
 bool false_preamble_detected = false;
 bool sx128x::dcd() {
-  bool preamble_detected = false;
-  bool header_detected = false;
-  bool carrier_detected = false;
-  bool trig = false;
   uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_8X, buf, 2);
-  uint32_t header_detect_max_time = lora_preamble_time_ms + lora_header_time_ms;
   uint32_t now = millis();
 
-  if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) {
-    preamble_detected = false;
-    header_detected = true;
-    carrier_detected = true;
-  } else { 
-    header_detected = false;
-  }
+  bool header_detected = false;
+  bool carrier_detected = false;
+
+  if ((buf[1] & IRQ_HEADER_DET_MASK_8X) != 0) { header_detected = true; carrier_detected = true; }
+  else { header_detected = false; }
 
   if ((buf[0] & IRQ_PREAMBLE_DET_MASK_8X) != 0) {
     carrier_detected = true;
     if (preamble_detected_at == 0) { preamble_detected_at = now; }
-    if (now - preamble_detected_at > header_detect_max_time) {
-      preamble_detected    = false;
+    if (now - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
       preamble_detected_at = 0;
-
       if (!header_detected) { false_preamble_detected = true; }
-
-      uint8_t clearbuf[2]  = {0};
-      clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X;
+      uint8_t clearbuf[2]  = {0}; clearbuf[0] = IRQ_PREAMBLE_DET_MASK_8X;
       executeOpcode(OP_CLEAR_IRQ_STATUS_8X, clearbuf, 2);
-      digitalWrite(PIN_PREAMBLE, LOW);
-
-    } else {
-      if (!header_detected) { preamble_detected = true; }
-      else                  { preamble_detected = false; }
     }
   }
 
-  // if (carrier_detected || preamble_detected || header_detected) { trig = true; }
-  // if (trig) { digitalWrite(PIN_TRIG, HIGH); } else { digitalWrite(PIN_TRIG, LOW); }
-  // if (preamble_detected) { digitalWrite(PIN_PREAMBLE, HIGH); } else { digitalWrite(PIN_PREAMBLE, LOW); }
-  // if (header_detected)   { digitalWrite(PIN_HEADER, HIGH); } else { digitalWrite(PIN_HEADER, LOW); }
-  // if (false_preamble_detected) { digitalWrite(PIN_CAD, HIGH); } else { digitalWrite(PIN_CAD, LOW); }
-
+  // TODO: Maybe there's a way of unlatching the RSSI
+  // status without re-activating receive mode?
   if (false_preamble_detected) { sx128x_modem.receive(); false_preamble_detected = false; }
   return carrier_detected;
 }
