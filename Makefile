@@ -473,5 +473,5 @@ release-heltec_t114:
 
 release-techo:
 	arduino-cli compile --log --fqbn adafruit:nrf52:pca10056 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x44\""
-	cp build/adafruit.nrf52.pca10056/RNode_Firmware.ino.hex build/rnode_firmware_techo_t114.hex
-	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application build/rnode_firmware_techo_t114.hex Release/rnode_firmware_techo.zip
+	cp build/adafruit.nrf52.pca10056/RNode_Firmware.ino.hex build/rnode_firmware_techo.hex
+	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application build/rnode_firmware_techo.hex Release/rnode_firmware_techo.zip
