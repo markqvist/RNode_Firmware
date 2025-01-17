@@ -2,7 +2,6 @@
 [title]: <> (How To Make Your Own RNodes)
 [image]: <> (images/g3p.webp)
 [excerpt]: <> (This article will outline the general process, and provide the information you need, for building your own RNode from a few basic modules. The RNode will be functionally identical to a commercially purchased board.)
-<div class="article_date">{DATE}</div>
 # How To Make Your Own RNodes
 
 This article will outline the general process, and provide the information you need, for building your own RNode from a few basic modules. The RNode will be functionally identical to a purchased device.
@@ -31,10 +30,9 @@ Currently, the RNode firmware supports a variety of different microcontrollers, 
 
 Regarding the LoRa transceiver module, there is going to be an almost overwhelming amount of options to choose from. To narrow it down, here are the essential characteristics to look for:
 
-- The RNode firmware needs a module based on the **Semtech SX1276** or **Semtech SX1278** LoRa transceiver IC. These come in several different variants, for all frequency bands from about 150 MHz to about 1100 MHz.
-- Support for **SX1262**, **SX1268** and **SX1280**-based modules is coming soon, but until that is released, only **SX1276** and **SX1278** modules will work.
+- The RNode firmware needs a module based on the **Semtech SX1276**, **Semtech SX1278**, **SX1262**, **SX1268** and **SX1280** LoRa transceiver ICs. These come in several different variants, for all frequency bands from about 150 MHz to 2500 MHz.
 - The module *must* expose the direct SPI bus to the transceiver chip. UART based modules that add their own communications layer will not work.
-- The module must also expose the *reset* line of the chip, and provide the **DIO0** interrupt signal *from* the chip.
+- The module must also expose the *reset* line of the chip, and provide the **DIO0** (or other relevant) interrupt signal *from* the chip.
 - As mentioned above, the module must be logic-level compatible with the microcontroller you are using, unless you want to add a level-shifter. Resistor divider arrays will most likely not work here, due to the bus speeds required.
 
 Keeping those things in mind, you should be able to select a suitable combination of microcontroller board and transceiver module.
@@ -56,12 +54,17 @@ In the photo above I used an Adafruit Feather ESP32 board and a ModTronix inAir4
 9. Connect the *DIO0* pin of the transceiver module to the *DIO0 interrupt pin* of the microcontroller board.
 10. You can optionally connect transmit and receiver LEDs to the corresponding pins of the microcontroller board.
 
-The pin layouts of your transceiver module and microcontroller board will vary, but you can look up the correct pin assignments for your processor type and board layout in the `Config.h` file of the [RNode Firmware]({ASSET_PATH}pkg/rnode_firmware.zip).
+The pin layouts of your transceiver module and microcontroller board will vary, but you can look up the correct pin assignments for your processor type and board layout in the [Config.h](https://github.com/markqvist/RNode_Firmware/blob/master/Config.h) file of the [RNode Firmware](https://unsigned.io/rnode_firmware).
 
-## Loading the Firmware
-Once the hardware is assembled, you are ready to load the firmware onto the board and configure the configuration parameters in the boards EEPROM. Luckily, this process is completely automated by the [RNode Configuration Utility]({ASSET_PATH}m/using.html#the-rnodeconf-utility).
+### Loading the Firmware
+Once the hardware is assembled, you are ready to load the firmware onto the board and configure the configuration parameters in the boards EEPROM. Luckily, this process is completely automated by the [RNode Configuration Utility](https://markqvist.github.io/Reticulum/manual/using.html#the-rnodeconf-utility). To prepare for loading the firmware, make sure that `python` and `pip` is installed on your system, then install the `rns` package (which includes the `rnodeconf` program) by issuing the command:
 
-The `rnodeconf` program is included in the `rns` package. Please read [these instructions]({ASSET_PATH}s_rns.html) for more information on how to install it from this repository, or from the Internet. If installation goes well, you can now move on to the next step.
+
+```txt
+pip install rns
+```
+
+If installation goes well, you can now move on to the next step.
 
 > *Take Care*: A LoRa transceiver module **must** be connected to the board for the firmware to start and accept commands. If the firmware does not verify that the correct transceiver is available on the SPI bus, execution is stopped, and the board will not accept commands. If you find the board unresponsive after installing the firmware, or EEPROM configuration fails, double-check your transceiver module wiring!
 
@@ -72,24 +75,6 @@ rnodeconf --autoinstall
 ```
 
 The installer will now ask you to insert the device you want to set up, scan for connected serial ports, and ask you a number of questions regarding the device. When it has the information it needs, it will install the correct firmware and configure the necessary parameters in the device EEPROM for it to function properly.
-
-> **Please Note!** If you are connected to the Internet while installing, the autoinstaller will automatically download any needed firmware files to a local cache before installing.
-
-> If you do not have an active Internet connection while installing, you can extract and use the firmware from this device instead. This will **only** work if you are building the same type of RNode as the device you are extracting from, as the firmware has to match the targeted board and hardware configuration.
-
-If you need to extract the firmware from an existing RNode, run the following command:
-
-```
-rnodeconf --extract
-```
-
-If `rnodeconf` finds a working RNode, it will extract and save the firmware from the device for later use. You can then run the auto-installer with the `--use-extracted` option to use the locally extracted file:
-
-```
-rnodeconf --autoinstall --use-extracted
-```
-
-This also works for updating the firmware on existing RNodes, so you can extract a newer firmware from one RNode, and deploy it onto other RNodes using the same method. Just use the `--update` option instead of `--autoinstall`.
 
 If the install goes well, you will be greated with a success message telling you that your device is now ready. To confirm everything is OK, you can query the device info with:
 
