@@ -389,30 +389,12 @@ int sx126x::endPacket() {
   if (timed_out) { return 0; } else { return 1; }
 }
 
-/////////////////////////////////////////
-// #define PIN_PREAMBLE 46
-// #define PIN_HEADER 45
-// #define PIN_FALSE 48
-// #define PIN_DCD 47
-// bool ps = false;
-/////////////////////////////////////////
-
 unsigned long preamble_detected_at = 0;
 extern long lora_preamble_time_ms;
 extern long lora_header_time_ms;
 bool false_preamble_detected = false;
 
 bool sx126x::dcd() {
-  /////////////////////////////////////////
-  // if (!ps) {
-  //   pinMode(PIN_PREAMBLE, OUTPUT);
-  //   pinMode(PIN_HEADER, OUTPUT);
-  //   pinMode(PIN_FALSE, OUTPUT);
-  //   pinMode(PIN_DCD, OUTPUT);
-  //   ps = true;
-  // }
-  /////////////////////////////////////////
-
   uint8_t buf[2] = {0}; executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
   uint32_t now = millis();
 
@@ -433,11 +415,6 @@ bool sx126x::dcd() {
       executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
     }
   }
-
-  // if (preamble_detected_at != 0) { digitalWrite(PIN_PREAMBLE, HIGH); } else { digitalWrite(PIN_PREAMBLE, LOW); }
-  // if (header_detected) { digitalWrite(PIN_HEADER, HIGH); } else { digitalWrite(PIN_HEADER, LOW); }
-  // if (false_preamble_detected) { digitalWrite(PIN_FALSE, HIGH); } else { digitalWrite(PIN_FALSE, LOW); }
-  // if (carrier_detected) { digitalWrite(PIN_DCD, HIGH); } else { digitalWrite(PIN_DCD, LOW); }
 
   // TODO: Maybe there's a way of unlatching the RSSI
   // status without re-activating receive mode?
