@@ -232,6 +232,10 @@ void measure_battery() {
         }
       }
 
+      #if MCU_VARIANT == MCU_NRF52
+        if (bt_state != BT_STATE_OFF) { blebas.write(battery_percent); }
+      #endif
+
       // if (bt_state == BT_STATE_CONNECTED) {
       //   SerialBT.printf("Bus voltage %.3fv. Unfiltered %.3fv.", battery_voltage, bat_v_samples[BAT_SAMPLES-1]);
       //   if (bat_voltage_dropping) { SerialBT.printf(" Voltage is dropping. Percentage %.1f%%.", battery_percent); }
