@@ -72,6 +72,7 @@ The RNode Firmware supports the following boards:
 - LilyGO T3S3 devices with SX1276/8 LoRa chips
 - LilyGO T3S3 devices with SX1262/8 LoRa chips
 - LilyGO T3S3 devices with SX1280 LoRa chips
+- LilyGO T-Echo devices
 - Heltec LoRa32 v2 devices
 - Heltec LoRa32 v3 devices
 - Heltec T114 devices
