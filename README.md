@@ -83,9 +83,7 @@ The RNode Firmware supports the following boards:
 - Homebrew RNodes based on generic ESP32 boards
 
 ## Supported Transceiver Modules
-The RNode Firmware supports all transceiver modules based on **Semtech SX1276** or **Semtech SX1278** chips, that have an **SPI interface** and expose the **DIO_0** interrupt pin from the chip.
-
-Support for **SX1262**, **SX1268** and **SX1280** is being implemented. Please support the project with donations if you want this faster!
+The RNode Firmware supports all transceiver modules based on Semtech **SX1276**, **SX1278**, **SX1262**, **SX1268** and **SX1280** chips, that have an **SPI interface** and expose the relevant **DIO** interrupt pins from the chip.
 
 ## Getting Started Fast
 You can download and flash the firmware to all the supported boards using the [RNode Config Utility](https://github.com/markqvist/rnodeconfigutil). All firmware releases are now handled and installed directly through the `rnodeconf` utility, which is included in the `rns` package. It can be installed via `pip`:
