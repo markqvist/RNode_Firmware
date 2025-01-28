@@ -404,7 +404,10 @@ bool init_pmu() {
       PMU->enablePowerOutput(XPOWERS_LDO2);
 
       // Turn on GPS
-      //PMU->enablePowerOutput(XPOWERS_LDO3);
+      #if defined(ENABLE_GPS)
+        PMU->enablePowerOutput(XPOWERS_LDO3);
+        PMU->enablePowerOutput(XPOWERS_VBACKUP); // RTC/GPS battery charging
+      #endif
 
       // protected oled power source
       PMU->setProtectedChannel(XPOWERS_DCDC1);
@@ -445,9 +448,9 @@ bool init_pmu() {
       // Set the power of LoRa and GPS module to 3.3V
       // LoRa
       PMU->setPowerChannelVoltage(XPOWERS_ALDO2, 3300);
-      // GPS
+      // GPS Voltage
       PMU->setPowerChannelVoltage(XPOWERS_ALDO3, 3300);
-      PMU->setPowerChannelVoltage(XPOWERS_VBACKUP, 3300);
+      //PMU->setPowerChannelVoltage(XPOWERS_VBACKUP, 3300); // I don't beleive tihs to be proper or safe. - Faragher
 
       // ESP32 VDD
       // ! No need to set, automatically open , Don't close it
@@ -458,11 +461,15 @@ bool init_pmu() {
       // LoRa VDD
       PMU->enablePowerOutput(XPOWERS_ALDO2);
 
-      // GNSS VDD
-      //PMU->enablePowerOutput(XPOWERS_ALDO3);
+      // GPS/GNSS VDD
+      #if defined(ENABLE_GPS)
+        PMU->enablePowerOutput(XPOWERS_ALDO3);
+      #endif
 
-      // GNSS RTC PowerVDD
-      //PMU->enablePowerOutput(XPOWERS_VBACKUP);
+      // GNSS RTC Power - Enables charging onboard battery
+      #if defined(ENABLE_GPS)
+        PMU->enablePowerOutput(XPOWERS_VBACKUP);
+      #endif
     }
 
     PMU->enableSystemVoltageMeasure();
