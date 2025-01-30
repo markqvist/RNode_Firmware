@@ -374,6 +374,8 @@ char bt_devname[11];
   #endif
 
 #elif MCU_VARIANT == MCU_NRF52
+    uint32_t pairing_pin = 0;
+
   uint8_t eeprom_read(uint32_t mapped_addr);
 
   void bt_stop() {
@@ -427,11 +429,6 @@ char bt_devname[11];
   }
 
   bool bt_passkey_callback(uint16_t conn_handle, uint8_t const passkey[6], bool match_request) {
-    for (int i = 0; i < 6; i++) {
-      // multiply by tens however many times needed to make numbers appear in order
-      bt_ssp_pin += ((int)passkey[i] - 48) * pow(10, 5-i);
-    }
-    kiss_indicate_btpin();
     if (bt_allow_pairing) {
       return true;
     }
@@ -454,6 +451,17 @@ char bt_devname[11];
     }
   }
 
+  void bt_update_passkey() {
+      pairing_pin = random(899999)+100000;
+      bt_ssp_pin = pairing_pin;
+  }
+
+  uint32_t bt_get_passkey() {
+    // Serial.println("API passkey request");
+    if (pairing_pin == 0) { bt_update_passkey(); }
+    return pairing_pin;
+  }
+
   bool bt_setup_hw() {
     if (!bt_ready) {
       #if HAS_EEPROM 
@@ -468,6 +476,10 @@ char bt_devname[11];
       Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
       Bluefruit.autoConnLed(false);
       if (Bluefruit.begin()) {
+        uint32_t pin = bt_get_passkey();
+        char pin_char[6];
+        sprintf(pin_char,"%lu", pin);
+
         Bluefruit.setTxPower(8);    // Check bluefruit.h for supported values
         Bluefruit.Security.setIOCaps(true, false, false); // display, yes; yes / no, no; keyboard, no
         // This device is indeed capable of yes / no through the pairing mode
@@ -477,6 +489,7 @@ char bt_devname[11];
         Bluefruit.Security.setMITM(true);
         Bluefruit.Security.setPairPasskeyCallback(bt_passkey_callback);
         Bluefruit.Security.setSecuredCallback(bt_connect_callback);
+        Bluefruit.Security.setPIN(pin_char);
         Bluefruit.Periph.setDisconnectCallback(bt_disconnect_callback);
         Bluefruit.Security.setPairCompleteCallback(bt_pairing_complete);
         Bluefruit.Periph.setConnInterval(6, 12); // 7.5 - 15 ms
@@ -549,6 +562,7 @@ char bt_devname[11];
     bt_allow_pairing = true;
     bt_pairing_started = millis();
     bt_state = BT_STATE_PAIRING;
+    kiss_indicate_btpin();
   }
 
   void update_bt() {
