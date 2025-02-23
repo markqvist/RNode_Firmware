@@ -146,6 +146,7 @@
 
 // test build - KJB
 #define BOARD_MODEL BOARD_SEEED_XIAO_ESP32S3
+//#define BOARD_MODEL BOARD_HELTEC32_V3
 
   #define HAS_DISPLAY false
   #define HAS_BLUETOOTH false
@@ -618,14 +619,17 @@
       #define HAS_SD false
       #define HAS_EEPROM true
 
-      #define HAS_INPUT false
+      #define HAS_INPUT true
       #define HAS_SLEEP false
       
 //      #define PMU_IRQ 40
 //      #define I2C_SCL 41
 //      #define I2C_SDA 42
 
-      const int pin_btn_usr1 = 0;
+      // Wio-SX1262 button pulls down GPIO21
+      // THis is shared with the Yellow LED
+      // on the ESP32S3 (also active Low)
+      const int pin_btn_usr1 = 21;
 
       const int pin_cs = 41; //16;
       const int pin_reset = 42; //14;
@@ -643,7 +647,9 @@
 
 //      const int IMU_CS = 34;
 
-      // HAS LED/tx on board - 47
+      // HAS LED/tx on Wio board - 48 Hi/ON
+      // LED 21 on ESP board - Lo/ON/Yellow
+      // shared with button input.
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
           const int pin_led_rx = -1;

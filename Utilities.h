@@ -286,10 +286,14 @@ uint8_t boot_vector = 0x00;
 		void led_id_on()  { }
 		void led_id_off() { }
   #elif BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
-		void led_rx_on()  { digitalWrite(pin_led_rx, LED_ON); }
-		void led_rx_off() { digitalWrite(pin_led_rx, LED_OFF); }
-		void led_tx_on()  { }
-		void led_tx_off() { }
+    // tx pin is active high, rx pin is active low....
+    // but shared with LED, choose button for now
+//		void led_rx_on()  { pinMode(pin_led_rx, OUTPUT); digitalWrite(pin_led_rx, LOW); }
+//		void led_rx_off() { digitalWrite(pin_led_rx, HIGH); pinMode(pin_led_rx, INPUT);  }
+		void led_rx_on()  { }
+		void led_rx_off() { }
+		void led_tx_on()  { digitalWrite(pin_led_tx, LED_ON); }
+		void led_tx_off() { digitalWrite(pin_led_tx, LED_OFF); }
 		void led_id_on()  { }
 		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_HUZZAH32
