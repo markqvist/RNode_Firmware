@@ -122,17 +122,19 @@ sx126x::sx126x() :
 { setTimeout(0); }
 
 bool sx126x::preInit() {
-//        delay(300);
-        //LoRa->reset();
-//        reset();
-//        delay(100);
+  #if BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
+    // Improve wakeup from sleep
+    delay(300);
+    reset();
+    delay(100);
+  #endif
 
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
   #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
-  #elif BOARD_MODEL == BOARD_TECHO  // || BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
+  #elif BOARD_MODEL == BOARD_TECHO
     SPI.setPins(pin_miso, pin_sclk, pin_mosi);
     SPI.begin();
   #else

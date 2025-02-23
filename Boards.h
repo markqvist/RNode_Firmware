@@ -620,8 +620,10 @@
       #define HAS_EEPROM true
 
       #define HAS_INPUT true
-      #define HAS_SLEEP false
-      
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_21
+      #define WAKEUP_LEVEL 0
+
 //      #define PMU_IRQ 40
 //      #define I2C_SCL 41
 //      #define I2C_SDA 42
