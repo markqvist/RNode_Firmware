@@ -122,12 +122,17 @@ sx126x::sx126x() :
 { setTimeout(0); }
 
 bool sx126x::preInit() {
+//        delay(300);
+        //LoRa->reset();
+//        reset();
+//        delay(100);
+
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
   #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_TDECK
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
-  #elif BOARD_MODEL == BOARD_TECHO
+  #elif BOARD_MODEL == BOARD_TECHO  // || BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
     SPI.setPins(pin_miso, pin_sclk, pin_mosi);
     SPI.begin();
   #else
@@ -146,6 +151,7 @@ bool sx126x::preInit() {
           break;
       }
       delay(100);
+      Serial.println( uint16_t(syncmsb << 8 | synclsb) );
   }
   if ( uint16_t(syncmsb << 8 | synclsb) != 0x1424 && uint16_t(syncmsb << 8 | synclsb) != 0x4434) {
       return false;
@@ -570,7 +576,7 @@ void sx126x::sleep() { uint8_t byte = 0x00; executeOpcode(OP_SLEEP_6X, &byte, 1)
 
 void sx126x::enableTCXO() {
   #if HAS_TCXO
-    #if BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_HELTEC32_V3
+    #if BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
       uint8_t buf[4] = {MODE_TCXO_3_3V_6X, 0x00, 0x00, 0xFF};
     #elif BOARD_MODEL == BOARD_TBEAM
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
