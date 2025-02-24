@@ -1612,7 +1612,7 @@ void loop() {
 void sleep_now() {
   #if HAS_SLEEP == true
     #if PLATFORM == PLATFORM_ESP32
-      #if BOARD_MODEL == BOARD_T3S3
+      #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
         display_intensity = 0;
         update_display(true);
       #endif
@@ -1626,6 +1626,7 @@ void sleep_now() {
           delay(100);
         }
       #endif
+      stopRadio();
       esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
       esp_deep_sleep_start();
     #elif PLATFORM == PLATFORM_NRF52
