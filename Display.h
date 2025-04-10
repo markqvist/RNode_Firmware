@@ -609,7 +609,7 @@ void draw_quality_bars(int px, int py) {
   }
 }
 
-#if MODE == SX1280
+#if MODEM == SX1280
   #define S_RSSI_MIN -105.0
   #define S_RSSI_MAX -65.0
 #else
