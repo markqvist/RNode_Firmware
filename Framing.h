@@ -82,6 +82,9 @@
   #define CMD_RESET       0x55
   #define CMD_RESET_BYTE  0xF8
 
+  #define CMD_GPS_CMD     0xA0
+  #define CMD_GPS_RATE    0xA1
+
   #define DETECT_REQ      0x73
   #define DETECT_RESP     0x46
 
