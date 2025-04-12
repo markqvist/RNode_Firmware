@@ -524,6 +524,7 @@ char bt_devname[11];
       bledis.setModel(BLE_MODEL);
       // start device information service
       bledis.begin();
+      blebas.begin();
 
       // Guard to ensure SerialBT service is not duplicated through BT being power cycled
       if (!SerialBT_init) {
