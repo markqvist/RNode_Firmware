@@ -155,8 +155,7 @@
   #define HAS_INPUT false
   #define HAS_SLEEP false
   #define PIN_DISP_SLEEP -1
-  //#define VALIDATE_FIRMWARE true
-  #define VALIDATE_FIRMWARE false
+  #define VALIDATE_FIRMWARE true
 
   #if defined(ENABLE_TCXO)
       #define HAS_TCXO true
