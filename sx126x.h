@@ -56,6 +56,7 @@ public:
   void receive(int size = 0);
   void standby();
   void sleep();
+  void reset(void);
 
   bool preInit();
   uint8_t getTxPower();
@@ -111,7 +112,6 @@ private:
   void handleLowDataRate();
   void optimizeModemSensitivity();
 
-  void reset(void);
   void calibrate(void);
   void calibrate_image(long frequency);
 

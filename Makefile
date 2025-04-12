@@ -143,6 +143,9 @@ firmware-heltec_t114:
 firmware-techo:
 	arduino-cli compile --log --fqbn adafruit:nrf52:pca10056 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x44\""
 
+firmware-xiao_s3:
+	arduino-cli compile --log --fqbn "esp32:esp32:XIAO_ESP32S3" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3E\""
+
 upload:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn unsignedio:avr:rnode
 
@@ -254,6 +257,13 @@ upload-techo:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn adafruit:nrf52:pca10056
 	@sleep 6
 	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes from_device /dev/ttyACM0)
+
+upload-xiao_s3:
+	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:XIAO_ESP32S3
+	@sleep 1
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.XIAO_ESP32S3/RNode_Firmware.ino.bin)
+# 	@sleep 3
+# 	python ./Release/esptool/esptool.py --chip esp32s3 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
 release: release-all
 

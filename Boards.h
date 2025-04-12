@@ -65,9 +65,10 @@
   #define MODEL_DB            0xDB // LilyGO T-Beam Supreme, 433 MHz
   #define MODEL_DC            0xDC // LilyGO T-Beam Supreme, 868 MHz
 
-  #define PRODUCT_SEEED_XIAO_ESP32S3  0xEB
-  #define BOARD_SEEED_XIAO_ESP32S3    0x3E
-  #define MODEL_DD            0xDD
+  #define PRODUCT_XIAO_S3     0xEB
+  #define BOARD_XIAO_S3       0x3E
+  #define MODEL_DE            0xDE // Xiao ESP32S3 with Wio-SX1262 module, 433 MHz
+  #define MODEL_DD            0xDD // Xiao ESP32S3 with Wio-SX1262 module, 868 MHz
 
   #define PRODUCT_T32_10      0xB2
   #define BOARD_LORA32_V1_0   0x39
@@ -143,10 +144,6 @@
       #define MODEM SX1276
     #endif
   #endif
-
-// test build - KJB
-#define BOARD_MODEL BOARD_SEEED_XIAO_ESP32S3
-//#define BOARD_MODEL BOARD_HELTEC32_V3
 
   #define HAS_DISPLAY false
   #define HAS_BLUETOOTH false
@@ -602,19 +599,17 @@
         #endif
       #endif
 
-    #elif BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
+    #elif BOARD_MODEL == BOARD_XIAO_S3
       #define IS_ESP32S3 true
       #define MODEM SX1262
       #define DIO2_AS_RF_SWITCH true
       #define HAS_BUSY true
       #define HAS_TCXO true
-//      #define OCP_TUNED 0x38
 
-      #define HAS_DISPLAY true
-//      #define HAS_CONSOLE true
+      #define HAS_DISPLAY false
+      #define HAS_CONSOLE true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
-//      #define HAS_PMU true
       #define HAS_NP false
       #define HAS_SD false
       #define HAS_EEPROM true
@@ -624,41 +619,23 @@
       #define PIN_WAKEUP GPIO_NUM_21
       #define WAKEUP_LEVEL 0
 
-//      #define PMU_IRQ 40
-//      #define I2C_SCL 41
-//      #define I2C_SDA 42
-
-      // Wio-SX1262 button pulls down GPIO21
-      // THis is shared with the Yellow LED
-      // on the ESP32S3 (also active Low)
       const int pin_btn_usr1 = 21;
-
-      const int pin_cs = 41; //16;
-      const int pin_reset = 42; //14;
-      const int pin_sclk = 7; //11;
-      const int pin_mosi = 9; //15;
-      const int pin_miso = 8; //13;
+      const int pin_cs = 41;
+      const int pin_reset = 42;
+      const int pin_sclk = 7;
+      const int pin_mosi = 9;
+      const int pin_miso = 8;
       const int pin_tcxo_enable = -1;
-      const int pin_dio = 39; //21;
-      const int pin_busy = 40; //18;
+      const int pin_dio = 39;
+      const int pin_busy = 40;
       
-//      const int SD_MISO = 37;
-//      const int SD_MOSI = 35;
-//      const int SD_CLK = 36;
-//      const int SD_CS = 47;
-
-//      const int IMU_CS = 34;
-
-      // HAS LED/tx on Wio board - 48 Hi/ON
-      // LED 21 on ESP board - Lo/ON/Yellow
-      // shared with button input.
       #if HAS_NP == false
         #if defined(EXTERNAL_LEDS)
-          const int pin_led_rx = -1;
-          const int pin_led_tx = 48; //47;
+          const int pin_led_rx = 48;
+          const int pin_led_tx = 48;
         #else
-          const int pin_led_rx = -1;
-          const int pin_led_tx = 48; //47;
+          const int pin_led_rx = 48;
+          const int pin_led_tx = 48;
         #endif
       #endif
 

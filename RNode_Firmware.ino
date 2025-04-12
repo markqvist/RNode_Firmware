@@ -179,6 +179,13 @@ void setup() {
       #endif
     #endif
 
+    #if BOARD_MODEL == BOARD_XIAO_S3
+      // Improve wakeup from sleep
+      delay(300);
+      LoRa->reset();
+      delay(100);
+    #endif
+
     // Check installed transceiver chip and
     // probe boot parameters.
     if (LoRa->preInit()) {
@@ -1611,10 +1618,13 @@ void loop() {
 
 void sleep_now() {
   #if HAS_SLEEP == true
+    stopRadio(); // TODO: Check this on all platforms
     #if PLATFORM == PLATFORM_ESP32
-      #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_SEEED_XIAO_ESP32S3
-        display_intensity = 0;
-        update_display(true);
+      #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_XIAO_S3
+        #if HAS_DISPLAY
+          display_intensity = 0;
+          update_display(true);
+        #endif
       #endif
       #if PIN_DISP_SLEEP >= 0
         pinMode(PIN_DISP_SLEEP, OUTPUT);
@@ -1626,7 +1636,6 @@ void sleep_now() {
           delay(100);
         }
       #endif
-      stopRadio();
       esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
       esp_deep_sleep_start();
     #elif PLATFORM == PLATFORM_NRF52
