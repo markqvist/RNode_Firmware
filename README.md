@@ -77,6 +77,7 @@ The RNode Firmware supports the following boards:
 - Heltec LoRa32 v3 devices
 - Heltec T114 devices
 - RAK4631 devices
+- SeeedStudio XIAO ESP32S3 devices (with Wio-SX1262)
 - Homebrew RNodes based on ATmega1284p boards
 - Homebrew RNodes based on ATmega2560 boards
 - Homebrew RNodes based on Adafruit Feather ESP32 boards
