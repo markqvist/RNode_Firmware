@@ -82,6 +82,11 @@
   #define CMD_RESET       0x55
   #define CMD_RESET_BYTE  0xF8
 
+  #define CMD_LOG         0x70
+  #define CMD_TIME        0x70
+  #define CMD_MUX_CHAIN   0x80
+  #define CMD_MUX_DSCVR   0x81
+
   #define DETECT_REQ      0x73
   #define DETECT_RESP     0x46
 

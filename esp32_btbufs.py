@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import re
 
 try:
     target_path = sys.argv[1]
@@ -12,7 +13,7 @@ try:
         for line in sf:
             line_index += 1
             if line.startswith("#define RX_QUEUE_SIZE"):
-                ents = line.split(" ")
+                ents = re.sub(" +", " ", line).split(" ")
                 try:
                     rxbuf_size = int(ents[2])
                     rx_line_index = line_index
@@ -20,12 +21,12 @@ try:
                     print(f"Could not parse Bluetooth RX_QUEUE_SIZE: {e}")
 
             if line.startswith("#define TX_QUEUE_SIZE"):
-                ents = line.split(" ")
+                ents = re.sub(" +", " ", line).split(" ")
                 try:
                     txbuf_size = int(ents[2])
                     tx_line_index = line_index
                 except Exception as e:
-                    print(f"Could not parse Bluetooth RX_QUEUE_SIZE: {e}")
+                    print(f"Could not parse Bluetooth TX_QUEUE_SIZE: {e}")
 
             if rxbuf_size != 0 and txbuf_size != 0:
                 break

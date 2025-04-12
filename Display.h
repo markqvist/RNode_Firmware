@@ -655,7 +655,7 @@ void draw_waterfall(int px, int py) {
   if (rssi_val > WF_RSSI_MAX) rssi_val = WF_RSSI_MAX;
   int rssi_normalised = ((rssi_val - WF_RSSI_MIN)*(1.0/WF_RSSI_SPAN))*WF_PIXEL_WIDTH;
   if (display_tx) {
-    for (uint8_t i; i < WF_TX_SIZE; i++) {
+    for (uint8_t i = 0; i < WF_TX_SIZE; i++) {
       waterfall[waterfall_head++] = -1;
       if (waterfall_head >= WATERFALL_SIZE) waterfall_head = 0;
     }
