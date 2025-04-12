@@ -485,3 +485,12 @@ release-techo:
 	arduino-cli compile --log --fqbn adafruit:nrf52:pca10056 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x44\""
 	cp build/adafruit.nrf52.pca10056/RNode_Firmware.ino.hex build/rnode_firmware_techo.hex
 	adafruit-nrfutil dfu genpkg --dev-type 0x0052 --application build/rnode_firmware_techo.hex Release/rnode_firmware_techo.zip
+
+release-xiao_s3:
+	arduino-cli compile --fqbn "esp32:esp32:XIAO_ESP32S3" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3E\""
+	cp ~/.arduino15/packages/esp32/hardware/esp32/$(ARDUINO_ESP_CORE_VER)/tools/partitions/boot_app0.bin build/rnode_firmware_xiao_esp32s3.boot_app0
+	cp build/esp32.esp32.XIAO_ESP32S3/RNode_Firmware.ino.bin build/rnode_firmware_xiao_esp32s3.bin
+	cp build/esp32.esp32.XIAO_ESP32S3/RNode_Firmware.ino.bootloader.bin build/rnode_firmware_xiao_esp32s3.bootloader
+	cp build/esp32.esp32.XIAO_ESP32S3/RNode_Firmware.ino.partitions.bin build/rnode_firmware_xiao_esp32s3.partitions
+	zip --junk-paths ./Release/rnode_firmware_xiao_esp32s3.zip ./Release/esptool/esptool.py ./Release/console_image.bin build/rnode_firmware_xiao_esp32s3.boot_app0 build/rnode_firmware_xiao_esp32s3.bin build/rnode_firmware_xiao_esp32s3.bootloader build/rnode_firmware_xiao_esp32s3.partitions
+	rm -r build
