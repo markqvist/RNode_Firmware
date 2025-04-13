@@ -99,11 +99,11 @@ void BLESerial::flush() {
 void BLESerial::disconnect() {
   if (ble_server->getConnectedCount() > 0) {
     uint16_t conn_id = ble_server->getConnId();
-    Serial.printf("Have connected: %d\n", conn_id);
+    // Serial.printf("Have connected: %d\n", conn_id);
     ble_server->disconnect(conn_id);
-    Serial.println("Disconnected");
+    // Serial.println("Disconnected");
   } else {
-    Serial.println("No connected");
+    // Serial.println("No connected");
   }
 }
 
