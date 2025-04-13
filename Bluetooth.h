@@ -170,31 +170,42 @@ char bt_devname[11];
     }
 
   #elif HAS_BLE == true
+    bool bt_setup_hw(); void bt_security_setup();
     BLESecurity *ble_security = new BLESecurity();
     bool ble_authenticated = false;
     uint32_t pairing_pin = 0;
 
     void bt_flush() { if (bt_state == BT_STATE_CONNECTED) { SerialBT.flush(); } }
 
-    void bt_disable_pairing() {
+    void bt_start() {
+      // Serial.println("BT start");
       display_unblank();
-      bt_allow_pairing = false;
-      bt_ssp_pin = 0;
-      bt_state = BT_STATE_ON;
+      if (bt_state == BT_STATE_OFF) {
+        bt_state = BT_STATE_ON;
+        SerialBT.begin(bt_devname);
+        SerialBT.setTimeout(10);
+      }
     }
 
-    void bt_passkey_notify_callback(uint32_t passkey) {
-      // Serial.printf("Got passkey notification: %d\n", passkey);
-      bt_ssp_pin = passkey;
-      bt_state = BT_STATE_PAIRING;
-      bt_allow_pairing = true;
-      bt_pairing_started = millis();
-      kiss_indicate_btpin();
+    void bt_stop() {
+      // Serial.println("BT stop");
+      display_unblank();
+      if (bt_state != BT_STATE_OFF) {
+        bt_allow_pairing = false;
+        bt_state = BT_STATE_OFF;
+        SerialBT.end();
+      }
     }
 
-    bool bt_confirm_pin_callback(uint32_t pin) {
-      // Serial.printf("Confirm PIN callback: %d\n", pin);
-      return true;
+    bool bt_init() {
+      // Serial.println("BT init");
+      bt_state = BT_STATE_OFF;
+      if (bt_setup_hw()) {
+        if (bt_enabled && !console_active) bt_start();
+        return true;
+      } else {
+        return false;
+      }
     }
 
     void bt_debond_all() {
@@ -204,6 +215,44 @@ char bt_devname[11];
       esp_ble_get_bond_device_list(&dev_num, dev_list);
       for (int i = 0; i < dev_num; i++) { esp_ble_remove_bond_device(dev_list[i].bd_addr); }
       free(dev_list);
+    }
+
+    void bt_enable_pairing() {
+      // Serial.println("BT enable pairing");
+      display_unblank();
+      if (bt_state == BT_STATE_OFF) bt_start();
+
+      bt_security_setup();
+
+      bt_allow_pairing = true;
+      bt_pairing_started = millis();
+      bt_state = BT_STATE_PAIRING;
+      bt_ssp_pin = pairing_pin;
+    }
+
+    void bt_disable_pairing() {
+      // Serial.println("BT disable pairing");
+      display_unblank();
+      bt_allow_pairing = false;
+      bt_ssp_pin = 0;
+      bt_state = BT_STATE_ON;
+    }
+
+    void bt_passkey_notify_callback(uint32_t passkey) {
+      // Serial.printf("Got passkey notification: %d\n", passkey);
+      if (bt_allow_pairing) {
+        bt_ssp_pin = passkey;
+        bt_pairing_started = millis();
+        kiss_indicate_btpin();
+      } else {
+        // Serial.println("Pairing not allowed, re-init");
+        SerialBT.disconnect();
+      }
+    }
+
+    bool bt_confirm_pin_callback(uint32_t pin) {
+      // Serial.printf("Confirm PIN callback: %d\n", pin);
+      return true;
     }
 
     void bt_update_passkey() {
@@ -222,31 +271,6 @@ char bt_devname[11];
       return ble_authenticated;
     }
 
-    void bt_security_setup() {
-      uint32_t passkey = bt_passkey_callback();
-
-      // Serial.printf("Executing BT security setup, passkey is %d\n", passkey);
-
-      uint8_t key_size = 16;
-      uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-      uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
-
-      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-      uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
-      uint8_t oob_support = ESP_BLE_OOB_DISABLE;
-
-      esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
-
-      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(uint8_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(uint8_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
-      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
-    }
-
     bool bt_security_request_callback() {
       if (bt_allow_pairing) {
           // Serial.println("Accepting security request");
@@ -261,7 +285,10 @@ char bt_devname[11];
       if (auth_result.success == true) {
         // Serial.println("Authentication success");
         ble_authenticated = true;
-        bt_state = BT_STATE_CONNECTED;
+        if (bt_state == BT_STATE_PAIRING) {
+          // Serial.println("Pairing complete, disconnecting");
+          delay(2000); SerialBT.disconnect();
+        } else { bt_state = BT_STATE_CONNECTED; }
       } else {
         // Serial.println("Authentication fail");
         ble_authenticated = false;
@@ -274,16 +301,16 @@ char bt_devname[11];
     }
 
     void bt_connect_callback(BLEServer *server) {
-      // uint16_t conn_id = server->getConnId();
+      uint16_t conn_id = server->getConnId();
       // Serial.printf("Connected: %d\n", conn_id);
       display_unblank();
       ble_authenticated = false;
-      bt_state = BT_STATE_CONNECTED;
+      if (bt_state != BT_STATE_PAIRING) { bt_state = BT_STATE_CONNECTED; }
       cable_state = CABLE_STATE_DISCONNECTED;
     }
 
     void bt_disconnect_callback(BLEServer *server) {
-      // uint16_t conn_id = server->getConnId();
+      uint16_t conn_id = server->getConnId();
       // Serial.printf("Disconnected: %d\n", conn_id);
       display_unblank();
       ble_authenticated = false;
@@ -291,6 +318,7 @@ char bt_devname[11];
     }
 
     bool bt_setup_hw() {
+      // Serial.println("BT setup hw");
       if (!bt_ready) {
         if (EEPROM.read(eeprom_addr(ADDR_CONF_BT)) == BT_ENABLE_BYTE) {
           bt_enabled = true;
@@ -322,45 +350,30 @@ char bt_devname[11];
       } else { return false; }
     }
 
-    void bt_start() {
-      display_unblank();
-      if (bt_state == BT_STATE_OFF) {
-        bt_state = BT_STATE_ON;
-        SerialBT.begin(bt_devname);
-        SerialBT.setTimeout(10);
-      }
-    }
+    void bt_security_setup() {
+      // Serial.println("Executing BT security setup");
+      if (pairing_pin == 0) { bt_update_passkey(); }
+      uint32_t passkey = pairing_pin;
+      // Serial.printf("Passkey is %d\n", passkey);
 
-    void bt_stop() {
-      display_unblank();
-      if (bt_state != BT_STATE_OFF) {
-        bt_allow_pairing = false;
-        bt_state = BT_STATE_OFF;
-        SerialBT.end();
-      }
-    }
+      uint8_t key_size = 16;
+      uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
+      uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
 
-    bool bt_init() {
-        bt_state = BT_STATE_OFF;
-        if (bt_setup_hw()) {
-          if (bt_enabled && !console_active) bt_start();
-          return true;
-        } else {
-          return false;
-        }
-    }
+      esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
+      uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
+      uint8_t oob_support = ESP_BLE_OOB_DISABLE;
 
-    void bt_enable_pairing() {
-      display_unblank();
-      if (bt_state == BT_STATE_OFF) bt_start();
+      esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
 
-      bt_security_setup();
-      //bt_debond_all();
-      //bt_update_passkey();
-
-      bt_allow_pairing = true;
-      bt_pairing_started = millis();
-      bt_state = BT_STATE_PAIRING;
+      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_STATIC_PASSKEY, &passkey, sizeof(uint32_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &auth_req, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &iocap, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &key_size, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_ONLY_ACCEPT_SPECIFIED_SEC_AUTH, &auth_option, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_OOB_SUPPORT, &oob_support, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &init_key, sizeof(uint8_t));
+      esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &rsp_key, sizeof(uint8_t));
     }
 
     void update_bt() {

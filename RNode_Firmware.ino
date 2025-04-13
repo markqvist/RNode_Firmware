@@ -1144,6 +1144,10 @@ void serial_callback(uint8_t sbyte) {
           }
         }
       #endif
+    } else if (command == CMD_BT_UNPAIR) {
+      #if HAS_BLE
+        if (sbyte == 0x01) { bt_debond_all(); }
+      #endif
     } else if (command == CMD_DISP_INT) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
