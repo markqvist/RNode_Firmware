@@ -266,6 +266,7 @@ char bt_devname[11];
         // Serial.println("Authentication fail");
         ble_authenticated = false;
         bt_state = BT_STATE_ON;
+        bt_update_passkey();
         bt_security_setup();
       }
       bt_allow_pairing = false;

@@ -110,13 +110,21 @@ void BLESerial::begin(const char *name) {
   BLEDevice::setSecurityCallbacks(this);
 
   SetupSerialService();
+  this->startAdvertising();
+}
 
+void BLESerial::startAdvertising() {
   ble_adv = BLEDevice::getAdvertising();
   ble_adv->addServiceUUID(BLE_SERIAL_SERVICE_UUID);
   ble_adv->setMinPreferred(0x20);
   ble_adv->setMaxPreferred(0x40);
   ble_adv->setScanResponse(true);
   ble_adv->start();
+}
+
+void BLESerial::stopAdvertising() {
+  ble_adv = BLEDevice::getAdvertising();
+  ble_adv->stop();
 }
 
 void BLESerial::end() { BLEDevice::deinit(); }

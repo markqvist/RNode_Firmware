@@ -78,6 +78,8 @@ public:
 
   void begin(const char *name);
   void end();
+  void startAdvertising();
+  void stopAdvertising();
   void onWrite(BLECharacteristic *characteristic);
   int available();
   int peek();
