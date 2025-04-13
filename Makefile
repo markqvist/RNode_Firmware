@@ -14,7 +14,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Version 2.0.17 of the Arduino ESP core is based on ESP-IDF v4.4.7
-ARDUINO_ESP_CORE_VER = 2.0.17
+# ARDUINO_ESP_CORE_VER = 2.0.17
+
+# Version 3.2.0 of the Arduino ESP core is based on ESP-IDF v5.4.1
+ARDUINO_ESP_CORE_VER = 3.2.0
 
 all: release
 
