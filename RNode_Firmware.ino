@@ -94,14 +94,24 @@ void setup() {
   #endif
 
   // Seed the PRNG for CSMA R-value selection
-  # if MCU_VARIANT == MCU_ESP32
+  #if MCU_VARIANT == MCU_ESP32
     // On ESP32, get the seed value from the
     // hardware RNG
-    int seed_val = (int)esp_random();
+    unsigned long seed_val = (unsigned long)esp_random();
+  #elif MCU_VARIANT == MCU_NRF52
+    // On nRF, get the seed value from the
+    // hardware RNG
+    unsigned long seed_val = get_rng_seed();
   #else
     // Otherwise, get a pseudo-random seed
     // value from an unconnected analog pin
-    int seed_val = analogRead(0);
+    //
+    // CAUTION! If you are implementing the
+    // firmware on a platform that does not
+    // have a hardware RNG, you MUST take
+    // care to get a seed value with enough
+    // entropy at each device reset!
+    unsigned long seed_val = analogRead(0);
   #endif
   randomSeed(seed_val);
 

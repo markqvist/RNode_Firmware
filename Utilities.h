@@ -18,6 +18,7 @@
 #if HAS_EEPROM
     #include <EEPROM.h>
 #elif PLATFORM == PLATFORM_NRF52
+		#include <hal/nrf_rng.h>
     #include <Adafruit_LittleFS.h>
     #include <InternalFileSystem.h>
     using namespace Adafruit_LittleFS_Namespace;
@@ -101,6 +102,28 @@ uint8_t boot_vector = 0x00;
 	// TODO: Get ESP32 boot flags
 #elif MCU_VARIANT == MCU_NRF52
 	// TODO: Get NRF52 boot flags
+#endif
+
+#if MCU_VARIANT == MCU_NRF52
+	unsigned long get_rng_seed() {
+		nrf_rng_error_correction_enable(NRF_RNG);
+		nrf_rng_shorts_disable(NRF_RNG, NRF_RNG_SHORT_VALRDY_STOP_MASK);
+		nrf_rng_task_trigger(NRF_RNG, NRF_RNG_TASK_START);
+		while (!nrf_rng_event_check(NRF_RNG, NRF_RNG_EVENT_VALRDY));
+		uint8_t rb_a = nrf_rng_random_value_get(NRF_RNG);
+		nrf_rng_event_clear(NRF_RNG, NRF_RNG_EVENT_VALRDY);
+		while (!nrf_rng_event_check(NRF_RNG, NRF_RNG_EVENT_VALRDY));
+		uint8_t rb_b = nrf_rng_random_value_get(NRF_RNG);
+		nrf_rng_event_clear(NRF_RNG, NRF_RNG_EVENT_VALRDY);
+		while (!nrf_rng_event_check(NRF_RNG, NRF_RNG_EVENT_VALRDY));
+		uint8_t rb_c = nrf_rng_random_value_get(NRF_RNG);
+		nrf_rng_event_clear(NRF_RNG, NRF_RNG_EVENT_VALRDY);
+		while (!nrf_rng_event_check(NRF_RNG, NRF_RNG_EVENT_VALRDY));
+		uint8_t rb_d = nrf_rng_random_value_get(NRF_RNG);
+		nrf_rng_event_clear(NRF_RNG, NRF_RNG_EVENT_VALRDY);
+		nrf_rng_task_trigger(NRF_RNG, NRF_RNG_TASK_STOP);
+		return rb_a << 24 | rb_b << 16 | rb_c << 8 | rb_d;
+	}
 #endif
 
 #if HAS_NP == true
@@ -349,7 +372,7 @@ void hard_reset(void) {
 	#elif MCU_VARIANT == MCU_ESP32
 		ESP.restart();
 	#elif MCU_VARIANT == MCU_NRF52
-        NVIC_SystemReset();
+    NVIC_SystemReset();
 	#endif
 }
 
