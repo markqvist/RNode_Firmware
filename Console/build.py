@@ -4,9 +4,9 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-0.9.1-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.5.7-py3-none-any.whl",
-    "lxmf": "lxmf-0.6.0-py3-none-any.whl",
+    "rns": "rns-1.0.0-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.8.0-py3-none-any.whl",
+    "lxmf": "lxmf-0.8.0-py3-none-any.whl",
     "rnsh": "rnsh-0.1.5-py3-none-any.whl",
 }
 
@@ -174,7 +174,7 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
-    pm = 90
+    pm = 200
     scale_imgs = [
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
@@ -201,9 +201,12 @@ def optimise_manual(path):
     import shlex
     for i,s in scale_imgs:
         fp = path+"/"+i
-        resize = "convert "+fp+" -quality 25 -resize "+str(s)+" "+fp
+        input_file = fp
+        output_file = input_file
+        resize = "convert "+input_file+" -quality 25 -resize "+str(s)+" "+output_file
         print(resize)
         subprocess.call(shlex.split(resize), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # if output_file != input_file and os.path.isfile(input_file): os.unlink(input_file)
 
     remove_files = [
         "objects.inv",
@@ -217,6 +220,20 @@ def optimise_manual(path):
         "_static/_sphinx_javascript_frameworks_compat.js",
         "_static/scripts/furo.js.LICENSE.txt",
         "_static/styles/furo-extensions.css.map",
+        "_images/board_rak4631.png",
+        "_images/board_rnodev2.png",
+        "_images/board_t114.png",
+        "_images/board_t3s3.png",
+        "_images/board_t3v10.png",
+        "_images/board_t3v20.png",
+        "_images/board_t3v21.png",
+        "_images/board_tbeam.png",
+        "_images/board_tdeck.png",
+        "_images/board_techo.png",
+        "_images/board_tbeam_supreme.png",
+        "_images/board_opencomxl.png",
+        "_images/board_heltec32v20.png",
+        "_images/board_heltec32v30.png",
         # "_static/pygments.css",
         # "_static/language_data.js",
         # "_static/searchtools.js",
