@@ -243,7 +243,7 @@
         #define HAS_TCXO true
         #define HAS_BUSY true
         #define DIO2_AS_RF_SWITCH true
-        #define OCP_TUNED 0x38
+        #define OCP_TUNED 0x18
         const int pin_busy = 32;
         const int pin_dio = 33;
         const int pin_tcxo_enable = -1;
@@ -348,7 +348,7 @@
       #define HAS_SLEEP true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
-      #define OCP_TUNED 0x38
+      #define OCP_TUNED 0x18
 
       const int pin_btn_usr1 = 0;
 
@@ -552,7 +552,7 @@
       #define DIO2_AS_RF_SWITCH true
       #define HAS_BUSY true
       #define HAS_TCXO true
-      #define OCP_TUNED 0x38
+      #define OCP_TUNED 0x18
 
       #define HAS_DISPLAY true
       #define HAS_CONSOLE true
@@ -853,7 +853,7 @@
   // Default OCP value if not specified
   // in board configuration
   #ifndef OCP_TUNED
-    #define OCP_TUNED 0x38
+    #define OCP_TUNED 0x18
   #endif
 
   #ifndef NP_M
