@@ -215,7 +215,7 @@
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 4;
-      const int pin_reset = 36;
+      const int pin_reset = 33;
       const int pin_dio = 39;
       const int pin_led_rx = 14;
       const int pin_led_tx = 32;
@@ -256,7 +256,7 @@
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
       const int pin_cs = 4;
-      const int pin_reset = 36;
+      const int pin_reset = 33;
       const int pin_dio = 39;
       const int pin_led_rx = 14;
       const int pin_led_tx = 32;
