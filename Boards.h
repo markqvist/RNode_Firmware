@@ -95,6 +95,10 @@
   #define MODEL_C5            0xC5 // Heltec Lora32 v3, 433 MHz
   #define MODEL_CA            0xCA // Heltec Lora32 v3, 868 MHz
 
+  #define PRODUCT_H32_V4      0xC3
+  #define BOARD_HELTEC32_V4   0x3B
+  #define MODEL_C8            0xC8 // Heltec Lora32 v3, 850-950 MHz, 28dBm
+
   #define PRODUCT_HELTEC_T114 0xC2 // Heltec Mesh Node T114
   #define BOARD_HELTEC_T114   0x3C
   #define MODEL_C6            0xC6 // Heltec Mesh Node T114, 470-510 MHz
@@ -367,6 +371,44 @@
       #define DIO2_AS_RF_SWITCH true
 
       // Following pins are for the SX1262
+      const int pin_cs = 8;
+      const int pin_busy = 13;
+      const int pin_dio = 14;
+      const int pin_reset = 12;
+      const int pin_mosi = 10;
+      const int pin_miso = 11;
+      const int pin_sclk = 9;
+
+    #elif BOARD_MODEL == BOARD_HELTEC32_V4
+      #define IS_ESP32S3 true
+      #define HAS_DISPLAY true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_PMU true
+      #define HAS_CONSOLE true
+      #define HAS_EEPROM true
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_0
+      #define WAKEUP_LEVEL 0
+      #define OCP_TUNED 0x18
+
+      const int pin_btn_usr1 = 0;
+
+      #if defined(EXTERNAL_LEDS)
+        const int pin_led_rx = 13;
+        const int pin_led_tx = 14;
+      #else
+        const int pin_led_rx = 35;
+        const int pin_led_tx = 35;
+      #endif
+
+      #define MODEM SX1262
+      #define HAS_TCXO true
+      const int pin_tcxo_enable = -1;
+      #define HAS_BUSY true
+      #define DIO2_AS_RF_SWITCH true
+
       const int pin_cs = 8;
       const int pin_busy = 13;
       const int pin_dio = 14;

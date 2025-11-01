@@ -60,6 +60,11 @@
   #define DISP_ADDR 0x3C
   #define SCL_OLED 18
   #define SDA_OLED 17
+#elif BOARD_MODEL == BOARD_HELTEC32_V4
+  #define DISP_RST 21
+  #define DISP_ADDR 0x3C
+  #define SCL_OLED 18
+  #define SDA_OLED 17
 #elif BOARD_MODEL == BOARD_RAK4631
   // RAK1921/SSD1306
   #define DISP_RST -1
@@ -265,6 +270,18 @@ bool display_init() {
       digitalWrite(pin_display_en, HIGH);
       delay(50);
       Wire.begin(SDA_OLED, SCL_OLED);
+    #elif BOARD_MODEL == BOARD_HELTEC32_V4
+      // enable vext / pin 36
+      pinMode(Vext, OUTPUT);
+      digitalWrite(Vext, LOW);
+      delay(50);
+      int pin_display_en = 21;
+      pinMode(pin_display_en, OUTPUT);
+      digitalWrite(pin_display_en, LOW);
+      delay(50);
+      digitalWrite(pin_display_en, HIGH);
+      delay(50);
+      Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_LORA32_V1_0
       int pin_display_en = 16;
       digitalWrite(pin_display_en, LOW);
@@ -380,6 +397,9 @@ bool display_init() {
           disp_mode = DISP_MODE_PORTRAIT;
           display.setRotation(1);
         #elif BOARD_MODEL == BOARD_HELTEC32_V3
+          disp_mode = DISP_MODE_PORTRAIT;
+          display.setRotation(1);
+        #elif BOARD_MODEL == BOARD_HELTEC32_V4
           disp_mode = DISP_MODE_PORTRAIT;
           display.setRotation(1);
         #elif BOARD_MODEL == BOARD_HELTEC_T114
