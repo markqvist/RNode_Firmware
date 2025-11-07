@@ -1263,54 +1263,104 @@ int getTxPower() {
 	return (int)txp;
 }
 
+#if HAS_LORA_PA
+	const int tx_gain[PA_GAIN_POINTS] = {PA_GAIN_VALUES};
+#endif
+
+int map_target_power_to_modem_output(int target_tx_power) {
+	#if HAS_LORA_PA
+		int modem_output_dbm = -9;
+		for (int i = 0; i < PA_GAIN_POINTS; i++) {
+			int gain = tx_gain[i];
+			int effective_output_dbm = i + gain;
+			printf("At %d dBm modem output, gain is %d dBm, effective output is %d\n", i, gain, effective_output_dbm);
+			if (effective_output_dbm > target_tx_power) {
+				int diff = effective_output_dbm - target_tx_power;
+				modem_output_dbm = -1*diff;
+				break;
+			} else if (effective_output_dbm == target_tx_power) {
+				modem_output_dbm = i; break;
+			} else if (i == PA_GAIN_POINTS-1) {
+				int diff = target_tx_power - effective_output_dbm;
+				modem_output_dbm = i+diff; break;
+			}
+		}
+	#else
+		int modem_output_dbm = target_tx_power;
+	#endif
+	
+	return modem_output_dbm;
+}
+
+int map_modem_output_to_target_power(int modem_output_dbm) {
+	#if HAS_LORA_PA
+		if (modem_output_dbm < 0)               { modem_output_dbm = 0; }
+		if (modem_output_dbm >= PA_GAIN_POINTS) { modem_output_dbm = PA_GAIN_POINTS-1; }
+		int gain = tx_gain[modem_output_dbm];
+		int target_tx_power = modem_output_dbm+gain;
+	#else
+		int target_tx_power = modem_output_dbm;
+	#endif
+
+	return target_tx_power;
+}
+
 void setTXPower() {
 	if (radio_online) {
-		if (model == MODEL_11) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-		if (model == MODEL_12) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		int mapped_lora_txp = map_target_power_to_modem_output(lora_txp);
+		
+		#if HAS_LORA_PA
+			int real_lora_txp = map_modem_output_to_target_power(mapped_lora_txp);
+			lora_txp = real_lora_txp;
+		#endif
 
-		if (model == MODEL_C6) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-        if (model == MODEL_C7) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_11) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_12) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
 
-		if (model == MODEL_A1) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A2) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A3) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-		if (model == MODEL_A4) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
-		if (model == MODEL_A5) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A6) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A7) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A8) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_A9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_AA) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_AC) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C6) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
+    if (model == MODEL_C7) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
 
-		if (model == MODEL_BA) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_BB) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B3) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B8) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_B9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A1) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A2) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A3) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A4) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_A5) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A6) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A7) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A8) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_A9) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_AA) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_AC) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_C4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_C9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_C5) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_CA) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_BA) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_BB) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B3) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B4) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B8) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_B9) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_D4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_D9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C4) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C9) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C5) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_CA) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_C8) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_DB) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_DC) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_D4) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_D9) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_DD) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_DE) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_DB) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_DC) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_E4) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_E9) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_E3) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_E8) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_DD) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_DE) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
 
-		if (model == MODEL_FE) LoRa->setTxPower(lora_txp, PA_OUTPUT_PA_BOOST_PIN);
-		if (model == MODEL_FF) LoRa->setTxPower(lora_txp, PA_OUTPUT_RFO_PIN);
+		if (model == MODEL_E4) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_E9) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_E3) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_E8) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+
+		if (model == MODEL_FE) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_PA_BOOST_PIN);
+		if (model == MODEL_FF) LoRa->setTxPower(mapped_lora_txp, PA_OUTPUT_RFO_PIN);
 	}
 }
 
@@ -1507,7 +1557,7 @@ bool eeprom_product_valid() {
 	#if PLATFORM == PLATFORM_AVR
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
 	#elif PLATFORM == PLATFORM_ESP32
-	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3 || rval == PRODUCT_TDECK_V1 || rval == PRODUCT_TBEAM_S_V1  || rval == PRODUCT_XIAO_S3) {
+	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3 || rval == PRODUCT_H32_V4 || rval == PRODUCT_TDECK_V1 || rval == PRODUCT_TBEAM_S_V1  || rval == PRODUCT_XIAO_S3) {
 	#elif PLATFORM == PLATFORM_NRF52
 	if (rval == PRODUCT_RAK4631 || rval == PRODUCT_HELTEC_T114 || rval == PRODUCT_TECHO || rval == PRODUCT_HMBRW) {
 	#else

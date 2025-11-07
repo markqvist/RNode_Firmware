@@ -342,12 +342,43 @@ int sx126x::begin(long frequency) {
   setModulationParams(_sf, _bw, _cr, _ldro);
   setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
 
+  #if HAS_LORA_PA
+    #if LORA_PA_GC1109
+      // Enable Vfem_ctl for supply to
+      // PA power net.
+      pinMode(LORA_PA_PWR_EN, OUTPUT);
+      digitalWrite(LORA_PA_PWR_EN, HIGH);
+
+      // Enable PA LNA and TX standby
+      pinMode(LORA_PA_CSD, OUTPUT);
+      digitalWrite(LORA_PA_CSD, HIGH);
+
+      // Keep PA CPS low until actual
+      // transmit. Does it save power?
+      // Who knows? Will have to measure.
+      pinMode(LORA_PA_CPS, OUTPUT);
+      digitalWrite(LORA_PA_CPS, LOW);
+
+      // On Heltec V4, the PA CTX pin
+      // is driven by the SX1262 DIO2
+      // pin directly, so we do not
+      // need to manually raise this.
+    #endif
+  #endif
+
   return 1;
 }
 
 void sx126x::end() { sleep(); SPI.end(); _preinit_done = false; }
 
 int sx126x::beginPacket(int implicitHeader) {
+  #if HAS_LORA_PA
+    #if LORA_PA_GC1109
+      // Enable PA CPS for transmit
+      digitalWrite(LORA_PA_CPS, HIGH);
+    #endif
+  #endif
+
   standby();
   if (implicitHeader) { implicitHeaderMode(); }
   else { explicitHeaderMode(); }
@@ -432,6 +463,9 @@ int ISR_VECT sx126x::currentRssi() {
   uint8_t byte = 0;
   executeOpcodeRead(OP_CURRENT_RSSI_6X, &byte, 1);
   int rssi = -(int(byte)) / 2;
+  #if HAS_LORA_LNA
+    rssi -= LORA_LNA_GAIN;
+  #endif
   return rssi;
 }
 
@@ -446,6 +480,9 @@ int ISR_VECT sx126x::packetRssi() {
   uint8_t buf[3] = {0};
   executeOpcodeRead(OP_PACKET_STATUS_6X, buf, 3);
   int pkt_rssi = -buf[0] / 2;
+  #if HAS_LORA_LNA
+    pkt_rssi -= LORA_LNA_GAIN;
+  #endif
   return pkt_rssi;
 }
 
@@ -550,6 +587,13 @@ void sx126x::onReceive(void(*callback)(int)){
 }
 
 void sx126x::receive(int size) {
+  #if HAS_LORA_PA
+    #if LORA_PA_GC1109
+      // Disable PA CPS for receive
+      digitalWrite(LORA_PA_CPS, LOW);
+    #endif
+  #endif
+
   if (size > 0) {
     implicitHeaderMode();
     _payloadLength = size;
@@ -583,6 +627,8 @@ void sx126x::enableTCXO() {
     #elif BOARD_MODEL == BOARD_HELTEC_T114
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #elif BOARD_MODEL == BOARD_TECHO
+      uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
+    #elif BOARD_MODEL == BOARD_HELTEC32_V4
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #endif
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);
