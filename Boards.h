@@ -96,7 +96,7 @@
   #define MODEL_CA            0xCA // Heltec Lora32 v3, 868 MHz
 
   #define PRODUCT_H32_V4      0xC3
-  #define BOARD_HELTEC32_V4   0x3B
+  #define BOARD_HELTEC32_V4   0x3F
   #define MODEL_C8            0xC8 // Heltec Lora32 v3, 850-950 MHz, 28dBm
 
   #define PRODUCT_HELTEC_T114 0xC2 // Heltec Mesh Node T114
@@ -158,6 +158,8 @@
   #define HAS_EEPROM false
   #define HAS_INPUT false
   #define HAS_SLEEP false
+  #define HAS_LORA_PA false
+  #define HAS_LORA_LNA false
   #define PIN_DISP_SLEEP -1
   #define VALIDATE_FIRMWARE true
 
@@ -389,9 +391,12 @@
       #define HAS_EEPROM true
       #define HAS_INPUT true
       #define HAS_SLEEP true
+      #define HAS_LORA_PA true
+      #define HAS_LORA_LNA true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
       #define OCP_TUNED 0x18
+      #define Vext GPIO_NUM_36
 
       const int pin_btn_usr1 = 0;
 
@@ -408,6 +413,16 @@
       const int pin_tcxo_enable = -1;
       #define HAS_BUSY true
       #define DIO2_AS_RF_SWITCH true
+
+      #define LORA_LNA_GAIN  17
+      #define LORA_PA_GC1109 true
+      #define LORA_PA_PWR_EN  7
+      #define LORA_PA_CSD     2
+      #define LORA_PA_CPS    46
+
+      #define PA_MAX_OUTPUT  28
+      #define PA_GAIN_POINTS 22
+      #define PA_GAIN_VALUES 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 10, 10, 9, 9, 8, 7
 
       const int pin_cs = 8;
       const int pin_busy = 13;

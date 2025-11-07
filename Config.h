@@ -20,7 +20,7 @@
 	#define CONFIG_H
 
 	#define MAJ_VERS  0x01
-	#define MIN_VERS  0x53
+	#define MIN_VERS  0x54
 
 	#define MODE_HOST 0x11
 	#define MODE_TNC  0x12
