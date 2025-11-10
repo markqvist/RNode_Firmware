@@ -95,10 +95,10 @@
   float bat_delay_v = 0;
   float bat_state_change_v = 0;
 #elif BOARD_MODEL == BOARD_HELTEC32_V3
-  #define BAT_V_MIN       3.05
-  #define BAT_V_MAX       4.0
-  #define BAT_V_CHG       4.1
-  #define BAT_V_FLOAT     3.95
+  #define BAT_V_MIN       3.15
+  #define BAT_V_MAX       4.3
+  #define BAT_V_CHG       4.48
+  #define BAT_V_FLOAT     4.33
   #define BAT_SAMPLES     7
   const uint8_t pin_vbat = 1;
   const uint8_t pin_ctrl = 37;
@@ -256,12 +256,12 @@ void measure_battery() {
       #endif
 
       // if (bt_state == BT_STATE_CONNECTED) {
-      //   SerialBT.printf("Bus voltage %.3fv. Unfiltered %.3fv.", battery_voltage, bat_v_samples[BAT_SAMPLES-1]);
-      //   if (bat_voltage_dropping) { SerialBT.printf(" Voltage is dropping. Percentage %.1f%%.", battery_percent); }
-      //   else                      { SerialBT.printf(" Voltage is not dropping. Percentage %.1f%%.", battery_percent); }
-      //   if (battery_state == BATTERY_STATE_DISCHARGING) { SerialBT.printf(" Battery discharging. delay_v %.3fv", bat_delay_v); }
-      //   if (battery_state == BATTERY_STATE_CHARGING) { SerialBT.printf(" Battery charging. delay_v %.3fv", bat_delay_v); }
-      //   if (battery_state == BATTERY_STATE_CHARGED) { SerialBT.print(" Battery is charged."); }
+      //   SerialBT.printf("\nBus voltage %.3fv. Unfiltered %.3fv.", battery_voltage, bat_v_samples[BAT_SAMPLES-1]);
+      //   if (bat_voltage_dropping) { SerialBT.printf("\n Voltage is dropping. Percentage %.1f%%.", battery_percent); }
+      //   else                      { SerialBT.printf("\n Voltage is not dropping. Percentage %.1f%%.", battery_percent); }
+      //   if (battery_state == BATTERY_STATE_DISCHARGING) { SerialBT.printf("\n Battery discharging. delay_v %.3fv", bat_delay_v); }
+      //   if (battery_state == BATTERY_STATE_CHARGING) { SerialBT.printf("\n Battery charging. delay_v %.3fv", bat_delay_v); }
+      //   if (battery_state == BATTERY_STATE_CHARGED) { SerialBT.print("\n Battery is charged."); }
       //   SerialBT.print("\n");
       // }
     }
