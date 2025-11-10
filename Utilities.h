@@ -1015,13 +1015,15 @@ void kiss_indicate_battery() {
 }
 
 void kiss_indicate_temperature() {
-	#if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
-		float pmu_temp = pmu_temperature+PMU_TEMP_OFFSET;
-		uint8_t temp = (uint8_t)pmu_temp;
-		serial_write(FEND);
-		serial_write(CMD_STAT_TEMP);
-		escaped_serial_write(pmu_temp);
-		serial_write(FEND);
+	#if HAS_PMU
+		#if MCU_VARIANT == MCU_ESP32
+			float pmu_temp = pmu_temperature+PMU_TEMP_OFFSET;
+			uint8_t temp = (uint8_t)pmu_temp;
+			serial_write(FEND);
+			serial_write(CMD_STAT_TEMP);
+			escaped_serial_write(pmu_temp);
+			serial_write(FEND);
+		#endif
 	#endif
 }
 

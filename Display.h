@@ -838,6 +838,7 @@ void draw_disp_area() {
         else {                        disp_area.drawBitmap(0, 0, bm_def,    disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }
 
         disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(2);
+        disp_area.fillRect(0, 20, disp_area.width(), 14, SSD1306_BLACK);
         if ((bt_dh[15] & 0b00001111) == 0x01) { disp_area.setCursor(25, 32); }
         else                                  { disp_area.setCursor(16, 32); }
         disp_area.printf("%02X%02X", bt_dh[14], bt_dh[15]);
