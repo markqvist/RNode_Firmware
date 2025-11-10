@@ -758,6 +758,8 @@ void update_stat_area() {
 #define START_PAGE 0
 const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
+extern char bt_devname[11];
+extern char bt_dh[16];
 void draw_disp_area() {
   if (!device_init_done || firmware_update_mode) {
     uint8_t p_by = 37;
@@ -771,7 +773,7 @@ void draw_disp_area() {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
       if (radio_online && display_diagnostics) {
         disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK); disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
-        disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE);
+        disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(1);
 
         disp_area.setCursor(2, 13);
         disp_area.print("On");
@@ -832,11 +834,14 @@ void draw_disp_area() {
         disp_area.drawBitmap(32+2, 50, bm_hg_high, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
 
       } else {
-        if (device_signatures_ok()) {
-          disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
-        } else {
-          disp_area.drawBitmap(0, 0, bm_def, disp_area.width(), 37, SSD1306_WHITE, SSD1306_BLACK);      
-        }
+        if (device_signatures_ok()) { disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }
+        else {                        disp_area.drawBitmap(0, 0, bm_def,    disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }
+
+        disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(2);
+        if ((bt_dh[15] & 0b00001111) == 0x01) { disp_area.setCursor(25, 32); }
+        else                                  { disp_area.setCursor(16, 32); }
+        disp_area.printf("%02X%02X", bt_dh[14], bt_dh[15]);
+
       }
 
       if (!hw_ready || radio_error || !device_firmware_ok()) {
