@@ -357,7 +357,8 @@ void ISR_VECT receive_callback(int packet_size) {
     BaseType_t int_mask;
   #endif
 
-  if (!promisc) {
+  bool    ready    = false;
+  if (!promisc) { // Not in promiscuous mode
     // The standard operating mode allows large
     // packets with a payload up to 500 bytes,
     // by combining two raw LoRa packets.
@@ -365,7 +366,6 @@ void ISR_VECT receive_callback(int packet_size) {
     // packet sequence number and split flags
     uint8_t header   = LoRa->read(); packet_size--;
     uint8_t sequence = packetSequence(header);
-    bool    ready    = false;
 
     if (isSplitPacket(header) && seq == SEQ_UNSET) {
       // This is the first part of a split
@@ -442,40 +442,7 @@ void ISR_VECT receive_callback(int packet_size) {
       getPacketData(packet_size);
       ready = true;
     }
-
-    if (ready) {
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        // We first signal the RSSI of the
-        // recieved packet to the host.
-        kiss_indicate_stat_rssi();
-        kiss_indicate_stat_snr();
-
-        // And then write the entire packet
-        kiss_write_packet();
-      
-      #else
-        // Allocate packet struct, but abort if there
-        // is not enough memory available.
-        modem_packet_t *modem_packet = (modem_packet_t*)malloc(sizeof(modem_packet_t) + read_len);
-        if(!modem_packet) { memory_low = true; return; }
-
-        // Get packet RSSI and SNR
-        #if MCU_VARIANT == MCU_ESP32
-          modem_packet->snr_raw = LoRa->packetSnrRaw();
-          modem_packet->rssi = LoRa->packetRssi(modem_packet->snr_raw);
-        #endif
-
-        // Send packet to event queue, but free the
-        // allocated memory again if the queue is
-        // unable to receive the packet.
-        modem_packet->len = read_len;
-        memcpy(modem_packet->data, pbuf, read_len);
-        if (!modem_packet_queue || xQueueSendFromISR(modem_packet_queue, &modem_packet, NULL) != pdPASS) {
-            free(modem_packet);
-        }
-      #endif
-    }  
-  } else {
+  } else { // In promiscuous mode
     // In promiscuous mode, raw packets are
     // output directly to the host
     read_len = 0;
@@ -495,7 +462,40 @@ void ISR_VECT receive_callback(int packet_size) {
 
     #else
       getPacketData(packet_size);
-      packet_ready = true;
+      ready = true;
+    #endif
+  }
+
+  if (ready) {
+    #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+      // We first signal the RSSI of the
+      // recieved packet to the host.
+      kiss_indicate_stat_rssi();
+      kiss_indicate_stat_snr();
+
+      // And then write the entire packet
+      kiss_write_packet();
+
+      #else
+      // Allocate packet struct, but abort if there
+      // is not enough memory available.
+      modem_packet_t *modem_packet = (modem_packet_t*)malloc(sizeof(modem_packet_t) + read_len);
+      if(!modem_packet) { memory_low = true; return; }
+
+      // Get packet RSSI and SNR
+      #if MCU_VARIANT == MCU_ESP32
+        modem_packet->snr_raw = LoRa->packetSnrRaw();
+        modem_packet->rssi = LoRa->packetRssi(modem_packet->snr_raw);
+      #endif
+
+      // Send packet to event queue, but free the
+      // allocated memory again if the queue is
+      // unable to receive the packet.
+      modem_packet->len = read_len;
+      memcpy(modem_packet->data, pbuf, read_len);
+      if (!modem_packet_queue || xQueueSendFromISR(modem_packet_queue, &modem_packet, NULL) != pdPASS) {
+          free(modem_packet);
+      }
     #endif
   }
 }
