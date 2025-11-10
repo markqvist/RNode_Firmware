@@ -106,6 +106,8 @@
   // indication confusingly flapping
   // between charge completed, charging and
   // discharging states.
+  // Update: Vodoo implemented. Hopefully
+  // it will work accross different boards.
   #define BAT_V_MIN       3.05
   #define BAT_V_MAX       4.0
   #define BAT_V_CHG       4.48
