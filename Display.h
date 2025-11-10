@@ -574,6 +574,9 @@ void draw_battery_bars(int px, int py) {
         }
         
         if (battery_state == BATTERY_STATE_CHARGING && !disable_charge_status) {
+          float battery_prog = battery_percent;
+          if (battery_prog > 85) { battery_prog = 84; }
+          if (charge_tick < battery_prog ) { charge_tick = battery_prog; }
           battery_value = charge_tick;
           charge_tick += 3;
           if (charge_tick > 100) charge_tick = 0;
