@@ -13,6 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+#define PMU_TEMP_MIN -30
+#define PMU_TEMP_MAX 90
+#define PMU_TEMP_OFFSET 120
+bool pmu_temp_sensor_ready = false;
+float pmu_temperature = PMU_TEMP_MIN-1;
+
 #if BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
   #include <XPowersLib.h>
   XPowersLibInterface* PMU = NULL;
@@ -187,6 +193,11 @@ bool bat_diff_positive = false;
 #define PMU_R_INTERVAL 5
 #define PMU_SCV_RESET_INTERVAL 3
 void kiss_indicate_battery();
+void kiss_indicate_temperature();
+
+void measure_temperature() {
+  if (pmu_temp_sensor_ready) { pmu_temperature = temperatureRead(); } else { pmu_temperature = PMU_TEMP_MIN-1; }
+}
 
 void measure_battery() {
   #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC_T114 || BOARD_MODEL == BOARD_TECHO
@@ -380,6 +391,7 @@ void measure_battery() {
     pmu_rc++;
     if (pmu_rc%PMU_R_INTERVAL == 0) {
       kiss_indicate_battery();
+      if (pmu_temp_sensor_ready) { kiss_indicate_temperature(); }
     }
   }
 }
@@ -387,11 +399,16 @@ void measure_battery() {
 void update_pmu() {
   if (millis()-last_pmu_update >= pmu_update_interval) {
     measure_battery();
+    measure_temperature();
     last_pmu_update = millis();
   }
 }
 
 bool init_pmu() {
+  #if IS_ESP32S3
+    pmu_temp_sensor_ready = true;
+  #endif
+
   #if BOARD_MODEL == BOARD_RNODE_NG_21 || BOARD_MODEL == BOARD_LORA32_V2_1 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_TECHO
     pinMode(pin_vbat, INPUT);
     return true;
