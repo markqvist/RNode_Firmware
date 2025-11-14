@@ -838,11 +838,12 @@ void draw_disp_area() {
         else {                        disp_area.drawBitmap(0, 0, bm_def,    disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }
 
         disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(2);
-        disp_area.fillRect(0, 20, disp_area.width(), 17, SSD1306_BLACK);
-        if ((bt_dh[15] & 0b00001111) == 0x01) { disp_area.setCursor(25, 32); }
-        else                                  { disp_area.setCursor(16, 32); }
-        disp_area.printf("%02X%02X", bt_dh[14], bt_dh[15]);
-
+        disp_area.fillRect(0, 20, disp_area.width(), 17, SSD1306_BLACK); uint8_t ofsc = 0;
+        if ((bt_dh[14] & 0b00001111) == 0x01) { ofsc += 8; }
+        if ((bt_dh[14] >> 4)         == 0x01) { ofsc += 8; }
+        if ((bt_dh[15] & 0b00001111) == 0x01) { ofsc += 8; }
+        if ((bt_dh[15] >> 4)         == 0x01) { ofsc += 8; }
+        disp_area.setCursor(17+ofsc, 32); disp_area.printf("%02X%02X", bt_dh[14], bt_dh[15]);
       }
 
       if (!hw_ready || radio_error || !device_firmware_ok()) {

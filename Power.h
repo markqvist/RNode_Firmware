@@ -196,7 +196,9 @@ void kiss_indicate_battery();
 void kiss_indicate_temperature();
 
 void measure_temperature() {
-  if (pmu_temp_sensor_ready) { pmu_temperature = temperatureRead(); } else { pmu_temperature = PMU_TEMP_MIN-1; }
+  #if PLATFORM == PLATFORM_ESP32
+    if (pmu_temp_sensor_ready) { pmu_temperature = temperatureRead(); } else { pmu_temperature = PMU_TEMP_MIN-1; }
+  #endif
 }
 
 void measure_battery() {
