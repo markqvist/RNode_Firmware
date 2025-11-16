@@ -104,6 +104,11 @@
   #define MODEL_C6            0xC6 // Heltec Mesh Node T114, 470-510 MHz
   #define MODEL_C7            0xC7 // Heltec Mesh Node T114, 863-928 MHz
 
+  #define PRODUCT_VME213      0xC9 // Heltec VisionMaster E213
+  #define BOARD_VME213        0x40
+  #define MODEL_CD            0xCD // VisionMaster E213, 470-510 MHz
+  #define MODEL_CE            0xCE // VisionMaster E213, 863-928 MHz
+
   #define PRODUCT_TECHO       0x15 // LilyGO T-Echo devices
   #define BOARD_TECHO         0x44
   #define MODEL_16            0x16 // T-Echo 433 MHz
@@ -431,6 +436,64 @@
       const int pin_mosi = 10;
       const int pin_miso = 11;
       const int pin_sclk = 9;
+
+    #elif BOARD_MODEL == BOARD_VME213
+      // Heltec VisionMaster E213 with ESP32-S3R8 + SX1262 + 2.13" E-Ink
+      #define IS_ESP32S3 true
+      #define HAS_DISPLAY true        // 2.13" E-Ink LCMEN2R13EFC1, 250x122 pixels
+      #define HAS_EINK true           // Enable E-Ink specific display code
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_PMU false
+      #define HAS_CONSOLE true
+      #define HAS_EEPROM true
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_0
+      #define WAKEUP_LEVEL 0
+
+      const int pin_btn_usr1 = 0;
+
+      // No physical LEDs on VME213, display only
+      #if defined(EXTERNAL_LEDS)
+        const int pin_led_rx = 35;
+        const int pin_led_tx = 35;
+      #else
+        const int pin_led_rx = -1;
+        const int pin_led_tx = -1;
+      #endif
+
+      // SX1262 LoRa radio configuration
+      #define MODEM SX1262
+      #define HAS_TCXO true
+      const int pin_tcxo_enable = -1;
+      #define HAS_BUSY true
+      #define DIO2_AS_RF_SWITCH true
+
+      // SX1262 pins (from Heltec board-config.h)
+      const int pin_cs = 8;
+      const int pin_busy = 13;
+      const int pin_dio = 14;
+      const int pin_reset = 12;
+      const int pin_mosi = 10;
+      const int pin_miso = 11;
+      const int pin_sclk = 9;
+
+      // E-Ink display pins (HT_ICMEN2R13EFC1 controller)
+      const int pin_disp_reset = 3;
+      const int pin_disp_dc = 2;
+      const int pin_disp_cs = 5;
+      const int pin_disp_busy = 1;
+      const int pin_disp_sck = 4;
+      const int pin_disp_mosi = 6;
+      const int pin_disp_miso = -1;
+
+      // Vext power control (HIGH=ON, LOW=OFF)
+      #define Vext GPIO_NUM_18
+
+      // I2C for sensors (QuickLink)
+      #define I2C_SDA 39
+      #define I2C_SCL 38
 
     #elif BOARD_MODEL == BOARD_RNODE_NG_20
       #define HAS_DISPLAY true
