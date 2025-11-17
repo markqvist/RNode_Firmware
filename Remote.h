@@ -32,7 +32,7 @@
 uint32_t wifi_update_interval_ms = WIFI_UPDATE_INTERVAL_MS;
 uint32_t last_wifi_update = 0;
 
-WiFiClient connection = NULL;
+WiFiClient connection;
 WiFiServer remote_listener(7633);
 IPAddress ap_ip(10, 0, 0, 1);
 IPAddress ap_nm(255, 255, 255, 0);
