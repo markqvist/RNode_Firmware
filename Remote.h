@@ -1,0 +1,162 @@
+// Copyright (C) 2024, Mark Qvist
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+#include <WiFi.h>
+
+#if CONFIG_IDF_TARGET_ESP32
+  #include "esp32/rom/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32S2
+  #include "esp32s2/rom/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32C3
+  #include "esp32c3/rom/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32S3
+  #include "esp32s3/rom/rtc.h"
+#else 
+  #error Target CONFIG_IDF_TARGET is not supported
+#endif
+
+#define WIFI_UPDATE_INTERVAL_MS 500
+
+uint32_t wifi_update_interval_ms = WIFI_UPDATE_INTERVAL_MS;
+uint32_t last_wifi_update = 0;
+
+WiFiClient connection = NULL;
+WiFiServer remote_listener(7633);
+IPAddress ap_ip(10, 0, 0, 1);
+IPAddress ap_nm(255, 255, 255, 0);
+IPAddress wr_device_ip;
+wl_status_t wr_wifi_status = WL_IDLE_STATUS;
+
+uint8_t wifi_mode = WIFI_OFF;
+bool wifi_initialized  = false;
+
+char wr_ssid[33];
+char wr_psk[33];
+
+void wifi_dbg(String msg) { Serial.print("[WiFi] "); Serial.println(msg); }
+
+uint8_t wifi_remote_mode() { return wifi_mode; }
+
+void wifi_update_status() {
+  wr_wifi_status = WiFi.status();
+  if (wr_wifi_status == WL_CONNECTED) { wr_device_ip = WiFi.localIP(); }
+  if (wifi_mode == WR_WIFI_AP && wifi_initialized) { wr_device_ip = WiFi.softAPIP(); wr_wifi_status = WL_CONNECTED; }
+}
+
+bool wifi_is_connected() { return (wr_wifi_status == WL_CONNECTED); }
+bool wifi_host_is_connected() { if (connection) { return true; } else { return false; } }
+
+void wifi_remote_start_ap() {
+  WiFi.mode(WIFI_AP);
+  if (wr_ssid[0] != 0x00) {
+    if (wr_psk[0] != 0x00) { Serial.printf("Starting Access Point: %s / %s\n", wr_ssid, wr_psk); WiFi.softAP(wr_ssid, wr_psk, wr_channel); }
+    else                   { Serial.printf("Starting Access Point: %s\n", wr_ssid); WiFi.softAP(wr_ssid, NULL, wr_channel); }
+  } else {
+    if (wr_psk[0] != 0x00) { Serial.printf("Starting Access Point: %s / %s\n", bt_devname, wr_psk); WiFi.softAP(bt_devname, wr_psk, wr_channel); }
+    else                   { Serial.printf("Starting Access Point: %s\n", bt_devname); WiFi.softAP(bt_devname, NULL, wr_channel); }
+  }
+  delay(150);
+  WiFi.softAPConfig(ap_ip, ap_ip, ap_nm);
+  wifi_initialized = true;
+}
+
+void wifi_remote_start_sta() {
+  WiFi.mode(WIFI_STA);
+  delay(100);
+  if (wr_ssid[0] != 0x00) {
+    if (wr_psk[0] != 0x00) { WiFi.begin(wr_ssid, wr_psk); }
+    else                   { WiFi.begin(wr_ssid); }
+  }
+  
+  delay(500);
+  wr_wifi_status = WiFi.status(); 
+  wifi_initialized = true;
+}
+
+void wifi_remote_stop() {
+  WiFi.softAPdisconnect(true);
+  WiFi.disconnect(true, true);
+  WiFi.mode(WIFI_MODE_NULL);
+  wifi_initialized = false;
+}
+
+void wifi_remote_start() {
+  if      (wifi_mode == WR_WIFI_AP)  { wifi_remote_start_ap(); }
+  else if (wifi_mode == WR_WIFI_STA) { wifi_remote_start_sta(); }
+  else                               { wifi_remote_stop(); }
+
+  if (wifi_initialized == true) {
+    remote_listener.begin();
+    wr_state = WR_STATE_ON;
+  } else { remote_listener.end(); wr_state = WR_STATE_OFF; }
+}
+
+void wifi_remote_init() {
+  WiFi.softAPdisconnect(true);
+  WiFi.disconnect(true, true);
+  WiFi.mode(WIFI_MODE_NULL);
+  WiFi.setHostname(bt_devname);
+  wr_ssid[32] = 0x00; wr_psk[32] = 0x00;
+  for (uint8_t i = 0; i < 32; i++) { wr_ssid[i] = EEPROM.read(config_addr(ADDR_CONF_SSID+i)); if (wr_ssid[i] == 0xFF) { wr_ssid[i] = 0x00; } }
+  for (uint8_t i = 0; i < 32; i++) { wr_psk[i]  = EEPROM.read(config_addr(ADDR_CONF_PSK+i));  if (wr_psk[i]  == 0xFF) { wr_psk[i]  = 0x00; } }
+  wr_channel = EEPROM.read(eeprom_addr(ADDR_CONF_WCHN)); if (wr_channel < 1 || wr_channel > 14) { wr_channel = WR_CHANNEL_DEFAULT; }
+  wifi_remote_start();
+}
+
+void wifi_remote_close_all() {
+  if (connection) { connection.stop(); }
+  WiFiClient client = remote_listener.available();
+  while (client) { client.stop(); client = remote_listener.available(); }
+  connection = NULL;
+  wr_state = WR_STATE_ON;
+}
+
+bool wifi_remote_available() {
+  if (connection) {
+    if (connection.connected()) {
+      if (connection.available()) { return true; }
+      else                        { return false; }
+    } else {
+      wifi_remote_close_all();
+      return false;
+    }
+  } else {
+    WiFiClient client = remote_listener.available();
+    if (!client) { return false; }
+    else {
+      connection = client;
+      wr_state = WR_STATE_CONNECTED;
+      if (connection.available()) { return true; }
+      else                        { return false; }
+    }
+  }
+}
+
+uint8_t wifi_remote_read() {
+  if (connection && connection.available()) { return connection.read(); }
+  else {
+    if (connection) { wifi_remote_close_all(); }
+    wifi_dbg("Error: No data to read from TCP socket"); return 0x00;
+  }
+}
+
+void wifi_remote_write(uint8_t byte) { if (connection) { connection.write(byte); } }
+
+void update_wifi() {
+  if (millis()-last_wifi_update >= wifi_update_interval_ms) {
+    wifi_update_status();
+    last_wifi_update = millis();
+  }
+}

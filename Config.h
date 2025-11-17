@@ -40,6 +40,17 @@
 	bool bt_enabled = false;
 	bool bt_allow_pairing = false;
 
+	#define WR_CHANNEL_DEFAULT 1
+	#define WR_WIFI_OFF        0x00
+	#define WR_WIFI_STA        0x01
+	#define WR_WIFI_AP         0x02
+	#define WR_STATE_NA        0xff
+	#define WR_STATE_OFF       0x00
+	#define WR_STATE_ON        0x01
+	#define WR_STATE_CONNECTED 0x02
+	uint8_t wr_state = WR_STATE_OFF;
+	uint8_t wr_channel = WR_CHANNEL_DEFAULT;
+
 	#define M_FRQ_S 27388122
 	#define M_FRQ_R 27388061
 	bool console_active = false;
@@ -54,6 +65,7 @@
     bool mw_radio_online = false;
 
 	#define eeprom_addr(a) (a+EEPROM_OFFSET)
+	#define config_addr(a) (a+CONFIG_OFFSET)
 
     #if (MODEM == SX1262 || MODEM == SX1280) && defined(NRF52840_XXAA)
         SPIClass spiModem(NRF_SPIM2, pin_miso, pin_sclk, pin_mosi);

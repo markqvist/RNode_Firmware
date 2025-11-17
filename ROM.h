@@ -44,12 +44,18 @@
   #define ADDR_CONF_PINT 0xB6
   #define ADDR_CONF_BSET 0xB7
   #define ADDR_CONF_DIA  0xB9
+  #define ADDR_CONF_WIFI 0xBA
+  #define ADDR_CONF_WCHN 0xBB
 
   #define INFO_LOCK_BYTE 0x73
   #define CONF_OK_BYTE   0x73
   #define BT_ENABLE_BYTE 0x73
 
   #define EEPROM_RESERVED 200
+  
+  #define CONFIG_SIZE     256
+  #define ADDR_CONF_SSID 0x00
+  #define ADDR_CONF_PSK  0x21
   //////////////////////////////////
 
 #endif

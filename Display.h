@@ -162,6 +162,25 @@ int p_as_y = 0;
 GFXcanvas1 stat_area(64, 64);
 GFXcanvas1 disp_area(64, 64);
 
+static const uint8_t one_counts[256] = {
+  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  1,  1,  1,  1,
+  1,  1,  1,  1,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,
+  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,
+  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,
+  0,  0,  0,  0,  1,  2,  1,  1,  1,  1,  1,  1,  1,  1,  2,  3,
+  2,  2,  2,  2,  2,  2,  2,  2,  1,  2,  1,  1,  1,  1,  1,  1,
+  1,  1,  1,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  1,
+  1,  1,  1,  1,  1,  1,  1,  2,  1,  1,  1,  1,  1,  1,  1,  1,
+  1,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,  1,  1,  1,  1,
+  1,  1,  1,  1,  1,  2,  1,  1,  1,  1,  1,  1,  1,  1,  1,  2,
+  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,  0,  0,  0,  0,
+  0,  0,  1,  2,  1,  1,  1,  1,  1,  1,  1,  1,  0,  1,  0,  0,
+  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,
+  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  0,  0,  0,  0
+};
+
 void fillRect(int16_t x, int16_t y, int16_t width, int16_t height, uint16_t colour);
 
 void update_area_positions() {
@@ -520,12 +539,35 @@ void drawBitmap(int16_t startX, int16_t startY, const uint8_t* bitmap, int16_t b
   #endif
 }
 
+extern uint8_t wifi_mode;
+extern bool wifi_is_connected();
+extern bool wifi_host_is_connected();
 void draw_cable_icon(int px, int py) {
-  if (cable_state == CABLE_STATE_DISCONNECTED) {
-    stat_area.drawBitmap(px, py, bm_cable+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
-  } else if (cable_state == CABLE_STATE_CONNECTED) {
-    stat_area.drawBitmap(px, py, bm_cable+1*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
-  }
+  #if HAS_WIFI
+    if (wifi_mode == WR_WIFI_OFF) {
+      if      (cable_state == CABLE_STATE_DISCONNECTED) { stat_area.drawBitmap(px, py, bm_cable+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+      else if (cable_state == CABLE_STATE_CONNECTED)    { stat_area.drawBitmap(px, py, bm_cable+1*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+    } else {
+      if (wifi_mode == WR_WIFI_STA) {
+        if (wifi_is_connected()) {
+          stat_area.drawBitmap(px, py, bm_wifi+3*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK);
+          if (!wifi_host_is_connected()) { stat_area.fillRect(px+5, py+12, 6, 3, SSD1306_BLACK); }
+        } else { stat_area.drawBitmap(px, py, bm_wifi+2*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+      
+      } else if (wifi_mode == WR_WIFI_AP) {
+        if (wifi_host_is_connected()) { stat_area.drawBitmap(px, py, bm_wifi+1*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+        else                          { stat_area.drawBitmap(px, py, bm_wifi+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+      
+      } else {
+        if      (cable_state == CABLE_STATE_DISCONNECTED) { stat_area.drawBitmap(px, py, bm_cable+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+        else if (cable_state == CABLE_STATE_CONNECTED)    { stat_area.drawBitmap(px, py, bm_cable+1*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+      }
+    }
+
+  #else
+  if      (cable_state == CABLE_STATE_DISCONNECTED) { stat_area.drawBitmap(px, py, bm_cable+0*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+  else if (cable_state == CABLE_STATE_CONNECTED)    { stat_area.drawBitmap(px, py, bm_cable+1*32, 16, 16, SSD1306_WHITE, SSD1306_BLACK); }
+  #endif
 }
 
 void draw_bt_icon(int px, int py) {
@@ -760,6 +802,7 @@ const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 extern char bt_devname[11];
 extern char bt_dh[16];
+extern IPAddress wr_device_ip;
 void draw_disp_area() {
   if (!device_init_done || firmware_update_mode) {
     uint8_t p_by = 37;
@@ -837,13 +880,32 @@ void draw_disp_area() {
         if (device_signatures_ok()) { disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }
         else {                        disp_area.drawBitmap(0, 0, bm_def,    disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }
 
-        disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(2);
-        disp_area.fillRect(0, 20, disp_area.width(), 17, SSD1306_BLACK); uint8_t ofsc = 0;
-        if ((bt_dh[14] & 0b00001111) == 0x01) { ofsc += 8; }
-        if ((bt_dh[14] >> 4)         == 0x01) { ofsc += 8; }
-        if ((bt_dh[15] & 0b00001111) == 0x01) { ofsc += 8; }
-        if ((bt_dh[15] >> 4)         == 0x01) { ofsc += 8; }
-        disp_area.setCursor(17+ofsc, 32); disp_area.printf("%02X%02X", bt_dh[14], bt_dh[15]);
+        bool display_ip = false;
+        #if HAS_WIFI
+          if (wifi_is_connected() && disp_page%2 == 1) { display_ip = true; }
+        #endif
+        if (display_ip) {
+          #if HAS_WIFI
+            uint8_t ones = 3+one_counts[wr_device_ip[0]]+one_counts[wr_device_ip[1]]+one_counts[wr_device_ip[2]]+one_counts[wr_device_ip[3]];
+            uint8_t chars = 7;
+            for (uint8_t i = 0; i<4; i++) { if (wr_device_ip[i] > 9) { chars++; } if (wr_device_ip[i] > 99) { chars++; } }
+            uint8_t width = chars*6-(ones*4);
+            int alignment_offset = disp_area.width()-width;
+            int ipxpos = alignment_offset;
+            disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(1);
+            disp_area.fillRect(0, 20, disp_area.width(), 17, SSD1306_BLACK);
+            disp_area.setCursor(3, 34-8); disp_area.print("WiFi IP:");
+            disp_area.setCursor(ipxpos, 34); disp_area.print(wr_device_ip);
+          #endif
+        } else {
+          disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(2);
+          disp_area.fillRect(0, 20, disp_area.width(), 17, SSD1306_BLACK); uint8_t ofsc = 0;
+          if ((bt_dh[14] & 0b00001111) == 0x01) { ofsc += 8; }
+          if ((bt_dh[14] >> 4)         == 0x01) { ofsc += 8; }
+          if ((bt_dh[15] & 0b00001111) == 0x01) { ofsc += 8; }
+          if ((bt_dh[15] >> 4)         == 0x01) { ofsc += 8; }
+          disp_area.setCursor(17+ofsc, 32); disp_area.printf("%02X%02X", bt_dh[14], bt_dh[15]);
+        }
       }
 
       if (!hw_ready || radio_error || !device_firmware_ok()) {

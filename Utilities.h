@@ -60,6 +60,10 @@ uint8_t eeprom_read(uint32_t mapped_addr);
   #include "Bluetooth.h"
 #endif
 
+#if HAS_WIFI == true
+  #include "Remote.h"
+#endif
+
 #if HAS_PMU == true
   #include "Power.h"
 #endif
@@ -797,7 +801,12 @@ int8_t  led_standby_direction = 0;
 void serial_write(uint8_t byte) {
 	#if HAS_BLUETOOTH || HAS_BLE == true
 		if (bt_state != BT_STATE_CONNECTED) {
-			Serial.write(byte);
+			#if HAS_WIFI
+				if (wifi_host_is_connected()) { wifi_remote_write(byte); }
+				else                          { Serial.write(byte); }
+			#else
+				Serial.write(byte);
+			#endif
 		} else {
 			SerialBT.write(byte);
       #if MCU_VARIANT == MCU_NRF52 && HAS_BLE
@@ -1286,7 +1295,6 @@ int map_target_power_to_modem_output(int target_tx_power) {
 		for (int i = 0; i < PA_GAIN_POINTS; i++) {
 			int gain = tx_gain[i];
 			int effective_output_dbm = i + gain;
-			printf("At %d dBm modem output, gain is %d dBm, effective output is %d\n", i, gain, effective_output_dbm);
 			if (effective_output_dbm > target_tx_power) {
 				int diff = effective_output_dbm - target_tx_power;
 				modem_output_dbm = -1*diff;
@@ -1490,10 +1498,26 @@ void eeprom_dump_all() {
 	}
 }
 
+void eeprom_config_dump_all() {
+	#if MCU_VARIANT == MCU_ESP32
+		for (int addr = 0; addr < CONFIG_SIZE; addr++) {
+	    uint8_t byte = EEPROM.read(config_addr(addr));
+			escaped_serial_write(byte);
+		}
+	#endif
+}
+
 void kiss_dump_eeprom() {
 	serial_write(FEND);
 	serial_write(CMD_ROM_READ);
 	eeprom_dump_all();
+	serial_write(FEND);
+}
+
+void kiss_dump_config() {
+	serial_write(FEND);
+	serial_write(CMD_CFG_READ);
+	eeprom_config_dump_all();
 	serial_write(FEND);
 }
 
@@ -1678,6 +1702,14 @@ bool eeprom_checksum_valid() {
 	free(hash);
 	free(data);
 	return checksum_valid;
+}
+
+void wr_conf_save(uint8_t mode) {
+	eeprom_update(eeprom_addr(ADDR_CONF_WIFI), mode);
+  #if !HAS_EEPROM && MCU_VARIANT == MCU_NRF52
+    // have to do a flush because we're only writing 1 byte and it syncs after 8
+    eeprom_flush();
+  #endif
 }
 
 void bt_conf_save(bool is_enabled) {

@@ -152,6 +152,7 @@
   #define HAS_DISPLAY false
   #define HAS_BLUETOOTH false
   #define HAS_BLE false
+  #define HAS_WIFI false
   #define HAS_TCXO false
   #define HAS_PMU false
   #define HAS_NP false
@@ -211,6 +212,7 @@
 
     #define EEPROM_SIZE 1024
     #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+    #define CONFIG_OFFSET 0
 
     #define GPS_BAUD_RATE 9600
     #define PIN_GPS_TX 12
@@ -345,6 +347,7 @@
     #elif BOARD_MODEL == BOARD_HELTEC32_V3
       #define IS_ESP32S3 true
       #define HAS_DISPLAY true
+      #define HAS_WIFI true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_PMU true
@@ -386,6 +389,7 @@
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
+      #define HAS_WIFI true
       #define HAS_PMU true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
@@ -484,6 +488,7 @@
       #define IS_ESP32S3 true
       #define HAS_DISPLAY true
       #define HAS_CONSOLE true
+      #define HAS_WIFI true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_PMU true
@@ -557,6 +562,7 @@
 
       #define HAS_DISPLAY false
       #define HAS_CONSOLE false
+      #define HAS_WIFI true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_PMU true
@@ -613,6 +619,7 @@
 
       #define HAS_DISPLAY true
       #define HAS_CONSOLE true
+      #define HAS_WIFI true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_PMU true
@@ -664,6 +671,7 @@
 
       #define HAS_DISPLAY false
       #define HAS_CONSOLE true
+      #define HAS_WIFI true
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_NP false

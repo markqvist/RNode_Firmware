@@ -272,6 +272,10 @@ void setup() {
         kiss_indicate_reset();
       #endif
     } else {
+      #if HAS_WIFI
+        wifi_mode = EEPROM.read(eeprom_addr(ADDR_CONF_WIFI));
+        if (wifi_mode == WR_WIFI_STA || wifi_mode == WR_WIFI_AP) { wifi_remote_init(); }
+      #endif
       kiss_indicate_reset();
     }
   #endif
@@ -1012,6 +1016,8 @@ void serial_callback(uint8_t sbyte) {
       }
     } else if (command == CMD_ROM_READ) {
       kiss_dump_eeprom();
+    } else if (command == CMD_CFG_READ) {
+      kiss_dump_config();
     } else if (command == CMD_ROM_WRITE) {
       if (sbyte == FESC) {
             ESCAPE = true;
@@ -1133,6 +1139,56 @@ void serial_callback(uint8_t sbyte) {
             memcpy(dev_firmware_hash_target, cmdbuf, DEV_HASH_LEN);
             device_save_firmware_hash();
           }
+      #endif
+    } else if (command == CMD_WIFI_CHN) {
+      #if HAS_WIFI
+        if (sbyte > 0 && sbyte < 14) { eeprom_update(eeprom_addr(ADDR_CONF_WCHN), sbyte); }
+      #endif
+    } else if (command == CMD_WIFI_MODE) {
+      #if HAS_WIFI
+        if (sbyte == WR_WIFI_OFF || sbyte == WR_WIFI_STA || sbyte == WR_WIFI_AP) {
+          wr_conf_save(sbyte);
+          wifi_mode = sbyte;
+          wifi_remote_init();
+        }
+      #endif
+    } else if (command == CMD_WIFI_SSID) {
+      #if HAS_WIFI
+        if (sbyte == FESC) { ESCAPE = true; }
+        else {
+          if (ESCAPE) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            ESCAPE = false;
+          }
+          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (sbyte == 0x00) {
+          for (uint8_t i = 0; i<33; i++) {
+            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_SSID+i), cmdbuf[i]); }
+            else                     { eeprom_update(config_addr(ADDR_CONF_SSID+i), 0x00); }
+          }
+        }
+      #endif
+    } else if (command == CMD_WIFI_PSK) {
+      #if HAS_WIFI
+        if (sbyte == FESC) { ESCAPE = true; }
+        else {
+          if (ESCAPE) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            ESCAPE = false;
+          }
+          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (sbyte == 0x00) {
+          for (uint8_t i = 0; i<33; i++) {
+            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_PSK+i), cmdbuf[i]); }
+            else                     { eeprom_update(config_addr(ADDR_CONF_PSK+i), 0x00); }
+          }
+        }
       #endif
     } else if (command == CMD_BT_CTRL) {
       #if HAS_BLUETOOTH || HAS_BLE
@@ -1621,6 +1677,10 @@ void loop() {
     if (!console_active && bt_ready) update_bt();
   #endif
 
+  #if HAS_WIFI
+    if (wifi_initialized) update_wifi();
+  #endif
+
   #if HAS_INPUT
     input_read();
   #endif
@@ -1754,7 +1814,11 @@ void buffer_serial() {
     #if HAS_BLUETOOTH || HAS_BLE == true
     while (
       c < MAX_CYCLES &&
+      #if HAS_WIFI
+      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) || (wr_state >= WR_STATE_ON && wifi_remote_available()) )
+      #else
       ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) )
+      #endif
       )
     #else
     while (c < MAX_CYCLES && Serial.available())
@@ -1763,23 +1827,15 @@ void buffer_serial() {
       c++;
 
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        if (!fifo_isfull_locked(&serialFIFO)) {
-          fifo_push_locked(&serialFIFO, Serial.read());
-        }
-      #elif HAS_BLUETOOTH || HAS_BLE == true
-        if (bt_state == BT_STATE_CONNECTED) {
-          if (!fifo_isfull(&serialFIFO)) {
-            fifo_push(&serialFIFO, SerialBT.read());
-          }
-        } else {
-          if (!fifo_isfull(&serialFIFO)) {
-            fifo_push(&serialFIFO, Serial.read());
-          }
-        }
+        if (!fifo_isfull_locked(&serialFIFO)) { fifo_push_locked(&serialFIFO, Serial.read()); }
+      #elif HAS_BLUETOOTH || HAS_BLE == true || HAS_WIFI
+        if      (bt_state == BT_STATE_CONNECTED) { if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, SerialBT.read()); } }
+        #if HAS_WIFI
+        else if (wifi_host_is_connected())       { if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, wifi_remote_read()); } }
+        #endif
+        else                                     { if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, Serial.read()); } }
       #else
-        if (!fifo_isfull(&serialFIFO)) {
-          fifo_push(&serialFIFO, Serial.read());
-        }
+        if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, Serial.read()); }
       #endif
     }
 

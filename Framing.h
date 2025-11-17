@@ -65,11 +65,16 @@
   #define CMD_BT_UNPAIR   0x70
   #define CMD_BT_PIN      0x62
   #define CMD_DIS_IA      0x69
+  #define CMD_WIFI_MODE   0x6A
+  #define CMD_WIFI_SSID   0x6B
+  #define CMD_WIFI_PSK    0x6C
+  #define CMD_WIFI_CHN    0x6E
 
   #define CMD_BOARD       0x47
   #define CMD_PLATFORM    0x48
   #define CMD_MCU         0x49
   #define CMD_FW_VERSION  0x50
+  #define CMD_CFG_READ    0x6D
   #define CMD_ROM_READ    0x51
   #define CMD_ROM_WRITE   0x52
   #define CMD_CONF_SAVE   0x53
