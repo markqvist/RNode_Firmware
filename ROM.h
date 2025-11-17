@@ -56,6 +56,8 @@
   #define CONFIG_SIZE     256
   #define ADDR_CONF_SSID 0x00
   #define ADDR_CONF_PSK  0x21
+  #define ADDR_CONF_IP   0x42
+  #define ADDR_CONF_NM   0x46
   //////////////////////////////////
 
 #endif

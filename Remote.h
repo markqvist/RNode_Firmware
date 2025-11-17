@@ -74,6 +74,23 @@ void wifi_remote_start_ap() {
 
 void wifi_remote_start_sta() {
   WiFi.mode(WIFI_STA);
+
+  uint8_t ip[4]; bool ip_ok = true;
+  for (uint8_t i = 0; i < 4; i++) { ip[i]  = EEPROM.read(config_addr(ADDR_CONF_IP+i)); }
+  if (ip[0]==0x00 && ip[1]==0x00 && ip[2]==0x00 && ip[3]==0x00) { ip_ok = false; }
+  if (ip[0]==0xFF && ip[1]==0xFF && ip[2]==0xFF && ip[3]==0xFF) { ip_ok = false; }
+
+  uint8_t nm[4]; bool nm_ok = true;
+  for (uint8_t i = 0; i < 4; i++) { nm[i]  = EEPROM.read(config_addr(ADDR_CONF_NM+i)); }
+  if (nm[0]==0x00 && nm[1]==0x00 && nm[2]==0x00 && nm[3]==0x00) { nm_ok = false; }
+  if (nm[0]==0xFF && nm[1]==0xFF && nm[2]==0xFF && nm[3]==0xFF) { nm_ok = false; }
+
+  if (ip_ok && nm_ok) {
+    IPAddress sta_ip(ip[0], ip[1], ip[2], ip[3]);
+    IPAddress sta_nm(nm[0], nm[1], nm[2], nm[3]);
+    WiFi.config(sta_ip, sta_ip, sta_nm);
+  }
+
   delay(100);
   if (wr_ssid[0] != 0x00) {
     if (wr_psk[0] != 0x00) { WiFi.begin(wr_ssid, wr_psk); }

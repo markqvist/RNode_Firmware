@@ -1190,6 +1190,34 @@ void serial_callback(uint8_t sbyte) {
           }
         }
       #endif
+    } else if (command == CMD_WIFI_IP) {
+      #if HAS_WIFI
+        if (sbyte == FESC) { ESCAPE = true; }
+        else {
+          if (ESCAPE) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            ESCAPE = false;
+          }
+          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_IP+i), cmdbuf[i]); } }
+      #endif
+    } else if (command == CMD_WIFI_NM) {
+      #if HAS_WIFI
+        if (sbyte == FESC) { ESCAPE = true; }
+        else {
+          if (ESCAPE) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            ESCAPE = false;
+          }
+          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+        }
+
+        if (frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_NM+i), cmdbuf[i]); } }
+      #endif
     } else if (command == CMD_BT_CTRL) {
       #if HAS_BLUETOOTH || HAS_BLE
         if (sbyte == 0x00) {

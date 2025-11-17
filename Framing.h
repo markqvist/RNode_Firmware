@@ -69,6 +69,8 @@
   #define CMD_WIFI_SSID   0x6B
   #define CMD_WIFI_PSK    0x6C
   #define CMD_WIFI_CHN    0x6E
+  #define CMD_WIFI_IP     0x84
+  #define CMD_WIFI_NM     0x85
 
   #define CMD_BOARD       0x47
   #define CMD_PLATFORM    0x48
