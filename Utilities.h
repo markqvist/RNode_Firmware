@@ -2009,3 +2009,13 @@ inline void fifo16_init(FIFOBuffer16 *f, uint16_t *buffer, uint16_t size) {
 inline uint16_t fifo16_len(FIFOBuffer16 *f) {
   return (f->end - f->begin);
 }
+
+extern void stopRadio();
+void host_disconnected() {
+	stopRadio();
+	cable_state   = CABLE_STATE_DISCONNECTED;
+	current_rssi  = -292;
+	last_rssi     = -292;
+	last_rssi_raw = 0x00;
+	last_snr_raw  = 0x80;
+}
