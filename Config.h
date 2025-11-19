@@ -86,6 +86,8 @@
 	#define LORA_PREAMBLE_FAST_DELTA   18
 	#define LORA_FAST_THRESHOLD_BPS    30E3
 	#define LORA_LIMIT_THRESHOLD_BPS   60E3
+	#define LORA_GUARD_THRESHOLD_BPS   14E3
+	#define LORA_FAST_GUARD_MS         48
 	long lora_preamble_symbols      =  LORA_PREAMBLE_SYMBOLS_MIN;
 	long lora_preamble_time_ms      =  0;
 	long lora_header_time_ms        =  0;
@@ -94,6 +96,7 @@
 	float lora_us_per_byte          =  0.0;
 	bool lora_low_datarate          =  false;
 	bool lora_limit_rate            =  false;
+	bool lora_guard_rate            =  false;
 
 	// CSMA Parameters
 	#define CSMA_SIFS_MS               0
@@ -154,6 +157,7 @@
 	uint8_t last_snr_raw	= 0x80;
 	uint8_t seq				= 0xFF;
 	uint16_t read_len		= 0;
+	uint16_t host_write_len = 0;
 
 	// Incoming packet buffer
 	uint8_t pbuf[MTU];

@@ -42,7 +42,7 @@ volatile bool serial_buffering = false;
 #endif
 
 #if PLATFORM == PLATFORM_ESP32 || PLATFORM == PLATFORM_NRF52
-  #define MODEM_QUEUE_SIZE 4
+  #define MODEM_QUEUE_SIZE 8
   typedef struct {
           size_t len;
           int rssi;
@@ -314,7 +314,7 @@ inline void kiss_write_packet() {
   serial_write(FEND);
   serial_write(CMD_DATA);
   
-  for (uint16_t i = 0; i < read_len; i++) {
+  for (uint16_t i = 0; i < host_write_len; i++) {
     #if MCU_VARIANT == MCU_NRF52
       portENTER_CRITICAL();
       uint8_t byte = pbuf[i];
@@ -329,7 +329,7 @@ inline void kiss_write_packet() {
   }
 
   serial_write(FEND);
-  read_len = 0;
+  host_write_len = 0;
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     packet_ready = false;
@@ -455,7 +455,8 @@ void ISR_VECT receive_callback(int packet_size) {
         kiss_indicate_stat_snr();
 
         // And then write the entire packet
-        kiss_write_packet();
+        host_write_len = read_len;
+        kiss_write_packet(); read_len = 0;
       
       #else
         // Allocate packet struct, but abort if there
@@ -473,7 +474,7 @@ void ISR_VECT receive_callback(int packet_size) {
         // allocated memory again if the queue is
         // unable to receive the packet.
         modem_packet->len = read_len;
-        memcpy(modem_packet->data, pbuf, read_len);
+        memcpy(modem_packet->data, pbuf, read_len); read_len = 0;
         if (!modem_packet_queue || xQueueSendFromISR(modem_packet_queue, &modem_packet, NULL) != pdPASS) {
             free(modem_packet);
         }
@@ -1359,6 +1360,11 @@ void update_noise_floor() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     if (!dcd) {
       if (!noise_floor_sampled || current_rssi < noise_floor + CSMA_INFR_THRESHOLD_DB) {
+        #if HAS_LORA_LNA
+          // Discard invalid samples due to gain variance
+          // during LoRa LNA re-calibration
+          if (current_rssi < noise_floor-LORA_LNA_GVT) { return; }
+        #endif
         noise_floor_buffer[noise_floor_sample] = current_rssi;
         noise_floor_sample = noise_floor_sample+1;
         if (noise_floor_sample >= NOISE_FLOOR_SAMPLES) {
@@ -1612,7 +1618,8 @@ void tx_queue_handler() {
             cw_wait_passed += millis()-cw_wait_start; cw_wait_start   = millis();
             if (cw_wait_passed < cw_wait_target) { return; }                      // Contention window wait time has not yet passed, continue waiting
             else {                                                                // Wait time has passed, flush the queue
-              if (!lora_limit_rate) { flush_queue(); } else { pop_queue(); }
+              bool should_flush = !lora_limit_rate && !lora_guard_rate;
+              if (should_flush) { flush_queue(); } else { pop_queue(); }
               cw_wait_passed = 0; csma_cw = -1; difs_wait_start = -1; }
           }
         }
@@ -1628,9 +1635,9 @@ void loop() {
     #if MCU_VARIANT == MCU_ESP32
       modem_packet_t *modem_packet = NULL;
       if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
-        read_len = modem_packet->len;
-        last_rssi = modem_packet->rssi;
-        last_snr_raw = modem_packet->snr_raw;
+        host_write_len = modem_packet->len;
+        last_rssi      = modem_packet->rssi;
+        last_snr_raw   = modem_packet->snr_raw;
         memcpy(&pbuf, modem_packet->data, modem_packet->len);
         free(modem_packet);
         modem_packet = NULL;
@@ -1648,7 +1655,7 @@ void loop() {
       modem_packet_t *modem_packet = NULL;
       if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
         memcpy(&pbuf, modem_packet->data, modem_packet->len);
-        read_len = modem_packet->len;
+        host_write_len = modem_packet->len;
         free(modem_packet);
         modem_packet = NULL;
 

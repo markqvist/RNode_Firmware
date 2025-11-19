@@ -1239,6 +1239,7 @@ void updateBitrate() {
 			
 			bool fast_rate   = lora_bitrate > LORA_FAST_THRESHOLD_BPS;
 			lora_limit_rate  = lora_bitrate > LORA_LIMIT_THRESHOLD_BPS;
+			lora_guard_rate  = (!lora_limit_rate && lora_bitrate > LORA_GUARD_THRESHOLD_BPS);
 
 			int csma_slot_min_ms = CSMA_SLOT_MIN_MS;
 			float lora_preamble_target_ms = LORA_PREAMBLE_TARGET_MS;
