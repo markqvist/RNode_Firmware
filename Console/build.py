@@ -4,9 +4,9 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-1.0.0-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.8.0-py3-none-any.whl",
-    "lxmf": "lxmf-0.8.0-py3-none-any.whl",
+    "rns": "rns-1.0.3-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.9.1-py3-none-any.whl",
+    "lxmf": "lxmf-0.9.3-py3-none-any.whl",
     "rnsh": "rnsh-0.1.5-py3-none-any.whl",
 }
 
@@ -37,7 +37,7 @@ document_start = """
 
 document_end = """</body></html>"""
 
-menu_md = """<center><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Software]({CONTENT_PATH}software.html) | [Learn]({CONTENT_PATH}learn.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
+menu_md = """<center markdown=\"1\"><span class="menu">[Start]({CONTENT_PATH}index.html) | [Replicate]({CONTENT_PATH}replicate.html) | [Software]({CONTENT_PATH}software.html) | [Learn]({CONTENT_PATH}learn.html) | [Help](help.html) | [Contribute]({CONTENT_PATH}contribute.html)</span></center>"""
 
 manual_redirect = """
 <!DOCTYPE html>
@@ -150,8 +150,8 @@ def generate_html(f, root_path):
         print("Found topic: "+str(topic)+", rt "+str(rt))
         md = md.replace(rt, tl)
 
-    menu_html = markdown.markdown(menu_md.replace("{CONTENT_PATH}", root_path), extensions=["markdown.extensions.fenced_code", "sane_lists"]).replace("<p></p>", "")
-    page_html = markdown.markdown(md, extensions=["markdown.extensions.fenced_code"]).replace("{ASSET_PATH}", root_path)
+    menu_html = markdown.markdown(menu_md.replace("{CONTENT_PATH}", root_path), extensions=["md_in_html", "markdown.extensions.fenced_code", "sane_lists"]).replace("<p></p>", "")
+    page_html = markdown.markdown(md, extensions=["md_in_html", "markdown.extensions.fenced_code"]).replace("{ASSET_PATH}", root_path)
     page_html = page_html.replace("{LXMF_ADDRESS}", LXMF_ADDRESS)
     for pkg_name in packages:
         page_html = page_html.replace("{PKG_"+pkg_name+"}", "pkg/"+pkg_name+".zip")
@@ -174,12 +174,13 @@ mf.write(help_redirect)
 mf.close()
 
 def optimise_manual(path):
-    pm = 200
+    pm = 180
     scale_imgs = [
         ("_images/board_rnodev2.png", pm),
         ("_images/board_rnode.png", pm),
         ("_images/board_heltec32v20.png", pm),
         ("_images/board_heltec32v30.png", pm),
+        ("_images/board_heltec32v4.png", pm),
         ("_images/board_t3v21.png", pm),
         ("_images/board_t3v20.png", pm),
         ("_images/board_t3v10.png", pm),
