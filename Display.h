@@ -802,7 +802,9 @@ const uint8_t pages = 3;
 uint8_t disp_page = START_PAGE;
 extern char bt_devname[11];
 extern char bt_dh[16];
-extern IPAddress wr_device_ip;
+#if HAS_WIFI
+  extern IPAddress wr_device_ip;
+#endif
 void draw_disp_area() {
   if (!device_init_done || firmware_update_mode) {
     uint8_t p_by = 37;
