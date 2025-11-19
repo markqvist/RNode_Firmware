@@ -827,6 +827,68 @@ void escaped_serial_write(uint8_t byte) {
     serial_write(byte);
 }
 
+/* This funtion takes a format string an variable number of arguments to send to the host, over KISS
+   The format of the message is as follows:
+   Byte 1:  Log level
+   Byte 2:  Tag
+   Byte 3:  Length
+   Byte 4 - 259:  256 bytes for the log message
+
+   The length field is a byte, meaning it can have values 0 through 255.
+   Due to limitted size, it can not indicate a length of 256
+   However, since sending a message of size 0 is useless, the length field will actuall indicate
+   the string's length - 1
+   this allows us to send messages with lengths of 1 through 256
+
+   log_string variable allocates 1 extra byte than the the full size since vsnprintf puts a 0 at the end
+   This routine won't send the terminating 0.  It's a waste of room since we do have a length field.
+*/
+void kiss_send_CMD_LOG(uint8_t level, uint8_t tag, const char *format, ...) {
+	va_list args;
+    const int max_log_string_size = 256;
+    char log_string[max_log_string_size + 1]; // make room for \0 at the end
+	int16_t  vsnprintf_result;
+    uint16_t log_string_size;
+	uint16_t i;
+
+    memset(log_string, 0xcc, sizeof(log_string));
+
+    va_start(args, format);
+
+    // vsnprintf return the number of bytes that the formatting would have written, not including 0 termination
+    vsnprintf_result = vsnprintf(log_string, sizeof(log_string), format, args);
+
+	if (vsnprintf_result < 0) {
+		// vsnprintf incured an encoding error
+		// do nothing
+	}
+    else {
+        // if total size needed was bigger than our buffer, truncate to size of our log_string buffer
+        if (vsnprintf_result > max_log_string_size) {
+            log_string_size = max_log_string_size;
+        }
+        else {
+            // use vsnprintf_result as the number of bytes written to log_string
+            log_string_size = vsnprintf_result;
+        }
+    }
+    va_end(args);
+
+	// only send the log message to the host if the size is 1 or larger
+	if (log_string_size > 0) {
+		serial_write(FEND);
+		serial_write(CMD_LOG);
+		escaped_serial_write(level);
+		escaped_serial_write(tag);
+		escaped_serial_write(log_string_size-1);
+
+		for (i = 0; i < log_string_size; i++) {
+			escaped_serial_write(log_string[i]);
+		}
+		serial_write(FEND);
+	}
+}
+
 void kiss_indicate_reset() {
 	serial_write(FEND);
 	serial_write(CMD_RESET);
