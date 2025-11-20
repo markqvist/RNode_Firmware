@@ -715,7 +715,7 @@
       #define HAS_BLUETOOTH false
       #define HAS_BLE true
       #define HAS_CONSOLE false
-      #define HAS_PMU false
+      #define HAS_PMU true
       #define HAS_NP false
       #define HAS_SD false
       #define HAS_TCXO true
@@ -731,7 +731,7 @@
       #define BLE_MANUFACTURER "RAK Wireless"
       #define BLE_MODEL "RAK4640"
 
-      const int pin_btn_usr1 = 9;
+      const int pin_btn_usr1 = 31;
 
       // Following pins are for the sx1262
       const int pin_rxen = 37;
