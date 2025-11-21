@@ -710,6 +710,7 @@
   
   #elif MCU_VARIANT == MCU_NRF52
     #if BOARD_MODEL == BOARD_RAK4631
+      #define _PINNUM(port, pin) ((port) * 32 + (pin))
       #define HAS_EEPROM false
       #define HAS_DISPLAY true
       #define HAS_BLUETOOTH false
@@ -722,6 +723,7 @@
       #define HAS_RF_SWITCH_RX_TX true
       #define HAS_BUSY true
       #define HAS_INPUT true
+      #define HAS_SLEEP true
       #define DIO2_AS_RF_SWITCH true
       #define CONFIG_UART_BUFFER_SIZE 6144
       #define CONFIG_QUEUE_SIZE 6144
@@ -731,7 +733,9 @@
       #define BLE_MANUFACTURER "RAK Wireless"
       #define BLE_MODEL "RAK4640"
 
-      const int pin_btn_usr1 = 31;
+      #define PIN_VEXT_EN _PINNUM(1, 2)
+
+      const int pin_btn_usr1 = _PINNUM(0, 31);
 
       // Following pins are for the sx1262
       const int pin_rxen = 37;
