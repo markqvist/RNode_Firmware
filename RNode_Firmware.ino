@@ -1383,6 +1383,8 @@ void update_noise_floor() {
 
 #define LED_ID_TRIG 16
 uint8_t led_id_filter = 0;
+uint32_t interference_start = 0;
+bool interference_persists = false;
 void update_modem_status() {
   #if MCU_VARIANT == MCU_ESP32
     portENTER_CRITICAL(&update_lock);
@@ -1403,6 +1405,19 @@ void update_modem_status() {
   interference_detected = !carrier_detected && (current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB));
   if (interference_detected) { if (led_id_filter < LED_ID_TRIG) { led_id_filter += 1; } }
   else                       { if (led_id_filter > 0) {led_id_filter -= 1; } }
+
+  // Handle potential false interference detection due to
+  // LNA recalibration, antenna swap, moving into new RF
+  // environment or similar.
+  if (interference_detected && current_rssi < CSMA_RFENV_RECAL_LIMIT_DB) {
+    if (!interference_persists) {
+      interference_persists = true; interference_start = millis();
+    } else {
+      if (millis()-interference_start >= CSMA_RFENV_RECAL_MS) { noise_floor_sampled = false; interference_persists = false; }
+    }
+  } else {
+    interference_persists = false;
+  }
 
   if (carrier_detected) { dcd = true; } else { dcd = false; }
 

@@ -356,8 +356,13 @@ int sx126x::begin(long frequency) {
       // Keep PA CPS low until actual
       // transmit. Does it save power?
       // Who knows? Will have to measure.
+      // Note from the future: Nope.
+      // Power consumption is the same,
+      // and turning it on and off is
+      // not something that it likes.
+      // Keeping it high for now.
       pinMode(LORA_PA_CPS, OUTPUT);
-      digitalWrite(LORA_PA_CPS, LOW);
+      digitalWrite(LORA_PA_CPS, HIGH);
 
       // On Heltec V4, the PA CTX pin
       // is driven by the SX1262 DIO2
@@ -375,7 +380,10 @@ int sx126x::beginPacket(int implicitHeader) {
   #if HAS_LORA_PA
     #if LORA_PA_GC1109
       // Enable PA CPS for transmit
-      digitalWrite(LORA_PA_CPS, HIGH);
+      // digitalWrite(LORA_PA_CPS, HIGH);
+      // Disabled since we're keeping it
+      // on permanently as long as the
+      // radio is powered up.
     #endif
   #endif
 
@@ -476,7 +484,6 @@ uint8_t sx126x::packetRssiRaw() {
 }
 
 int ISR_VECT sx126x::packetRssi() {
-  // TODO: May need more calculations here
   uint8_t buf[3] = {0};
   executeOpcodeRead(OP_PACKET_STATUS_6X, buf, 3);
   int pkt_rssi = -buf[0] / 2;
@@ -590,7 +597,12 @@ void sx126x::receive(int size) {
   #if HAS_LORA_PA
     #if LORA_PA_GC1109
       // Disable PA CPS for receive
-      digitalWrite(LORA_PA_CPS, LOW);
+      // digitalWrite(LORA_PA_CPS, LOW);
+      // That turned out to be a bad idea.
+      // The LNA goes wonky if it's toggled
+      // on and off too quickly. We'll keep
+      // it on permanently, as long as the
+      // radio is powered up.
     #endif
   #endif
 

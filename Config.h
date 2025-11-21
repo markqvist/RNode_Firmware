@@ -110,7 +110,9 @@
 	#define CSMA_CW_PER_BAND_WINDOWS   15
 	#define CSMA_BAND_1_MAX_AIRTIME    7
 	#define CSMA_BAND_N_MIN_AIRTIME    85
-	#define CSMA_INFR_THRESHOLD_DB     12
+	#define CSMA_INFR_THRESHOLD_DB     6
+	#define CSMA_RFENV_RECAL_MS        2500
+	#define CSMA_RFENV_RECAL_LIMIT_DB -83
 	bool interference_detected      =  false;
 	bool avoid_interference         =  true;
 	int csma_slot_ms                =  CSMA_SLOT_MIN_MS;
