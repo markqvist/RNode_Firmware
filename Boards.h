@@ -307,6 +307,7 @@
       #define HAS_PMU true
       #define HAS_CONSOLE true
       #define HAS_EEPROM true
+      #define HAS_WIFI true
       const int pin_cs = 18;
       const int pin_reset = 23;
       const int pin_dio = 26;
