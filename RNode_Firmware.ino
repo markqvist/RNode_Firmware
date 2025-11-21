@@ -575,7 +575,7 @@ volatile bool queue_flushing = false;
 void flush_queue(void) {
   if (!queue_flushing) {
     queue_flushing = true;
-    led_tx_on(); uint16_t processed = 0;
+    led_tx_on();
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     while (!fifo16_isempty(&packet_starts)) {
@@ -592,7 +592,7 @@ void flush_queue(void) {
           tbuf[i] = packet_queue[pos];
         }
 
-        transmit(length); processed++;
+        transmit(length);
       }
     }
 
@@ -615,8 +615,7 @@ void flush_queue(void) {
 
 void pop_queue() {
   if (!queue_flushing) {
-    queue_flushing = true;
-    led_tx_on(); uint16_t processed = 0;
+    queue_flushing = true; led_tx_on();
 
     #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     if (!fifo16_isempty(&packet_starts)) {
@@ -632,9 +631,9 @@ void pop_queue() {
           tbuf[i] = packet_queue[pos];
         }
 
-        transmit(length); processed++;
+        transmit(length);
       }
-      queue_height -= processed;
+      queue_height -= 1;
       queued_bytes -= length;
     }
 
