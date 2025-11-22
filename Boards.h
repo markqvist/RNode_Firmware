@@ -419,7 +419,7 @@
       #define DIO2_AS_RF_SWITCH true
 
       #define LORA_LNA_GAIN  17
-      #define LORA_LNA_GVT   14
+      #define LORA_LNA_GVT   12
       #define LORA_PA_GC1109 true
       #define LORA_PA_PWR_EN  7
       #define LORA_PA_CSD     2
