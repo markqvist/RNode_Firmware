@@ -84,6 +84,14 @@
   #define DISP_W 128
   #define DISP_H 64
   #define DISP_ADDR -1
+#elif BOARD_MODEL == BOARD_VME213
+  #include "src/LCMEN2R13EFC1.h"
+  #include "src/einkDetect_VME213.h"
+  // VME213 E-Ink display: 250x122 pixels
+  #define DISP_W 250
+  #define DISP_H 122
+  #define DISP_ADDR -1
+  #define VME213_REFRESH_RATIO 10  // 10 FAST : 1 FULL refresh
 #elif BOARD_MODEL == BOARD_TBEAM_S_V1
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
@@ -121,6 +129,18 @@
   uint32_t last_epd_refresh = 0;
   uint32_t last_epd_full_refresh = 0;
   #define REFRESH_PERIOD 300000
+#elif BOARD_MODEL == BOARD_VME213
+  LCMEN2R13EFC1 vme213_display;
+  EInkChipType vme213_chip_type = EINK_LCMEN213EFC1;
+  uint8_t vme213_displayBuffer[4000];  // 250x122 pixels = 4000 bytes
+  uint32_t last_epd_refresh = 0;
+  uint32_t last_epd_full_refresh = 0;
+  uint8_t vme213_fast_refresh_count = 0;
+  #define REFRESH_PERIOD 300000
+  // Compatibility macro
+  #define display vme213_display
+  #define SSD1306_BLACK 0
+  #define SSD1306_WHITE 1
 #else
   Adafruit_SSD1306 display(DISP_W, DISP_H, &Wire, DISP_RST);
 #endif
@@ -209,6 +229,19 @@ void update_area_positions() {
       p_as_x = 64;
       p_as_y = 0;
     }
+  #elif BOARD_MODEL == BOARD_VME213
+    // VME213: 250x122 landscape - split into two 125x122 areas
+    if (disp_mode == DISP_MODE_LANDSCAPE) {
+      p_ad_x = 0;
+      p_ad_y = 0;
+      p_as_x = 125;
+      p_as_y = 0;
+    } else {
+      p_ad_x = 0;
+      p_ad_y = 0;
+      p_as_x = 0;
+      p_as_y = 61;
+    }
   #else
     if (disp_mode == DISP_MODE_PORTRAIT) {
       p_ad_x = 0 * DISPLAY_SCALE;
@@ -267,6 +300,58 @@ uint8_t display_contrast = 0x00;
   }
 #endif
 
+#if BOARD_MODEL == BOARD_VME213
+// VME213 E-Ink display rendering helpers
+void vme213_drawPixel(uint16_t x, uint16_t y, uint8_t color) {
+  if (x >= DISP_W || y >= DISP_H) return;
+  uint16_t byteIndex = y * ((DISP_W + 7) / 8) + (x / 8);
+  uint8_t bitMask = 0x80 >> (x % 8);
+  
+  if (color == SSD1306_WHITE) {
+    vme213_displayBuffer[byteIndex] |= bitMask;  // White pixel
+  } else {
+    vme213_displayBuffer[byteIndex] &= ~bitMask; // Black pixel
+  }
+}
+
+void vme213_fillScreen(uint8_t color) {
+  memset(vme213_displayBuffer, (color == SSD1306_WHITE) ? 0xFF : 0x00, sizeof(vme213_displayBuffer));
+}
+
+void vme213_drawText(uint16_t x, uint16_t y, const char* text, uint8_t size) {
+  // Simple text rendering using 5x7 font
+  // This is a placeholder - full implementation would use Adafruit_GFX font rendering
+  // For now, just mark text position
+  for (int i = 0; i < 10; i++) {
+    vme213_drawPixel(x + i, y, SSD1306_BLACK);
+  }
+}
+
+void vme213_renderStatus() {
+  vme213_fillScreen(SSD1306_WHITE);
+  
+  // Header area (top 20 pixels)
+  for (int y = 0; y < 20; y++) {
+    for (int x = 0; x < DISP_W; x++) {
+      vme213_drawPixel(x, y, (y % 2 == 0) ? SSD1306_BLACK : SSD1306_WHITE);
+    }
+  }
+  
+  // Status text placeholder
+  vme213_drawText(10, 30, "RNode", 2);
+  
+  // Signal indicator (simple bars)
+  if (radio_online) {
+    for (int i = 0; i < 5; i++) {
+      int barHeight = 10 + i * 5;
+      for (int y = 0; y < barHeight; y++) {
+        vme213_drawPixel(10 + i * 8, 100 - y, SSD1306_BLACK);
+      }
+    }
+  }
+}
+#endif
+
 bool display_init() {
   #if HAS_DISPLAY
     #if BOARD_MODEL == BOARD_RNODE_NG_20 || BOARD_MODEL == BOARD_LORA32_V2_0
@@ -319,6 +404,27 @@ bool display_init() {
         pinMode(pin_backlight, OUTPUT);
         analogWrite(pin_backlight, 0);
       #endif
+    #elif BOARD_MODEL == BOARD_VME213
+      // Enable Vext power (GPIO 18) for peripherals
+      pinMode(Vext, OUTPUT);
+      digitalWrite(Vext, HIGH);
+      delay(100);
+      
+      // Detect E-Ink chip type
+      vme213_chip_type = detectEInkChip(pin_disp_reset, pin_disp_busy);
+      
+      // Initialize SPI for E-Ink display
+      SPI.begin(pin_disp_sck, pin_disp_miso, pin_disp_mosi, pin_disp_cs);
+      
+      // Initialize E-Ink driver
+      vme213_display.begin(&SPI, pin_disp_dc, pin_disp_cs, pin_disp_busy, pin_disp_reset);
+      
+      // Clear buffer
+      memset(vme213_displayBuffer, 0xFF, sizeof(vme213_displayBuffer));
+      
+      // Perform initial FULL refresh to clear display
+      vme213_display.update(vme213_displayBuffer, LCMEN2R13EFC1::UPDATE_FULL);
+      vme213_fast_refresh_count = 0;
     #elif BOARD_MODEL == BOARD_TBEAM_S_V1
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_XIAO_S3
@@ -367,6 +473,9 @@ bool display_init() {
     
     #if BOARD_MODEL == BOARD_TECHO
     // Don't check if display is actually connected
+    if(false) {
+    #elif BOARD_MODEL == BOARD_VME213
+    // VME213 E-Ink display initialization already done, skip connection check
     if(false) {
     #elif BOARD_MODEL == BOARD_TDECK
     display.init(240, 320);
@@ -434,6 +543,10 @@ bool display_init() {
         #elif BOARD_MODEL == BOARD_TECHO
           disp_mode = DISP_MODE_PORTRAIT;
           display.setRotation(3);
+        #elif BOARD_MODEL == BOARD_VME213
+          // VME213 E-Ink: 250x122 landscape by default
+          disp_mode = DISP_MODE_LANDSCAPE;
+          // No setRotation for VME213 (driver handles orientation)
         #else
           disp_mode = DISP_MODE_PORTRAIT;
           display.setRotation(3);
@@ -449,7 +562,7 @@ bool display_init() {
       stat_area.cp437(true);
       disp_area.cp437(true);
 
-      #if BOARD_MODEL != BOARD_HELTEC_T114
+      #if BOARD_MODEL != BOARD_HELTEC_T114 && BOARD_MODEL != BOARD_VME213
       display.cp437(true);
       #endif
 
@@ -1066,6 +1179,12 @@ void update_display(bool blank = false) {
           epd_blank();
           epd_blanked = true;
         }
+      #elif BOARD_MODEL == BOARD_VME213
+        if (!epd_blanked) {
+          vme213_fillScreen(SSD1306_WHITE);
+          vme213_display.update(vme213_displayBuffer, LCMEN2R13EFC1::UPDATE_FULL);
+          epd_blanked = true;
+        }
       #endif
 
       #if BOARD_MODEL == BOARD_HELTEC_T114
@@ -1091,6 +1210,8 @@ void update_display(bool blank = false) {
 
       #if BOARD_MODEL == BOARD_HELTEC_T114
         display.clear();
+      #elif BOARD_MODEL == BOARD_VME213
+        // E-Ink buffer will be redrawn completely
       #elif BOARD_MODEL != BOARD_TDECK && BOARD_MODEL != BOARD_TECHO
         display.clearDisplay();
       #endif
@@ -1103,6 +1224,9 @@ void update_display(bool blank = false) {
         #if BOARD_MODEL == BOARD_TECHO
           display.setFullWindow();
           display.fillScreen(SSD1306_WHITE);
+        #elif BOARD_MODEL == BOARD_VME213
+          // Render RNode UI to E-Ink buffer
+          vme213_renderStatus();
         #endif
 
         update_stat_area();
@@ -1113,6 +1237,24 @@ void update_display(bool blank = false) {
         if (current-last_epd_refresh >= epd_update_interval) {
           if (current-last_epd_full_refresh >= REFRESH_PERIOD) { display.display(false); last_epd_full_refresh = millis(); }
           else { display.display(true); }
+          last_epd_refresh = millis();
+          epd_blanked = false;
+        }
+      #elif BOARD_MODEL == BOARD_VME213
+        if (current-last_epd_refresh >= epd_update_interval) {
+          // Decide refresh type: 10 FAST : 1 FULL
+          LCMEN2R13EFC1::UpdateType refreshType;
+          if (vme213_fast_refresh_count >= VME213_REFRESH_RATIO || current-last_epd_full_refresh >= REFRESH_PERIOD) {
+            refreshType = LCMEN2R13EFC1::UPDATE_FULL;
+            vme213_fast_refresh_count = 0;
+            last_epd_full_refresh = millis();
+          } else {
+            refreshType = LCMEN2R13EFC1::UPDATE_FAST;
+            vme213_fast_refresh_count++;
+          }
+          
+          // Perform E-Ink update
+          vme213_display.update(vme213_displayBuffer, refreshType);
           last_epd_refresh = millis();
           epd_blanked = false;
         }
