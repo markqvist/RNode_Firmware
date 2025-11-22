@@ -68,6 +68,26 @@ float pmu_temperature = PMU_TEMP_MIN-1;
   bool bat_voltage_dropping = false;
   float bat_delay_v = 0;
   float bat_state_change_v = 0;
+#elif BOARD_MODEL == BOARD_RAK4631
+  #include "nrfx_power.h"
+  #define BAT_C_SAMPLES   7
+  #define BAT_D_SAMPLES   2
+  #define BAT_V_MIN       2.75
+  #define BAT_V_MAX       4.2
+  #define BAT_V_FLOAT     4.22
+  #define BAT_SAMPLES     5
+  #define VBAT_MV_PER_LSB (0.73242188F) // 3.0V ADC range and 12 - bit ADC resolution = 3000mV / 4096
+  #define VBAT_DIVIDER_COMP (1.73)      // Compensation factor for the VBAT divider
+  #define VBAT_MV_PER_LSB_FIN (VBAT_DIVIDER_COMP * VBAT_MV_PER_LSB)
+  #define PIN_VBAT WB_A0
+  float bat_p_samples[BAT_SAMPLES];
+  float bat_v_samples[BAT_SAMPLES];
+  uint8_t bat_samples_count = 0;
+  int bat_discharging_samples = 0;
+  int bat_charging_samples = 0;
+  int bat_charged_samples = 0;
+  bool bat_voltage_dropping = false;
+  float bat_delay_v = 0;
 #elif BOARD_MODEL == BOARD_T3S3
   #define BAT_V_MIN       3.15
   #define BAT_V_MAX       4.217
@@ -387,6 +407,75 @@ void measure_battery() {
     else {
       battery_ready = false;
     }
+  #elif BOARD_MODEL == BOARD_RAK4631
+    battery_installed = true;
+    battery_indeterminate = false;
+
+    bat_v_samples[bat_samples_count%BAT_SAMPLES] = (float)(analogRead(PIN_VBAT)) * VBAT_MV_PER_LSB_FIN;
+
+    if (bat_v_samples[bat_samples_count%BAT_SAMPLES] < 3300) {
+        bat_p_samples[bat_samples_count%BAT_SAMPLES] = 0;
+    }
+    else if (bat_v_samples[bat_samples_count%BAT_SAMPLES] < 3600)
+    {
+        bat_v_samples[bat_samples_count%BAT_SAMPLES] -= 3300;
+        bat_p_samples[bat_samples_count%BAT_SAMPLES] = bat_v_samples[bat_samples_count%BAT_SAMPLES] / 30;
+    } else {
+        bat_v_samples[bat_samples_count%BAT_SAMPLES] -= 3600;
+    }
+    bat_p_samples[bat_samples_count%BAT_SAMPLES] = 10 + (bat_v_samples[bat_samples_count%BAT_SAMPLES] * 0.15F);
+
+    bat_samples_count++;
+    if (!battery_ready && bat_samples_count >= BAT_SAMPLES) {
+      battery_ready = true;
+    }
+
+    battery_percent = 0;
+    for (uint8_t bi = 0; bi < BAT_SAMPLES; bi++) {
+        battery_percent += bat_p_samples[bi];
+    }
+    battery_percent = battery_percent/BAT_SAMPLES;
+
+    battery_voltage = 0;
+    for (uint8_t bi = 0; bi < BAT_SAMPLES; bi++) {
+        battery_voltage += bat_v_samples[bi];
+    }
+    battery_voltage = battery_voltage/BAT_SAMPLES;
+
+    if (bat_delay_v == 0) bat_delay_v = battery_voltage;
+    if (battery_percent > 100.0) battery_percent = 100.0;
+    if (battery_percent < 0.0) battery_percent = 0.0;
+
+    if (bat_samples_count%BAT_SAMPLES == 0) {
+        if (battery_voltage < bat_delay_v && battery_voltage < BAT_V_FLOAT) {
+            bat_voltage_dropping = true;
+        } else {
+            bat_voltage_dropping = false;
+        }
+        bat_samples_count = 0;
+    }
+
+    nrfx_power_usb_state_t usbstate = nrfx_power_usbstatus_get();
+    if (usbstate == NRFX_POWER_USB_STATE_CONNECTED || usbstate == NRFX_POWER_USB_STATE_READY) {
+        // charging
+        battery_state = BATTERY_STATE_CHARGING;
+    } else {
+        battery_state = BATTERY_STATE_DISCHARGING;
+    }
+
+    if (battery_percent >= 98) {
+        battery_state = BATTERY_STATE_CHARGED;
+    }
+
+    #if HAS_BLE
+    if ((bt_state == BT_STATE_ON) || bt_state == BT_STATE_CONNECTED) {
+        if (battery_state != BATTERY_STATE_CHARGING) {
+            blebas.write(battery_percent);
+        } else {
+            blebas.write(100);
+        }
+    }
+    #endif
   #endif
 
   if (battery_ready) {
@@ -564,6 +653,21 @@ bool init_pmu() {
     PMU->setPowerKeyPressOffTime(XPOWERS_POWEROFF_4S);
 
     return true; 
+  #elif BOARD_MODEL == BOARD_RAK4631
+    // board doesn't have PMU but we can measure batt voltage
+
+    // prep ADC for reading battery level
+    analogReference(AR_INTERNAL_3_0);
+
+    // Set the resolution to 12-bit (0..4095)
+    analogReadResolution(12);
+
+    // Let the ADC settle
+    delay(1);
+
+    // Get a single ADC sample and throw it away
+    float raw = analogRead(PIN_VBAT);
+    return true;
   #elif BOARD_MODEL == BOARD_TBEAM_S_V1
     Wire1.begin(I2C_SDA, I2C_SCL);
 
