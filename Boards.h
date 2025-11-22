@@ -417,6 +417,8 @@
       const int pin_tcxo_enable = -1;
       #define HAS_BUSY true
       #define DIO2_AS_RF_SWITCH true
+      #define LNA_GD_THRSHLD (-109)
+      #define LNA_GD_LIMIT   (-89)
 
       #define LORA_LNA_GAIN  17
       #define LORA_LNA_GVT   12

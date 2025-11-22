@@ -152,6 +152,7 @@ bool device_firmware_ok();
 
 #define WATERFALL_SIZE 46
 int waterfall[WATERFALL_SIZE];
+int waterfall_meta[WATERFALL_SIZE];
 int waterfall_head = 0;
 
 int p_ad_x = 0;
@@ -722,6 +723,9 @@ void draw_signal_bars(int px, int py) {
 #define WF_RSSI_MIN -135
 #define WF_RSSI_SPAN (WF_RSSI_MAX-WF_RSSI_MIN)
 #define WF_PIXEL_WIDTH 10
+#define WF_M_RX   0x00
+#define WF_M_TX   0x01
+#define WF_M_NTFR 0x02
 void draw_waterfall(int px, int py) {
   int rssi_val = current_rssi;
   if (rssi_val < WF_RSSI_MIN) rssi_val = WF_RSSI_MIN;
@@ -729,11 +733,14 @@ void draw_waterfall(int px, int py) {
   int rssi_normalised = ((rssi_val - WF_RSSI_MIN)*(1.0/WF_RSSI_SPAN))*WF_PIXEL_WIDTH;
   if (display_tx) {
     for (uint8_t i = 0; i < WF_TX_SIZE; i++) {
+      waterfall_meta[waterfall_head] = WF_M_TX;
       waterfall[waterfall_head++] = -1;
       if (waterfall_head >= WATERFALL_SIZE) waterfall_head = 0;
     }
     display_tx = false;
   } else {
+    if (interference_detected) { waterfall_meta[waterfall_head] = WF_M_NTFR; }
+    else                       { waterfall_meta[waterfall_head] = WF_M_RX; }
     waterfall[waterfall_head++] = rssi_normalised;
     if (waterfall_head >= WATERFALL_SIZE) waterfall_head = 0;
   }
@@ -742,8 +749,13 @@ void draw_waterfall(int px, int py) {
   for (int i = 0; i < WATERFALL_SIZE; i++){
     int wi = (waterfall_head+i)%WATERFALL_SIZE;
     int ws = waterfall[wi];
+    int wm = waterfall_meta[wi];
     if (ws > 0) {
-      stat_area.drawLine(px, py+i, px+ws-1, py+i, SSD1306_WHITE);
+      if      (wm == WF_M_RX)   { stat_area.drawLine(px, py+i, px+ws-1, py+i, SSD1306_WHITE); }
+      else if (wm == WF_M_NTFR) {
+        uint8_t o = 0;
+        for (uint8_t ti = 0; ti < WF_PIXEL_WIDTH/2; ti++) { stat_area.drawPixel(px+ti*2+o, py+i, SSD1306_WHITE); }
+      }
     } else if (ws == -1) {
       uint8_t o = i%2;
       for (uint8_t ti = 0; ti < WF_PIXEL_WIDTH/2; ti++) {

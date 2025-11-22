@@ -151,7 +151,7 @@
 	uint8_t model     = 0x00;
 	uint8_t hwrev     = 0x00;
 
-	#define NOISE_FLOOR_SAMPLES 64
+	#define NOISE_FLOOR_SAMPLES 128
 	int     noise_floor     = -292;
     int     current_rssi    = -292;
 	int		last_rssi		= -292;

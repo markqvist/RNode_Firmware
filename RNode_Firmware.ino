@@ -1358,20 +1358,26 @@ int  noise_floor_buffer[NOISE_FLOOR_SAMPLES] = {0};
 void update_noise_floor() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     if (!dcd) {
+      #if BOARD_MODEL != BOARD_HELTEC32_V4
       if (!noise_floor_sampled || current_rssi < noise_floor + CSMA_INFR_THRESHOLD_DB) {
+      #else
+      if ((!noise_floor_sampled || current_rssi < noise_floor + CSMA_INFR_THRESHOLD_DB) || (noise_floor_sampled && (noise_floor < LNA_GD_THRSHLD && current_rssi <= LNA_GD_LIMIT))) {
+      #endif
         #if HAS_LORA_LNA
           // Discard invalid samples due to gain variance
           // during LoRa LNA re-calibration
           if (current_rssi < noise_floor-LORA_LNA_GVT) { return; }
         #endif
+        bool sum_noise_floor = false;
         noise_floor_buffer[noise_floor_sample] = current_rssi;
         noise_floor_sample = noise_floor_sample+1;
         if (noise_floor_sample >= NOISE_FLOOR_SAMPLES) {
           noise_floor_sample %= NOISE_FLOOR_SAMPLES;
           noise_floor_sampled = true;
+          sum_noise_floor = true;
         }
 
-        if (noise_floor_sampled) {
+        if (noise_floor_sampled && sum_noise_floor) {
           noise_floor = 0;
           for (int ni = 0; ni < NOISE_FLOOR_SAMPLES; ni++) { noise_floor += noise_floor_buffer[ni]; }
           noise_floor /= NOISE_FLOOR_SAMPLES;
@@ -1402,7 +1408,13 @@ void update_modem_status() {
     portEXIT_CRITICAL();
   #endif
 
-  interference_detected = !carrier_detected && (current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB));
+  #if BOARD_MODEL == BOARD_HELTEC32_V4
+    if (noise_floor > LNA_GD_THRSHLD)  { interference_detected = !carrier_detected && (current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB)); }
+    else                               { interference_detected = !carrier_detected && (current_rssi > LNA_GD_LIMIT); }
+  #else
+    interference_detected = !carrier_detected && (current_rssi > (noise_floor+CSMA_INFR_THRESHOLD_DB));
+  #endif
+
   if (interference_detected) { if (led_id_filter < LED_ID_TRIG) { led_id_filter += 1; } }
   else                       { if (led_id_filter > 0) {led_id_filter -= 1; } }
 
@@ -1410,14 +1422,11 @@ void update_modem_status() {
   // LNA recalibration, antenna swap, moving into new RF
   // environment or similar.
   if (interference_detected && current_rssi < CSMA_RFENV_RECAL_LIMIT_DB) {
-    if (!interference_persists) {
-      interference_persists = true; interference_start = millis();
-    } else {
+    if (!interference_persists) { interference_persists = true; interference_start = millis(); }
+    else {
       if (millis()-interference_start >= CSMA_RFENV_RECAL_MS) { noise_floor_sampled = false; interference_persists = false; }
     }
-  } else {
-    interference_persists = false;
-  }
+  } else { interference_persists = false; }
 
   if (carrier_detected) { dcd = true; } else { dcd = false; }
 
