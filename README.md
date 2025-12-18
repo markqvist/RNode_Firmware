@@ -75,6 +75,7 @@ The RNode Firmware supports the following boards:
 - LilyGO T-Echo devices
 - Heltec LoRa32 v2 devices
 - Heltec LoRa32 v3 devices
+- Heltec LoRa32 v4 devices
 - Heltec T114 devices
 - RAK4631 devices
 - SeeedStudio XIAO ESP32S3 devices (with Wio-SX1262)
