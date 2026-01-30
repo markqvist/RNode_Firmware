@@ -22,7 +22,7 @@
   #elif BOARD_MODEL == BOARD_HELTEC_T114
     #include "ST7789.h"
     #define COLOR565(r, g, b) (((r & 0xF8) << 8) | ((g & 0xFC) << 3) | ((b & 0xF8) >> 3))
-  #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+  #elif BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_WIO_L1
     #include <Adafruit_SH110X.h>
   #else
     #include <Wire.h>
@@ -71,6 +71,12 @@
   #define DISP_ADDR 0x3C
   #define SCL_OLED 14
   #define SDA_OLED 13
+#elif BOARD_MODEL == BOARD_WIO_L1
+  #define DISP_RST -1
+  #define DISP_ADDR 0x3D
+  #define SCL_OLED 15
+  #define SDA_OLED 14
+  #define DISP_CUSTOM_ADDR true
 #elif BOARD_MODEL == BOARD_RNODE_NG_21
   #define DISP_RST -1
   #define DISP_ADDR 0x3C
@@ -112,7 +118,7 @@
   ST7789Spi display(&SPI1, DISPLAY_RST, DISPLAY_DC, DISPLAY_CS);
   #define SSD1306_WHITE ST77XX_WHITE
   #define SSD1306_BLACK ST77XX_BLACK
-#elif BOARD_MODEL == BOARD_TBEAM_S_V1
+#elif BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_WIO_L1
   Adafruit_SH1106G display = Adafruit_SH1106G(128, 64, &Wire, -1);
   #define SSD1306_WHITE SH110X_WHITE
   #define SSD1306_BLACK SH110X_BLACK
@@ -225,7 +231,7 @@ void update_area_positions() {
 }
 
 uint8_t display_contrast = 0x00;
-#if BOARD_MODEL == BOARD_TBEAM_S_V1
+#if BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_WIO_L1
   void set_contrast(Adafruit_SH1106G *display, uint8_t value) {
   }
 #elif BOARD_MODEL == BOARD_HELTEC_T114
@@ -323,6 +329,8 @@ bool display_init() {
       Wire.begin(SDA_OLED, SCL_OLED);
     #elif BOARD_MODEL == BOARD_XIAO_S3
       Wire.begin(SDA_OLED, SCL_OLED);
+    #elif BOARD_MODEL == BOARD_WIO_L1
+      Wire.begin();
     #endif
 
     #if HAS_EEPROM
@@ -376,7 +384,7 @@ bool display_init() {
     // set white as default pixel colour for Heltec T114
     display.setRGB(COLOR565(0xFF, 0xFF, 0xFF));
     if (false) {
-    #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+    #elif BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_WIO_L1
     if (!display.begin(display_address, true)) {
     #else
     if (!display.begin(SSD1306_SWITCHCAPVCC, display_address)) {
@@ -439,6 +447,15 @@ bool display_init() {
           display.setRotation(3);
         #endif
       }
+
+      #if BOARD_MODEL == BOARD_WIO_L1
+        // Force a clean OLED state on boot to clear any prior firmware remnants.
+        display.clearDisplay();
+        display.display();
+        delay(25);
+        display.clearDisplay();
+        display.display();
+      #endif
 
       update_area_positions();
 

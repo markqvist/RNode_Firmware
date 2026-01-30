@@ -51,6 +51,10 @@ prep-nrf:
 	arduino-cli core install rakwireless:nrf52 --config-file arduino-cli.yaml
 	arduino-cli core install Heltec_nRF52:Heltec_nRF52 --config-file arduino-cli.yaml
 	arduino-cli core install adafruit:nrf52 --config-file arduino-cli.yaml
+	arduino-cli lib install "Adafruit GFX Library"
+	arduino-cli lib install "Adafruit SSD1306"
+	arduino-cli lib install "Adafruit SH110X"
+	arduino-cli lib install "Crypto"
 	arduino-cli lib install "GxEPD2"
 	arduino-cli config set library.enable_unsafe_install true
 	arduino-cli lib install --git-url https://github.com/liamcottle/esp8266-oled-ssd1306#e16cee124fe26490cb14880c679321ad8ac89c95
@@ -148,6 +152,9 @@ firmware-heltec_t114:
 
 firmware-techo:
 	arduino-cli compile --log --fqbn adafruit:nrf52:pca10056 -e --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x44\""
+
+firmware-wio_l1:
+	arduino-cli compile --log --fqbn Seeeduino:nrf52:seeed_wio_tracker_L1 -e --build-cache-path /tmp/arduino-cache-$${USER} --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x45\""
 
 firmware-xiao_s3:
 	arduino-cli compile --log --fqbn "esp32:esp32:XIAO_ESP32S3" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3E\""

@@ -108,6 +108,11 @@
   #define BOARD_TECHO         0x44
   #define MODEL_16            0x16 // T-Echo 433 MHz
   #define MODEL_17            0x17 // T-Echo 868/915 MHz
+  
+  #define PRODUCT_WIO_L1      0x18 // Seeed Wio Tracker L1 devices
+  #define BOARD_WIO_L1        0x45
+  #define MODEL_18            0x18 // Wio Tracker L1, 433 MHz
+  #define MODEL_19            0x19 // Wio Tracker L1, 868/915 MHz
 
   #define PRODUCT_RAK4631     0x10
   #define BOARD_RAK4631       0x51
@@ -808,6 +813,45 @@
       const int pin_tcxo_enable = 21;
       const int pin_led_rx = PIN_LED_BLUE;
       const int pin_led_tx = PIN_LED_RED;
+
+    #elif BOARD_MODEL == BOARD_WIO_L1
+      #define MODEM SX1262
+      #define HAS_EEPROM false
+      #define HAS_DISPLAY true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_CONSOLE false
+      #define HAS_PMU false
+      #define HAS_NP false
+      #define HAS_SD false
+      #define HAS_TCXO true
+      #define HAS_RF_SWITCH_RX_TX true
+      #define HAS_BUSY true
+      #define HAS_INPUT true
+      #define DIO2_AS_RF_SWITCH true
+      #define CONFIG_UART_BUFFER_SIZE 6144
+      #define CONFIG_QUEUE_SIZE 6144
+      #define CONFIG_QUEUE_MAX_LENGTH 200
+      #define EEPROM_SIZE 296
+      #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
+      #define BLE_MANUFACTURER "Seeed Studio"
+      #define BLE_MODEL "Wio Tracker L1"
+
+      const int pin_btn_usr1 = 13; // Menu key (P0.08)
+
+      // SX1262 (Wio-SX1262 module)
+      const int pin_rxen = 5;  // Lora_sw (P1.08)
+      const int pin_txen = -1;
+      const int pin_reset = 2; // Lora_rst (P1.07)
+      const int pin_cs = 4;    // Lora_cs (P1.14)
+      const int pin_sclk = 8;  // Lora_sck (P0.30)
+      const int pin_mosi = 10; // Lora_mosi (P0.28)
+      const int pin_miso = 9;  // Lora_miso (P0.03)
+      const int pin_busy = 3;  // Lora_busy (P1.10)
+      const int pin_dio = 1;   // Lora_dio1 (P0.07)
+      const int pin_led_rx = 11; // Mesh LED (P1.01)
+      const int pin_led_tx = 11;
+      const int pin_tcxo_enable = -1;
 
     #elif BOARD_MODEL == BOARD_HELTEC_T114
       #define MODEM SX1262

@@ -8,6 +8,7 @@ The RNode Firmware supports the following boards:
 - LilyGO LoRa32 v2.0 devices
 - LilyGO LoRa32 v2.1 devices
 - Heltec LoRa32 v2 devices
+- Seeed Wio Tracker L1 devices (915 MHz)
 - Homebrew RNodes based on ATmega1284p boards
 - Homebrew RNodes based on ATmega2560 boards
 - Homebrew RNodes based on Adafruit Feather ESP32 boards
