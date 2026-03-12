@@ -47,6 +47,9 @@
   #define CMD_STAT_BAT    0x27
   #define CMD_STAT_CSMA   0x28
   #define CMD_STAT_TEMP   0x29
+  #define CMD_STAT_GPS    0x2A
+  #define CMD_GPS_NMEA    0x2B
+  #define CMD_DIAG        0x2C
   #define CMD_BLINK       0x30
   #define CMD_RANDOM      0x40
 
@@ -71,6 +74,11 @@
   #define CMD_WIFI_CHN    0x6E
   #define CMD_WIFI_IP     0x84
   #define CMD_WIFI_NM     0x85
+  #define CMD_BCN_KEY     0x86
+  #define CMD_LXMF_HASH  0x87
+  #define CMD_LXMF_TEST 0x88
+  #define CMD_IFAC_KEY  0x89
+  #define CMD_TRANSPORT_ID 0x8A
 
   #define CMD_BOARD       0x47
   #define CMD_PLATFORM    0x48
@@ -115,10 +123,31 @@
   #define ERROR_MEMORY_LOW    0x05
   #define ERROR_MODEM_TIMEOUT 0x06
 
-  // Serial framing variables
-  size_t frame_len;
-  bool IN_FRAME = false;
-  bool ESCAPE = false;
-  uint8_t command = CMD_UNKNOWN;
+  // Channel constants
+  #define CHANNEL_USB   0
+  #define CHANNEL_BT    1
+  #define CHANNEL_WIFI  2
+
+  // Compile-time channel count per platform
+  #if HAS_WIFI == true
+    #define NUM_CHANNELS 3
+  #elif HAS_BLUETOOTH == true || HAS_BLE == true
+    #define NUM_CHANNELS 2
+  #else
+    #define NUM_CHANNELS 1
+  #endif
+
+  // Per-channel parser state
+  typedef struct {
+      bool     in_frame;
+      bool     escape;
+      uint8_t  command;
+      size_t   frame_len;
+      uint8_t  cmdbuf[CMD_L];
+      #if NUM_CHANNELS > 1
+      uint8_t  pktbuf[MTU];
+      uint16_t pkt_len;
+      #endif
+  } ChannelState;
 
 #endif

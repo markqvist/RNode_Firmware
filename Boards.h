@@ -214,9 +214,15 @@
     #define EEPROM_OFFSET EEPROM_SIZE-EEPROM_RESERVED
     #define CONFIG_OFFSET 0
 
-    #define GPS_BAUD_RATE 9600
-    #define PIN_GPS_TX 12
-    #define PIN_GPS_RX 34
+    #ifndef GPS_BAUD_RATE
+      #define GPS_BAUD_RATE 9600
+    #endif
+    #ifndef PIN_GPS_TX
+      #define PIN_GPS_TX 12
+    #endif
+    #ifndef PIN_GPS_RX
+      #define PIN_GPS_RX 34
+    #endif
 
     #if BOARD_MODEL == BOARD_GENERIC_ESP32
       #define HAS_BLUETOOTH true
@@ -397,6 +403,15 @@
       #define HAS_SLEEP true
       #define HAS_LORA_PA true
       #define HAS_LORA_LNA true
+      #define HAS_GPS true
+      #define PIN_GPS_TX  38
+      #define PIN_GPS_RX  39
+      #define PIN_GPS_EN  34
+      #define PIN_GPS_RST 42
+      #define PIN_GPS_PPS 41
+      #define PIN_GPS_STANDBY 40
+      #define GPS_EN_ACTIVE LOW
+      #define GPS_BAUD_RATE 9600
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
       #define OCP_TUNED 0x18
@@ -632,6 +647,15 @@
 
       #define HAS_INPUT true
       #define HAS_SLEEP false
+
+      #define HAS_GPS true
+      #define PIN_GPS_TX  8
+      #define PIN_GPS_RX  9
+      #define PIN_GPS_PPS 6
+      #define PIN_GPS_STANDBY 7
+      #define GPS_BAUD_RATE 9600
+
+      #define HAS_RTC true
       
       #define PMU_IRQ 40
       #define I2C_SCL 41
@@ -926,6 +950,10 @@
 
   #ifndef NP_M
     #define NP_M 0.15
+  #endif
+
+  #ifndef HAS_GPS
+    #define HAS_GPS false
   #endif
 
 #endif

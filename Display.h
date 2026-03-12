@@ -783,6 +783,23 @@ void draw_stat_area() {
     if (radio_online) {
       draw_waterfall(27, 4);
     }
+
+    #if HAS_GPS == true
+      stat_area.setFont(SMALL_FONT);
+      stat_area.setTextSize(1);
+      stat_area.setTextWrap(false);
+      if (gps_has_fix) {
+        stat_area.setTextColor(SSD1306_WHITE);
+        stat_area.fillRect(22, 48, 20, 7, SSD1306_BLACK);
+        stat_area.setCursor(22, 54);
+        stat_area.printf("%ds", gps_sats);
+      } else if (gps_ready) {
+        stat_area.setTextColor(SSD1306_WHITE);
+        stat_area.fillRect(22, 48, 20, 7, SSD1306_BLACK);
+        stat_area.setCursor(22, 54);
+        stat_area.print("gps");
+      }
+    #endif
   }
 }
 
@@ -810,7 +827,11 @@ void update_stat_area() {
 }
 
 #define START_PAGE 0
-const uint8_t pages = 3;
+#if HAS_GPS == true
+  const uint8_t pages = 6;  // 2 diagnostics + 3 GPS + 1 LXMF status
+#else
+  const uint8_t pages = 3;
+#endif
 uint8_t disp_page = START_PAGE;
 extern char bt_devname[11];
 extern char bt_dh[16];
@@ -829,6 +850,127 @@ void draw_disp_area() {
   } else {
     if (!disp_ext_fb or bt_ssp_pin != 0) {
       if (radio_online && display_diagnostics) {
+        if (millis()-last_page_flip >= page_interval) {
+          disp_page = (++disp_page%pages);
+          last_page_flip = millis();
+        }
+
+        #if HAS_GPS == true
+        if (disp_page >= 2 && disp_page <= 4) {
+          // GPS page (pages 2-4, diagnostics on pages 0-1)
+          disp_area.fillRect(0,8,disp_area.width(),56, SSD1306_BLACK);
+          disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(1);
+
+          #if HAS_RTC == true
+            if (rtc_ready && rtc_synced) {
+              disp_area.setCursor(2, 13);
+              disp_area.printf("%02d:%02d:%02d", rtc_hour, rtc_minute, rtc_second);
+              disp_area.setCursor(56, 13);
+              disp_area.printf("%02d/%02d/%02d", rtc_day, rtc_month, rtc_year % 100);
+            } else {
+          #endif
+              disp_area.setCursor(2, 13);
+              disp_area.print("On");
+              disp_area.setCursor(14, 13);
+              disp_area.print("@");
+              disp_area.setCursor(21, 13);
+              disp_area.printf("%.1fKbps", (float)lora_bitrate/1000.0);
+          #if HAS_RTC == true
+            }
+          #endif
+
+          // Provisioning flash overlay (3 seconds)
+          if (lxmf_provisioned_at > 0 && (millis() - lxmf_provisioned_at < 3000)) {
+            disp_area.setCursor(2, 27);
+            disp_area.print("PROVISIONED");
+            disp_area.setCursor(2, 39);
+            disp_area.print("");
+            disp_area.setCursor(2, 51);
+            disp_area.print("");
+          } else {
+            if (lxmf_provisioned_at > 0 && (millis() - lxmf_provisioned_at >= 3000)) {
+              lxmf_provisioned_at = 0;  // Clear after display
+            }
+
+            if (gps_has_fix) {
+              disp_area.setCursor(2, 27);
+              disp_area.printf("%.5f", gps_lat);
+              disp_area.setCursor(2, 39);
+              disp_area.printf("%.5f", gps_lon);
+              disp_area.setCursor(2, 51);
+              if (beacon_mode_active) {
+                if (lxmf_identity_configured && beacon_crypto_configured) {
+                  disp_area.printf("%dsat %.0fm LX", gps_sats, gps_alt);
+                } else {
+                  disp_area.printf("%dsat %.0fm BCN", gps_sats, gps_alt);
+                }
+              } else {
+                disp_area.printf("%dsat %.0fm", gps_sats, gps_alt);
+              }
+            } else if (gps_ready) {
+              disp_area.setCursor(2, 27);
+              disp_area.print("GPS searching");
+              disp_area.setCursor(2, 39);
+              disp_area.printf("%d sats", gps_sats);
+              #if HAS_RTC == true
+                if (rtc_ready && rtc_synced) {
+                  disp_area.setCursor(2, 51);
+                  disp_area.printf("%02d:%02d:%02d UTC", rtc_hour, rtc_minute, rtc_second);
+                }
+              #endif
+            } else {
+              disp_area.setCursor(2, 27);
+              disp_area.print("GPS starting");
+            }
+          }
+        } else if (disp_page == 5) {
+          // LXMF status page
+          disp_area.fillRect(0,8,disp_area.width(),56, SSD1306_BLACK);
+          disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(1);
+
+          disp_area.setCursor(2, 13);
+          if (lxmf_identity_configured) {
+            disp_area.print("LXMF Identity");
+          } else {
+            disp_area.print("LXMF: no identity");
+          }
+
+          disp_area.setCursor(2, 27);
+          if (lxmf_identity_configured) {
+            char hash_str[17];
+            for (int i = 0; i < 8; i++) {
+              sprintf(&hash_str[i*2], "%02x", lxmf_source_hash[i]);
+            }
+            hash_str[16] = '\0';
+            disp_area.print(hash_str);
+          }
+
+          disp_area.setCursor(2, 39);
+          if (beacon_crypto_configured) {
+            char tgt_str[24];
+            snprintf(tgt_str, sizeof(tgt_str), "Tgt: %02x%02x%02x%02x",
+                     collector_dest_hash[0], collector_dest_hash[1],
+                     collector_dest_hash[2], collector_dest_hash[3]);
+            disp_area.print(tgt_str);
+          } else {
+            disp_area.print("Tgt: none");
+          }
+
+          disp_area.setCursor(2, 51);
+          if (lxmf_identity_configured) {
+            uint32_t ann_ago = (lxmf_last_announce > 0) ? (millis() - lxmf_last_announce) / 60000 : 0;
+            uint32_t bcn_ago = (last_beacon_tx > 0) ? (millis() - last_beacon_tx) / 1000 : 0;
+            char timing_str[24];
+            if (lxmf_last_announce > 0) {
+              snprintf(timing_str, sizeof(timing_str), "Ann:%lum Bcn:%lus", (unsigned long)ann_ago, (unsigned long)bcn_ago);
+            } else {
+              snprintf(timing_str, sizeof(timing_str), "Ann:-- Bcn:--");
+            }
+            disp_area.print(timing_str);
+          }
+        } else {
+        #endif
+        // Diagnostics page (original)
         disp_area.fillRect(0,8,disp_area.width(),37, SSD1306_BLACK); disp_area.fillRect(0,37,disp_area.width(),27, SSD1306_WHITE);
         disp_area.setFont(SMALL_FONT); disp_area.setTextWrap(false); disp_area.setTextColor(SSD1306_WHITE); disp_area.setTextSize(1);
 
@@ -842,7 +984,7 @@ void draw_disp_area() {
         //disp_area.setCursor(31, 23-1);
         disp_area.setCursor(2, 23-1);
         disp_area.print("Airtime:");
-        
+
         disp_area.setCursor(11, 33-1);
         if (total_channel_util < 0.099) {
           //disp_area.printf("%.1f%%", total_channel_util*100.0);
@@ -869,7 +1011,7 @@ void draw_disp_area() {
         disp_area.print("Channel");
         disp_area.setCursor(38, 46);
         disp_area.print("Load:");
-        
+
         disp_area.setCursor(11, 57);
         if (total_channel_util < 0.099) {
           //disp_area.printf("%.1f%%", airtime*100.0);
@@ -889,6 +1031,9 @@ void draw_disp_area() {
           disp_area.printf("%.0f%%", longterm_channel_util*100.0);
         }
         disp_area.drawBitmap(32+2, 50, bm_hg_high, 5, 9, SSD1306_BLACK, SSD1306_WHITE);
+        #if HAS_GPS == true
+        }
+        #endif
 
       } else {
         if (device_signatures_ok()) { disp_area.drawBitmap(0, 0, bm_def_lc, disp_area.width(), 23, SSD1306_WHITE, SSD1306_BLACK); }

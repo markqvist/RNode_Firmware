@@ -15,6 +15,18 @@
 
 #include "Config.h"
 
+#if HAS_GPS == true
+  #include "GPS.h"
+  #include "BeaconCrypto.h"
+  #include "IfacAuth.h"
+  #include "LxmfBeacon.h"
+  #include "Beacon.h"
+#endif
+
+#if HAS_RTC == true
+  #include "RTC.h"
+#endif
+
 #if HAS_EEPROM
     #include <EEPROM.h>
 #elif PLATFORM == PLATFORM_NRF52
@@ -799,26 +811,28 @@ int8_t  led_standby_direction = 0;
 #endif
 
 void serial_write(uint8_t byte) {
-	#if HAS_BLUETOOTH || HAS_BLE == true
-		if (bt_state != BT_STATE_CONNECTED) {
-			#if HAS_WIFI
-				if (wifi_host_is_connected()) { wifi_remote_write(byte); }
-				else                          { Serial.write(byte); }
-			#else
-				Serial.write(byte);
-			#endif
-		} else {
+	switch (response_channel) {
+		#if HAS_BLUETOOTH || HAS_BLE == true
+		case CHANNEL_BT:
 			SerialBT.write(byte);
-      #if MCU_VARIANT == MCU_NRF52 && HAS_BLE
-	      // This ensures that the TX buffer is flushed after a frame is queued in serial.
-	      // serial_in_frame is used to ensure that the flush only happens at the end of the frame
-	      if (serial_in_frame && byte == FEND) { SerialBT.flushTXD(); serial_in_frame = false; }
-	      else if (!serial_in_frame && byte == FEND) { serial_in_frame = true; }
-      #endif
-		}
-	#else
-		Serial.write(byte);
-	#endif
+			#if MCU_VARIANT == MCU_NRF52 && HAS_BLE
+			// This ensures that the TX buffer is flushed after a frame is queued in serial.
+			// serial_in_frame is used to ensure that the flush only happens at the end of the frame
+			if (serial_in_frame && byte == FEND) { SerialBT.flushTXD(); serial_in_frame = false; }
+			else if (!serial_in_frame && byte == FEND) { serial_in_frame = true; }
+			#endif
+			break;
+		#endif
+		#if HAS_WIFI == true
+		case CHANNEL_WIFI:
+			wifi_remote_write(byte);
+			break;
+		#endif
+		case CHANNEL_USB:
+		default:
+			Serial.write(byte);
+			break;
+	}
 }
 
 void escaped_serial_write(uint8_t byte) {
@@ -882,6 +896,65 @@ void kiss_indicate_stat_snr() {
 	escaped_serial_write(last_snr_raw);
 	serial_write(FEND);
 }
+
+#if HAS_GPS == true
+void kiss_indicate_stat_gps() {
+  // Report GPS data as a KISS frame:
+  // [fix(1)] [sats(1)] [lat(4)] [lon(4)] [alt(4)] [speed(4)] [hdop(4)]
+  // All floats are IEEE 754 single-precision, big-endian
+  serial_write(FEND);
+  serial_write(CMD_STAT_GPS);
+  escaped_serial_write(gps_has_fix ? 0x01 : 0x00);
+  escaped_serial_write(gps_sats);
+
+  union { float f; uint8_t b[4]; } u;
+
+  u.f = (float)gps_lat;
+  for (int i = 3; i >= 0; i--) escaped_serial_write(u.b[i]);
+
+  u.f = (float)gps_lon;
+  for (int i = 3; i >= 0; i--) escaped_serial_write(u.b[i]);
+
+  u.f = (float)gps_alt;
+  for (int i = 3; i >= 0; i--) escaped_serial_write(u.b[i]);
+
+  u.f = (float)gps_speed;
+  for (int i = 3; i >= 0; i--) escaped_serial_write(u.b[i]);
+
+  u.f = (float)gps_hdop;
+  for (int i = 3; i >= 0; i--) escaped_serial_write(u.b[i]);
+
+  // Diagnostic counters from TinyGPS++ (uint32 big-endian each)
+  uint32_t val;
+
+  val = gps_parser.charsProcessed();
+  escaped_serial_write((val >> 24) & 0xFF);
+  escaped_serial_write((val >> 16) & 0xFF);
+  escaped_serial_write((val >> 8) & 0xFF);
+  escaped_serial_write(val & 0xFF);
+
+  val = gps_parser.passedChecksum();
+  escaped_serial_write((val >> 24) & 0xFF);
+  escaped_serial_write((val >> 16) & 0xFF);
+  escaped_serial_write((val >> 8) & 0xFF);
+  escaped_serial_write(val & 0xFF);
+
+  val = gps_parser.failedChecksum();
+  escaped_serial_write((val >> 24) & 0xFF);
+  escaped_serial_write((val >> 16) & 0xFF);
+  escaped_serial_write((val >> 8) & 0xFF);
+  escaped_serial_write(val & 0xFF);
+
+  val = gps_parser.sentencesWithFix();
+  escaped_serial_write((val >> 24) & 0xFF);
+  escaped_serial_write((val >> 16) & 0xFF);
+  escaped_serial_write((val >> 8) & 0xFF);
+  escaped_serial_write(val & 0xFF);
+
+  serial_write(FEND);
+}
+
+#endif
 
 void kiss_indicate_radio_lock() {
 	serial_write(FEND);
@@ -1263,12 +1336,20 @@ void updateBitrate() {
 }
 
 void setSpreadingFactor() {
-	if (radio_online) LoRa->setSpreadingFactor(lora_sf);
+	if (radio_online) {
+		LoRa->standby();
+		LoRa->setSpreadingFactor(lora_sf);
+		lora_receive();
+	}
 	updateBitrate();
 }
 
 void setCodingRate() {
-	if (radio_online) LoRa->setCodingRate4(lora_cr);
+	if (radio_online) {
+		LoRa->standby();
+		LoRa->setCodingRate4(lora_cr);
+		lora_receive();
+	}
 	updateBitrate();
 }
 
@@ -1396,8 +1477,10 @@ void getBandwidth() {
 
 void setBandwidth() {
 	if (radio_online) {
+		LoRa->standby();
 		LoRa->setSignalBandwidth(lora_bw);
 		getBandwidth();
+		lora_receive();
 	}
 }
 
@@ -1409,8 +1492,10 @@ void getFrequency() {
 
 void setFrequency() {
 	if (radio_online) {
+		LoRa->standby();
 		LoRa->setFrequency(lora_freq);
 		getFrequency();
+		lora_receive();
 	}
 }
 
@@ -2019,4 +2104,7 @@ void host_disconnected() {
 	last_rssi     = -292;
 	last_rssi_raw = 0x00;
 	last_snr_raw  = 0x80;
+	#if HAS_WIFI == true
+	if (data_channel == CHANNEL_WIFI) data_channel = CHANNEL_USB;
+	#endif
 }

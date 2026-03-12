@@ -110,11 +110,12 @@ char bt_devname[11];
       display_unblank();
       if(event == ESP_SPP_SRV_OPEN_EVT) {
         bt_state = BT_STATE_CONNECTED;
-        cable_state = CABLE_STATE_DISCONNECTED;
+        cable_state = CABLE_STATE_CONNECTED;
       }
-       
+
       if(event == ESP_SPP_CLOSE_EVT ){
         bt_state = BT_STATE_ON;
+        if (data_channel == CHANNEL_BT) data_channel = CHANNEL_USB;
       }
     }
 
@@ -306,7 +307,7 @@ char bt_devname[11];
       display_unblank();
       ble_authenticated = false;
       if (bt_state != BT_STATE_PAIRING) { bt_state = BT_STATE_CONNECTED; }
-      cable_state = CABLE_STATE_DISCONNECTED;
+      cable_state = CABLE_STATE_CONNECTED;
     }
 
     void bt_disconnect_callback(BLEServer *server) {
@@ -315,6 +316,7 @@ char bt_devname[11];
       display_unblank();
       ble_authenticated = false;
       bt_state = BT_STATE_ON;
+      if (data_channel == CHANNEL_BT) data_channel = CHANNEL_USB;
     }
 
     bool bt_setup_hw() {
@@ -361,7 +363,7 @@ char bt_devname[11];
       uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;
 
       esp_ble_auth_req_t auth_req = ESP_LE_AUTH_REQ_SC_MITM_BOND;
-      uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_ENABLE;
+      uint8_t auth_option = ESP_BLE_ONLY_ACCEPT_SPECIFIED_AUTH_DISABLE;
       uint8_t oob_support = ESP_BLE_OOB_DISABLE;
 
       esp_ble_io_cap_t iocap = ESP_IO_CAP_OUT;
@@ -435,7 +437,7 @@ char bt_devname[11];
       if (security.sm == 1 && security.lv >= 3) {
           // Serial.println("Auth level success");
           bt_state = BT_STATE_CONNECTED;
-          cable_state = CABLE_STATE_DISCONNECTED;
+          cable_state = CABLE_STATE_CONNECTED;
           connection->disconnect();
           bt_disable_pairing();
       } else {
@@ -462,7 +464,7 @@ char bt_devname[11];
   void bt_connect_callback(uint16_t conn_handle) {
     // Serial.println("Connect callback");
     bt_state = BT_STATE_CONNECTED;
-    cable_state = CABLE_STATE_DISCONNECTED;
+    cable_state = CABLE_STATE_CONNECTED;
 
     BLEConnection* conn = Bluefruit.Connection(conn_handle);
     conn->requestPHY(BLE_GAP_PHY_2MBPS);
@@ -475,6 +477,7 @@ char bt_devname[11];
     if (reason != BLE_GAP_SEC_STATUS_SUCCESS) {
         bt_state = BT_STATE_ON;
     }
+    if (data_channel == CHANNEL_BT) data_channel = CHANNEL_USB;
   }
 
   void bt_update_passkey() {

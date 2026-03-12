@@ -392,6 +392,7 @@ void measure_battery() {
   if (battery_ready) {
     pmu_rc++;
     if (pmu_rc%PMU_R_INTERVAL == 0) {
+      response_channel = data_channel;
       kiss_indicate_battery();
       if (pmu_temp_sensor_ready) { kiss_indicate_temperature(); }
     }

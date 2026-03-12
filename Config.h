@@ -164,8 +164,9 @@
 	// Incoming packet buffer
 	uint8_t pbuf[MTU];
 
-	// KISS command buffer
-	uint8_t cmdbuf[CMD_L];
+	// Response routing globals (channel 0 = USB)
+	volatile uint8_t response_channel = 0;
+	uint8_t data_channel = 0;
 
 	// LoRa transmit buffer
 	uint8_t tbuf[MTU];

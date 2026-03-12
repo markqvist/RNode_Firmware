@@ -84,6 +84,16 @@ public:
   void readBuffer(uint8_t* buffer, size_t size);
   void setPacketParams(long preamble_symbols, uint8_t headermode, uint8_t payload_length, uint8_t crc);
 
+  // Deferred ISR processing: call from main loop to handle RX
+  bool rxPending() { return _rx_pending; }
+  void processRxInterrupt();
+  uint8_t getModemStatus();
+  void getIrqStatus(uint8_t *buf);
+  void getDeviceErrors(uint8_t *buf);
+  uint32_t getActualFrequency();
+  uint8_t readPublicRegister(uint16_t address);
+  uint8_t getPacketType();
+
   void setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, int ldro);
 
   // deprecated
@@ -138,6 +148,7 @@ private:
   uint8_t _packet[255];
   bool _preinit_done;
   void (*_onReceive)(int);
+  volatile bool _rx_pending;
 };
 
 extern sx126x sx126x_modem;

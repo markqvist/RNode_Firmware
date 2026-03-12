@@ -45,6 +45,8 @@
 #define OP_RX_TX_FALLBACK_MODE_6X   0x93
 #define OP_REGULATOR_MODE_6X        0x96
 #define OP_CALIBRATE_IMAGE_6X       0x98
+#define OP_GET_DEVICE_ERRORS_6X     0x17
+#define OP_CLR_DEVICE_ERRORS_6X     0x07
 
 #define MASK_CALIBRATE_ALL          0x7f
 
@@ -118,14 +120,15 @@ sx126x::sx126x() :
   _fifo_rx_addr_ptr(0),
   _packet({0}),
   _preinit_done(false),
-  _onReceive(NULL)
+  _onReceive(NULL),
+  _rx_pending(false)
 { setTimeout(0); }
 
 bool sx126x::preInit() {
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
-  #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_XIAO_S3
+  #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_XIAO_S3 || BOARD_MODEL == BOARD_TBEAM_S_V1
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
   #elif BOARD_MODEL == BOARD_TECHO
     SPI.setPins(pin_miso, pin_sclk, pin_mosi);
@@ -270,9 +273,23 @@ void sx126x::setPacketParams(long preamble_symbols, uint8_t headermode, uint8_t 
   buf[4] = crc;
   buf[5] = 0x00; // standard IQ setting (no inversion)
   buf[6] = 0x00; // unused params
-  buf[7] = 0x00; 
-  buf[8] = 0x00; 
+  buf[7] = 0x00;
+  buf[8] = 0x00;
   executeOpcode(OP_PACKET_PARAMS_6X, buf, 9);
+
+  // SX1262 errata section 15.4: IQ polarity is inverted compared to
+  // SX1276. Register 0x0736 must be set to correct the polarity.
+  // Standard IQ: set bit 2 (register value 0x0D → keep other bits).
+  // Inverted IQ: clear bit 2 (register value 0x09).
+  // Without this fix, LoRa RX demodulation fails silently.
+  uint8_t iqreg = readRegister(0x0736);
+  if (buf[5] == 0x00) {
+    // Standard IQ: set bit 2
+    writeRegister(0x0736, iqreg | 0x04);
+  } else {
+    // Inverted IQ: clear bit 2
+    writeRegister(0x0736, iqreg & ~0x04);
+  }
 }
 
 void sx126x::reset(void) {
@@ -316,9 +333,25 @@ int sx126x::begin(long frequency) {
   if (!_preinit_done) { if (!preInit()) { return false; } }
   if (_rxen != -1) { pinMode(_rxen, OUTPUT); }
 
+  // Enable DC-DC regulator if the board has the required inductor.
+  // Default after reset is LDO-only. Heltec V4 (and most SX1262
+  // boards) have the DC-DC inductor on VREGSW and need this set
+  // before TCXO/calibration per datasheet Section 13.1.
+  #if BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TDECK
+    uint8_t reg_mode = 0x01; // DC-DC + LDO
+    executeOpcode(OP_REGULATOR_MODE_6X, &reg_mode, 1);
+  #endif
+
+  // SX1262 datasheet requires TCXO to be enabled BEFORE calibration.
+  // With TCXO off, calibrate() uses the inaccurate RC oscillator as
+  // reference, resulting in bad PLL/image calibration that can kill
+  // RX sensitivity while TX still works (enough power margin).
+  enableTCXO();
+  // Clear any latched errors from power-on before calibration
+  uint8_t clr_err[2] = {0x00, 0x00};
+  executeOpcode(OP_CLR_DEVICE_ERRORS_6X, clr_err, 2);
   calibrate();
   calibrate_image(frequency);
-  enableTCXO();
   loraMode();
   standby();
 
@@ -329,6 +362,13 @@ int sx126x::begin(long frequency) {
     // enable dio2 rf switch
     uint8_t byte = 0x01;
     executeOpcode(OP_DIO2_RF_CTRL_6X, &byte, 1);
+
+    // After TX the SX1262 falls back to STANDBY_RC by default.
+    // Set fallback to STDBY_XOSC (0x40) so the oscillator stays
+    // running and DIO2 toggles the GC1109 PA/LNA RF switch back
+    // to RX promptly when receive() is called after a transmit.
+    uint8_t fb = 0x40; // STDBY_XOSC
+    executeOpcode(OP_RX_TX_FALLBACK_MODE_6X, &fb, 1);
   #endif
 
   rxAntEnable();
@@ -336,11 +376,20 @@ int sx126x::begin(long frequency) {
   setTxPower(2);
   enableCrc();
   writeRegister(REG_LNA_6X, 0x96); // Set LNA boost
+
+  // Undocumented register 0x8B5: setting bit 0 improves RX sensitivity
+  // on boards with GC1109 PA/LNA (Heltec V4). Patch recommended by
+  // Heltec engineer, confirmed by MeshCore community testing.
+  #if HAS_LORA_PA && LORA_PA_GC1109
+    uint8_t reg8b5 = readRegister(0x08B5);
+    writeRegister(0x08B5, reg8b5 | 0x01);
+  #endif
   uint8_t basebuf[2] = {0}; // Set base addresses
   executeOpcode(OP_BUFFER_BASE_ADDR_6X, basebuf, 2);
 
   setModulationParams(_sf, _bw, _cr, _ldro);
   setPacketParams(_preambleLength, _implicitHeaderMode, _payloadLength, _crcMode);
+  optimizeModemSensitivity();
 
   #if HAS_LORA_PA
     #if LORA_PA_GC1109
@@ -349,25 +398,18 @@ int sx126x::begin(long frequency) {
       pinMode(LORA_PA_PWR_EN, OUTPUT);
       digitalWrite(LORA_PA_PWR_EN, HIGH);
 
-      // Enable PA LNA and TX standby
+      // CSD: Chip enable - must be HIGH for GC1109 to work
       pinMode(LORA_PA_CSD, OUTPUT);
       digitalWrite(LORA_PA_CSD, HIGH);
 
-      // Keep PA CPS low until actual
-      // transmit. Does it save power?
-      // Who knows? Will have to measure.
-      // Note from the future: Nope.
-      // Power consumption is the same,
-      // and turning it on and off is
-      // not something that it likes.
-      // Keeping it high for now.
+      delay(1); // Allow GC1109 FEM time to power up
+
+      // CPS held HIGH permanently for now. Per GC1109 datasheet CPS is
+      // "don't care" in RX (LNA mode: CSD=1, CTX=0, CPS=X), and HIGH
+      // in TX (PA mode: CSD=1, CTX=1, CPS=1). Keeping it HIGH covers
+      // both modes. CTX is driven by SX1262 DIO2 automatically.
       pinMode(LORA_PA_CPS, OUTPUT);
       digitalWrite(LORA_PA_CPS, HIGH);
-
-      // On Heltec V4, the PA CTX pin
-      // is driven by the SX1262 DIO2
-      // pin directly, so we do not
-      // need to manually raise this.
     #endif
   #endif
 
@@ -377,16 +419,6 @@ int sx126x::begin(long frequency) {
 void sx126x::end() { sleep(); SPI.end(); _preinit_done = false; }
 
 int sx126x::beginPacket(int implicitHeader) {
-  #if HAS_LORA_PA
-    #if LORA_PA_GC1109
-      // Enable PA CPS for transmit
-      // digitalWrite(LORA_PA_CPS, HIGH);
-      // Disabled since we're keeping it
-      // on permanently as long as the
-      // radio is powered up.
-    #endif
-  #endif
-
   standby();
   if (implicitHeader) { implicitHeaderMode(); }
   else { explicitHeaderMode(); }
@@ -443,21 +475,29 @@ bool sx126x::dcd() {
   if ((buf[1] & IRQ_HEADER_DET_MASK_6X) != 0) { header_detected = true; carrier_detected = true; }
   else { header_detected = false; }
 
-  if ((buf[1] & IRQ_PREAMBLE_DET_MASK_6X) != 0) {
+  // After a false preamble timeout, ignore new preamble detections
+  // briefly to prevent noise-driven preamble→timeout→preamble cycles
+  // that keep carrier_detected true and block CSMA transmissions.
+  static uint32_t preamble_cooldown_until = 0;
+
+  if ((buf[1] & IRQ_PREAMBLE_DET_MASK_6X) != 0 && now >= preamble_cooldown_until) {
     carrier_detected = true;
     if (preamble_detected_at == 0) { preamble_detected_at = now; }
     if (now - preamble_detected_at > lora_preamble_time_ms + lora_header_time_ms) {
       preamble_detected_at = 0;
       if (!header_detected) { false_preamble_detected = true; }
-      uint8_t clearbuf[2] = {0};
-      clearbuf[1] = IRQ_PREAMBLE_DET_MASK_6X;
+      // Clear all IRQ flags except RX_DONE (bit 1) and CRC_ERR (bit 6)
+      // to prevent sticky flags (HeaderErr, HeaderValid, Preamble) from
+      // keeping carrier_detected true and blocking CSMA transmissions.
+      uint8_t clearbuf[2] = {0x03, 0xBD}; // bits 8-9 + 0-7 except 1,6
       executeOpcode(OP_CLEAR_IRQ_STATUS_6X, clearbuf, 2);
+      // Cooldown: ignore preamble detections for 2x the preamble+header
+      // time to prevent noise-driven re-detection cycles.
+      preamble_cooldown_until = now + (lora_preamble_time_ms + lora_header_time_ms) * 2;
     }
   }
 
-  // TODO: Maybe there's a way of unlatching the RSSI
-  // status without re-activating receive mode?
-  if (false_preamble_detected) { sx126x_modem.receive(); false_preamble_detected = false; }
+  if (false_preamble_detected) { false_preamble_detected = false; }
   return carrier_detected;
 }
 
@@ -594,17 +634,19 @@ void sx126x::onReceive(void(*callback)(int)){
 }
 
 void sx126x::receive(int size) {
-  #if HAS_LORA_PA
-    #if LORA_PA_GC1109
-      // Disable PA CPS for receive
-      // digitalWrite(LORA_PA_CPS, LOW);
-      // That turned out to be a bad idea.
-      // The LNA goes wonky if it's toggled
-      // on and off too quickly. We'll keep
-      // it on permanently, as long as the
-      // radio is powered up.
-    #endif
-  #endif
+  // CPS stays HIGH permanently (set in begin())
+
+  // Ensure LoRa packet type is set before entering RX.
+  // On some SX1262 chips, the packet type reverts to GFSK (0x00)
+  // after calibration despite being set in begin(). This is a
+  // no-op if already in LoRa mode since SetPacketType only resets
+  // params when the type actually changes.
+  if (getPacketType() != MODE_LONG_RANGE_MODE_6X) {
+    loraMode();
+    // Re-apply modulation/packet params since SetPacketType
+    // resets all params to defaults when type changes.
+    setModulationParams(_sf, _bw, _cr, _ldro);
+  }
 
   if (size > 0) {
     implicitHeaderMode();
@@ -641,9 +683,11 @@ void sx126x::enableTCXO() {
     #elif BOARD_MODEL == BOARD_TECHO
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #elif BOARD_MODEL == BOARD_HELTEC32_V4
-      uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
+      uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0xC8, 0x00}; // 800ms timeout
     #endif
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);
+    delay(10); // Allow TCXO to stabilize
+    waitOnBusy();
   #endif
 }
 
@@ -728,8 +772,16 @@ void sx126x::handleLowDataRate() {
     else { _ldro = 0x00; lora_low_datarate = false; }
 }
 
-// TODO: Check if there's anything the sx1262 can do here
-void sx126x::optimizeModemSensitivity(){ }
+// SX1262 errata section 15.1: Modulation quality with 500 kHz LoRa BW.
+// Register 0x0889 bit 2 must be cleared for 500 kHz, set for all others.
+void sx126x::optimizeModemSensitivity(){
+  uint8_t reg = readRegister(0x0889);
+  if (getSignalBandwidth() == 500E3) {
+    writeRegister(0x0889, reg & 0xFB); // clear bit 2
+  } else {
+    writeRegister(0x0889, reg | 0x04); // set bit 2
+  }
+}
 
 void sx126x::setSignalBandwidth(long sbw) {
   if (sbw <= 7.8E3)        { _bw = 0x00; }
@@ -787,6 +839,16 @@ void sx126x::dumpRegisters(Stream& out) {
 }
 
 void ISR_VECT sx126x::handleDio0Rise() {
+  // Deferred ISR: no SPI from interrupt context.
+  // SPI operations in ISR can corrupt the bus on ESP32
+  // when the main loop is also accessing SPI.
+  _rx_pending = true;
+}
+
+void sx126x::processRxInterrupt() {
+  if (!_rx_pending) return;
+  _rx_pending = false;
+
   uint8_t buf[2];
   buf[0] = 0x00;
   buf[1] = 0x00;
@@ -794,12 +856,59 @@ void ISR_VECT sx126x::handleDio0Rise() {
   executeOpcode(OP_CLEAR_IRQ_STATUS_6X, buf, 2);
 
   if ((buf[1] & IRQ_PAYLOAD_CRC_ERROR_MASK_6X) == 0) {
-    _packetIndex = 0;
-    uint8_t rxbuf[2] = {0}; // Read packet length
-    executeOpcodeRead(OP_RX_BUFFER_STATUS_6X, rxbuf, 2);
-    int packetLength = rxbuf[0];
-    if (_onReceive) { _onReceive(packetLength); }
+    if (buf[1] & IRQ_RX_DONE_MASK_6X) {
+      _packetIndex = 0;
+      uint8_t rxbuf[2] = {0};
+      executeOpcodeRead(OP_RX_BUFFER_STATUS_6X, rxbuf, 2);
+      int packetLength = rxbuf[0];
+      if (_onReceive) { _onReceive(packetLength); }
+    }
   }
+}
+
+uint8_t sx126x::getModemStatus() {
+  // GetStatus (0xC0): status byte is returned during the NOP
+  // byte after the opcode, not in the data buffer.
+  waitOnBusy();
+  uint8_t status;
+  digitalWrite(_ss, LOW);
+  SPI.beginTransaction(_spiSettings);
+  SPI.transfer(OP_STATUS_6X);
+  status = SPI.transfer(0x00);
+  SPI.endTransaction();
+  digitalWrite(_ss, HIGH);
+  return status;
+}
+
+void sx126x::getIrqStatus(uint8_t *buf) {
+  buf[0] = 0x00;
+  buf[1] = 0x00;
+  executeOpcodeRead(OP_GET_IRQ_STATUS_6X, buf, 2);
+}
+
+void sx126x::getDeviceErrors(uint8_t *buf) {
+  buf[0] = 0x00;
+  buf[1] = 0x00;
+  executeOpcodeRead(OP_GET_DEVICE_ERRORS_6X, buf, 2);
+}
+
+uint32_t sx126x::getActualFrequency() {
+  // Read the 4-byte frequency register at 0x088B-0x088E
+  uint32_t freq_reg = ((uint32_t)readRegister(0x088B) << 24) |
+                      ((uint32_t)readRegister(0x088C) << 16) |
+                      ((uint32_t)readRegister(0x088D) << 8) |
+                      readRegister(0x088E);
+  // Convert: freq_Hz = freq_reg * F_XTAL / 2^25 = freq_reg * 32000000 / 33554432
+  // Simplify: freq_Hz = freq_reg * 0.95367431640625
+  return (uint32_t)((uint64_t)freq_reg * 32000000ULL / 33554432ULL);
+}
+
+uint8_t sx126x::readPublicRegister(uint16_t address) { return readRegister(address); }
+
+uint8_t sx126x::getPacketType() {
+  uint8_t buf = 0;
+  executeOpcodeRead(0x11, &buf, 1); // GetPacketType
+  return buf;
 }
 
 void ISR_VECT sx126x::onDio0Rise() { sx126x_modem.handleDio0Rise(); }

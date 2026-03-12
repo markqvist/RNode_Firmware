@@ -17,8 +17,10 @@
 #include <SPI.h>
 #include "Utilities.h"
 
-FIFOBuffer serialFIFO;
-uint8_t serialBuffer[CONFIG_UART_BUFFER_SIZE+1];
+#define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
+FIFOBuffer   channelFIFO[NUM_CHANNELS];
+uint8_t      channelBuffer[NUM_CHANNELS][CHANNEL_FIFO_SIZE + 1];
+ChannelState channel_state[NUM_CHANNELS];
 
 FIFOBuffer16 packet_starts;
 uint16_t packet_starts_buf[CONFIG_QUEUE_MAX_LENGTH+1];
@@ -116,8 +118,12 @@ void setup() {
   randomSeed(seed_val);
 
   // Initialise serial communication
-  memset(serialBuffer, 0, sizeof(serialBuffer));
-  fifo_init(&serialFIFO, serialBuffer, CONFIG_UART_BUFFER_SIZE);
+  for (uint8_t ch = 0; ch < NUM_CHANNELS; ch++) {
+    memset(channelBuffer[ch], 0, sizeof(channelBuffer[ch]));
+    fifo_init(&channelFIFO[ch], channelBuffer[ch], CHANNEL_FIFO_SIZE);
+    memset(&channel_state[ch], 0, sizeof(ChannelState));
+    channel_state[ch].command = CMD_UNKNOWN;
+  }
 
   Serial.begin(serial_baudrate);
 
@@ -158,7 +164,6 @@ void setup() {
 
   // Initialise buffers
   memset(pbuf, 0, sizeof(pbuf));
-  memset(cmdbuf, 0, sizeof(cmdbuf));
   
   memset(packet_queue, 0, sizeof(packet_queue));
 
@@ -263,6 +268,28 @@ void setup() {
     #if HAS_BLUETOOTH || HAS_BLE == true
       bt_init();
       bt_init_ran = true;
+    #endif
+
+    #if HAS_RTC == true
+      rtc_setup();
+    #endif
+
+    #if HAS_GPS == true
+      gps_setup();
+      // Load beacon encryption config from EEPROM (config region)
+      if (EEPROM.read(config_addr(ADDR_BCN_OK)) == CONF_OK_BYTE) {
+          for (int i = 0; i < 32; i++)
+              collector_pub_key[i] = EEPROM.read(config_addr(ADDR_BCN_KEY + i));
+          for (int i = 0; i < 16; i++)
+              collector_identity_hash[i] = EEPROM.read(config_addr(ADDR_BCN_IHASH + i));
+          for (int i = 0; i < 16; i++)
+              collector_dest_hash[i] = EEPROM.read(config_addr(ADDR_BCN_DHASH + i));
+          beacon_crypto_configured = true;
+      }
+      // Initialize LXMF identity (load from NVS or generate new)
+      lxmf_init_identity();
+      // Initialize IFAC authentication (load from NVS if provisioned)
+      ifac_init();
     #endif
 
     if (console_active) {
@@ -448,16 +475,19 @@ void ISR_VECT receive_callback(int packet_size) {
     }
 
     if (ready) {
+      stat_rx++;
+
       #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
         // We first signal the RSSI of the
         // recieved packet to the host.
+        response_channel = data_channel;
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
 
         // And then write the entire packet
         host_write_len = read_len;
         kiss_write_packet(); read_len = 0;
-      
+
       #else
         // Allocate packet struct, but abort if there
         // is not enough memory available.
@@ -479,11 +509,12 @@ void ISR_VECT receive_callback(int packet_size) {
             free(modem_packet);
         }
       #endif
-    }  
+    }
   } else {
     // In promiscuous mode, raw packets are
     // output directly to the host
     read_len = 0;
+    stat_rx++;
 
     #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
       last_rssi = LoRa->packetRssi();
@@ -492,6 +523,7 @@ void ISR_VECT receive_callback(int packet_size) {
 
       // We first signal the RSSI of the
       // recieved packet to the host.
+      response_channel = data_channel;
       kiss_indicate_stat_rssi();
       kiss_indicate_stat_snr();
 
@@ -709,6 +741,7 @@ void update_airtime() {
       update_csma_parameters();
     #endif
 
+    response_channel = data_channel;
     kiss_indicate_channel_stats();
   #endif
 }
@@ -749,6 +782,7 @@ void transmit(uint16_t size) {
       }
 
       add_airtime(written);
+      stat_tx++;
 
     } else {
       led_tx_on(); uint16_t written = 0;
@@ -757,15 +791,52 @@ void transmit(uint16_t size) {
       else           { LoRa->beginPacket(size); }
       for (uint16_t i=0; i < size; i++) { LoRa->write(tbuf[i]); written++; }
       LoRa->endPacket(); add_airtime(written);
+      stat_tx++;
     }
 
   } else { kiss_indicate_error(ERROR_TXFAILED); led_indicate_error(5); }
 }
 
-void serial_callback(uint8_t sbyte) {
-  if (IN_FRAME && sbyte == FEND && command == CMD_DATA) {
-    IN_FRAME = false;
+// Transmit raw RNS packet without the 1-byte RNode LoRa header.
+// Used by beacon mode so the receiving RNode passes the packet
+// directly to Reticulum without a spurious header byte.
+void beacon_transmit(uint16_t size) {
+  if (radio_online) {
+    #if HAS_GPS == true
+      size = ifac_apply(tbuf, size);
+    #endif
+    LoRa->beginPacket();
+    for (uint16_t i = 0; i < size; i++) {
+      LoRa->write(tbuf[i]);
+    }
+    if (!LoRa->endPacket()) {
+      led_indicate_error(5);
+    }
+    add_airtime(size);
+  }
+}
 
+void serial_callback(uint8_t sbyte, uint8_t ch) {
+  ChannelState *cs = &channel_state[ch];
+  if (cs->in_frame && sbyte == FEND && cs->command == CMD_DATA) {
+    cs->in_frame = false;
+
+    #if NUM_CHANNELS > 1
+    if (cs->pkt_len >= MIN_L && !fifo16_isfull(&packet_starts)
+        && queue_height < CONFIG_QUEUE_MAX_LENGTH && queued_bytes + cs->pkt_len <= CONFIG_QUEUE_SIZE) {
+        uint16_t s = queue_cursor;
+        for (uint16_t i = 0; i < cs->pkt_len; i++) {
+            packet_queue[queue_cursor++] = cs->pktbuf[i];
+            if (queue_cursor == CONFIG_QUEUE_SIZE) queue_cursor = 0;
+        }
+        queue_height++;
+        queued_bytes += cs->pkt_len;
+        fifo16_push(&packet_starts, s);
+        fifo16_push(&packet_lengths, cs->pkt_len);
+    }
+    cs->pkt_len = 0;
+    data_channel = ch;
+    #else
     if (!fifo16_isfull(&packet_starts) && queued_bytes < CONFIG_QUEUE_SIZE) {
         uint16_t s = current_packet_start;
         int16_t e = queue_cursor-1; if (e == -1) e = CONFIG_QUEUE_SIZE-1;
@@ -781,47 +852,57 @@ void serial_callback(uint8_t sbyte) {
             current_packet_start = queue_cursor;
         }
     }
+    #endif
 
   } else if (sbyte == FEND) {
-    IN_FRAME = true;
-    command = CMD_UNKNOWN;
-    frame_len = 0;
-  } else if (IN_FRAME && frame_len < MTU) {
+    cs->in_frame = true;
+    cs->command = CMD_UNKNOWN;
+    cs->frame_len = 0;
+  } else if (cs->in_frame && cs->frame_len < MTU) {
     // Have a look at the command byte first
-    if (frame_len == 0 && command == CMD_UNKNOWN) {
-        command = sbyte;
-    } else if (command == CMD_DATA) {
-        if (bt_state != BT_STATE_CONNECTED) {
+    if (cs->frame_len == 0 && cs->command == CMD_UNKNOWN) {
+        cs->command = sbyte;
+        #if HAS_GPS == true
+          beacon_check_host_activity();
+        #endif
+    } else if (cs->command == CMD_DATA) {
+        if (ch == CHANNEL_USB) {
           cable_state = CABLE_STATE_CONNECTED;
         }
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
+            #if NUM_CHANNELS > 1
+            if (cs->pkt_len < MTU) {
+              cs->pktbuf[cs->pkt_len++] = sbyte;
+            }
+            #else
             if (queue_height < CONFIG_QUEUE_MAX_LENGTH && queued_bytes < CONFIG_QUEUE_SIZE) {
               queued_bytes++;
               packet_queue[queue_cursor++] = sbyte;
               if (queue_cursor == CONFIG_QUEUE_SIZE) queue_cursor = 0;
             }
+            #endif
         }
-    } else if (command == CMD_FREQUENCY) {
+    } else if (cs->command == CMD_FREQUENCY) {
       if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
-            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+            if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 4) {
-          uint32_t freq = (uint32_t)cmdbuf[0] << 24 | (uint32_t)cmdbuf[1] << 16 | (uint32_t)cmdbuf[2] << 8 | (uint32_t)cmdbuf[3];
+        if (cs->frame_len == 4) {
+          uint32_t freq = (uint32_t)cs->cmdbuf[0] << 24 | (uint32_t)cs->cmdbuf[1] << 16 | (uint32_t)cs->cmdbuf[2] << 8 | (uint32_t)cs->cmdbuf[3];
 
           if (freq == 0) {
             kiss_indicate_frequency();
@@ -831,20 +912,20 @@ void serial_callback(uint8_t sbyte) {
             kiss_indicate_frequency();
           }
         }
-    } else if (command == CMD_BANDWIDTH) {
+    } else if (cs->command == CMD_BANDWIDTH) {
       if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
-            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+            if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 4) {
-          uint32_t bw = (uint32_t)cmdbuf[0] << 24 | (uint32_t)cmdbuf[1] << 16 | (uint32_t)cmdbuf[2] << 8 | (uint32_t)cmdbuf[3];
+        if (cs->frame_len == 4) {
+          uint32_t bw = (uint32_t)cs->cmdbuf[0] << 24 | (uint32_t)cs->cmdbuf[1] << 16 | (uint32_t)cs->cmdbuf[2] << 8 | (uint32_t)cs->cmdbuf[3];
 
           if (bw == 0) {
             kiss_indicate_bandwidth();
@@ -854,7 +935,7 @@ void serial_callback(uint8_t sbyte) {
             kiss_indicate_bandwidth();
           }
         }
-    } else if (command == CMD_TXPOWER) {
+    } else if (cs->command == CMD_TXPOWER) {
       if (sbyte == 0xFF) {
         kiss_indicate_txpower();
       } else {
@@ -879,7 +960,7 @@ void serial_callback(uint8_t sbyte) {
         if (op_mode == MODE_HOST) setTXPower();
         kiss_indicate_txpower();
       }
-    } else if (command == CMD_SF) {
+    } else if (cs->command == CMD_SF) {
       if (sbyte == 0xFF) {
         kiss_indicate_spreadingfactor();
       } else {
@@ -891,7 +972,7 @@ void serial_callback(uint8_t sbyte) {
         if (op_mode == MODE_HOST) setSpreadingFactor();
         kiss_indicate_spreadingfactor();
       }
-    } else if (command == CMD_CR) {
+    } else if (cs->command == CMD_CR) {
       if (sbyte == 0xFF) {
         kiss_indicate_codingrate();
       } else {
@@ -903,10 +984,10 @@ void serial_callback(uint8_t sbyte) {
         if (op_mode == MODE_HOST) setCodingRate();
         kiss_indicate_codingrate();
       }
-    } else if (command == CMD_IMPLICIT) {
+    } else if (cs->command == CMD_IMPLICIT) {
       set_implicit_length(sbyte);
       kiss_indicate_implicit_length();
-    } else if (command == CMD_LEAVE) {
+    } else if (cs->command == CMD_LEAVE) {
       if (sbyte == 0xFF) {
         display_unblank();
         cable_state   = CABLE_STATE_DISCONNECTED;
@@ -915,8 +996,8 @@ void serial_callback(uint8_t sbyte) {
         last_rssi_raw = 0x00;
         last_snr_raw  = 0x80;
       }
-    } else if (command == CMD_RADIO_STATE) {
-      if (bt_state != BT_STATE_CONNECTED) {
+    } else if (cs->command == CMD_RADIO_STATE) {
+      if (ch == CHANNEL_USB) {
         cable_state = CABLE_STATE_CONNECTED;
         display_unblank();
       }
@@ -929,20 +1010,20 @@ void serial_callback(uint8_t sbyte) {
         startRadio();
         kiss_indicate_radiostate();
       }
-    } else if (command == CMD_ST_ALOCK) {
+    } else if (cs->command == CMD_ST_ALOCK) {
       if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
-            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+            if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 2) {
-          uint16_t at = (uint16_t)cmdbuf[0] << 8 | (uint16_t)cmdbuf[1];
+        if (cs->frame_len == 2) {
+          uint16_t at = (uint16_t)cs->cmdbuf[0] << 8 | (uint16_t)cs->cmdbuf[1];
 
           if (at == 0) {
             st_airtime_limit = 0.0;
@@ -952,20 +1033,20 @@ void serial_callback(uint8_t sbyte) {
           }
           kiss_indicate_st_alock();
         }
-    } else if (command == CMD_LT_ALOCK) {
+    } else if (cs->command == CMD_LT_ALOCK) {
       if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
-            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+            if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 2) {
-          uint16_t at = (uint16_t)cmdbuf[0] << 8 | (uint16_t)cmdbuf[1];
+        if (cs->frame_len == 2) {
+          uint16_t at = (uint16_t)cs->cmdbuf[0] << 8 | (uint16_t)cs->cmdbuf[1];
 
           if (at == 0) {
             lt_airtime_limit = 0.0;
@@ -975,77 +1056,81 @@ void serial_callback(uint8_t sbyte) {
           }
           kiss_indicate_lt_alock();
         }
-    } else if (command == CMD_STAT_RX) {
+    } else if (cs->command == CMD_STAT_RX) {
       kiss_indicate_stat_rx();
-    } else if (command == CMD_STAT_TX) {
+    } else if (cs->command == CMD_STAT_TX) {
       kiss_indicate_stat_tx();
-    } else if (command == CMD_STAT_RSSI) {
+    } else if (cs->command == CMD_STAT_RSSI) {
       kiss_indicate_stat_rssi();
-    } else if (command == CMD_RADIO_LOCK) {
+    #if HAS_GPS == true
+    } else if (cs->command == CMD_STAT_GPS) {
+      kiss_indicate_stat_gps();
+    #endif
+    } else if (cs->command == CMD_RADIO_LOCK) {
       update_radio_lock();
       kiss_indicate_radio_lock();
-    } else if (command == CMD_BLINK) {
+    } else if (cs->command == CMD_BLINK) {
       led_indicate_info(sbyte);
-    } else if (command == CMD_RANDOM) {
+    } else if (cs->command == CMD_RANDOM) {
       kiss_indicate_random(getRandom());
-    } else if (command == CMD_DETECT) {
+    } else if (cs->command == CMD_DETECT) {
       if (sbyte == DETECT_REQ) {
-        if (bt_state != BT_STATE_CONNECTED) cable_state = CABLE_STATE_CONNECTED;
+        if (ch == CHANNEL_USB) cable_state = CABLE_STATE_CONNECTED;
         kiss_indicate_detect();
       }
-    } else if (command == CMD_PROMISC) {
+    } else if (cs->command == CMD_PROMISC) {
       if (sbyte == 0x01) {
         promisc_enable();
       } else if (sbyte == 0x00) {
         promisc_disable();
       }
       kiss_indicate_promisc();
-    } else if (command == CMD_READY) {
+    } else if (cs->command == CMD_READY) {
       if (!queue_full()) {
         kiss_indicate_ready();
       } else {
         kiss_indicate_not_ready();
       }
-    } else if (command == CMD_UNLOCK_ROM) {
+    } else if (cs->command == CMD_UNLOCK_ROM) {
       if (sbyte == ROM_UNLOCK_BYTE) {
         unlock_rom();
       }
-    } else if (command == CMD_RESET) {
+    } else if (cs->command == CMD_RESET) {
       if (sbyte == CMD_RESET_BYTE) {
         hard_reset();
       }
-    } else if (command == CMD_ROM_READ) {
+    } else if (cs->command == CMD_ROM_READ) {
       kiss_dump_eeprom();
-    } else if (command == CMD_CFG_READ) {
+    } else if (cs->command == CMD_CFG_READ) {
       kiss_dump_config();
-    } else if (command == CMD_ROM_WRITE) {
+    } else if (cs->command == CMD_ROM_WRITE) {
       if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
-            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+            if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 2) {
-          eeprom_write(cmdbuf[0], cmdbuf[1]);
+        if (cs->frame_len == 2) {
+          eeprom_write(cs->cmdbuf[0], cs->cmdbuf[1]);
         }
-    } else if (command == CMD_FW_VERSION) {
+    } else if (cs->command == CMD_FW_VERSION) {
       kiss_indicate_version();
-    } else if (command == CMD_PLATFORM) {
+    } else if (cs->command == CMD_PLATFORM) {
       kiss_indicate_platform();
-    } else if (command == CMD_MCU) {
+    } else if (cs->command == CMD_MCU) {
       kiss_indicate_mcu();
-    } else if (command == CMD_BOARD) {
+    } else if (cs->command == CMD_BOARD) {
       kiss_indicate_board();
-    } else if (command == CMD_CONF_SAVE) {
+    } else if (cs->command == CMD_CONF_SAVE) {
       eeprom_conf_save();
-    } else if (command == CMD_CONF_DELETE) {
+    } else if (cs->command == CMD_CONF_DELETE) {
       eeprom_conf_delete();
-    } else if (command == CMD_FB_EXT) {
+    } else if (cs->command == CMD_FB_EXT) {
       #if HAS_DISPLAY == true
         if (sbyte == 0xFF) {
           kiss_indicate_fbstate();
@@ -1057,60 +1142,60 @@ void serial_callback(uint8_t sbyte) {
           kiss_indicate_fbstate();
         }
       #endif
-    } else if (command == CMD_FB_WRITE) {
+    } else if (cs->command == CMD_FB_WRITE) {
       if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
-            if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+            if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
         #if HAS_DISPLAY
-          if (frame_len == 9) {
-            uint8_t line = cmdbuf[0];
+          if (cs->frame_len == 9) {
+            uint8_t line = cs->cmdbuf[0];
             if (line > 63) line = 63;
             int fb_o = line*8; 
-            memcpy(fb+fb_o, cmdbuf+1, 8);
+            memcpy(fb+fb_o, cs->cmdbuf+1, 8);
           }
         #endif
-    } else if (command == CMD_FB_READ) {
+    } else if (cs->command == CMD_FB_READ) {
       if (sbyte != 0x00) { kiss_indicate_fb(); }
-    } else if (command == CMD_DISP_READ) {
+    } else if (cs->command == CMD_DISP_READ) {
       if (sbyte != 0x00) { kiss_indicate_disp(); }
-    } else if (command == CMD_DEV_HASH) {
+    } else if (cs->command == CMD_DEV_HASH) {
       #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
         if (sbyte != 0x00) {
           kiss_indicate_device_hash();
         }
       #endif
-    } else if (command == CMD_DEV_SIG) {
+    } else if (cs->command == CMD_DEV_SIG) {
       #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
         if (sbyte == FESC) {
-              ESCAPE = true;
+              cs->escape = true;
           } else {
-              if (ESCAPE) {
+              if (cs->escape) {
                   if (sbyte == TFEND) sbyte = FEND;
                   if (sbyte == TFESC) sbyte = FESC;
-                  ESCAPE = false;
+                  cs->escape = false;
               }
-              if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+              if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
           }
 
-          if (frame_len == DEV_SIG_LEN) {
-            memcpy(dev_sig, cmdbuf, DEV_SIG_LEN);
+          if (cs->frame_len == DEV_SIG_LEN) {
+            memcpy(dev_sig, cs->cmdbuf, DEV_SIG_LEN);
             device_save_signature();
           }
       #endif
-    } else if (command == CMD_FW_UPD) {
+    } else if (cs->command == CMD_FW_UPD) {
       if (sbyte == 0x01) {
         firmware_update_mode = true;
       } else {
         firmware_update_mode = false;
       }
-    } else if (command == CMD_HASHES) {
+    } else if (cs->command == CMD_HASHES) {
       #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
         if (sbyte == 0x01) {
           kiss_indicate_target_fw_hash();
@@ -1122,29 +1207,29 @@ void serial_callback(uint8_t sbyte) {
           kiss_indicate_partition_table_hash();
         }
       #endif
-    } else if (command == CMD_FW_HASH) {
+    } else if (cs->command == CMD_FW_HASH) {
       #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
         if (sbyte == FESC) {
-              ESCAPE = true;
+              cs->escape = true;
           } else {
-              if (ESCAPE) {
+              if (cs->escape) {
                   if (sbyte == TFEND) sbyte = FEND;
                   if (sbyte == TFESC) sbyte = FESC;
-                  ESCAPE = false;
+                  cs->escape = false;
               }
-              if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+              if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
           }
 
-          if (frame_len == DEV_HASH_LEN) {
-            memcpy(dev_firmware_hash_target, cmdbuf, DEV_HASH_LEN);
+          if (cs->frame_len == DEV_HASH_LEN) {
+            memcpy(dev_firmware_hash_target, cs->cmdbuf, DEV_HASH_LEN);
             device_save_firmware_hash();
           }
       #endif
-    } else if (command == CMD_WIFI_CHN) {
+    } else if (cs->command == CMD_WIFI_CHN) {
       #if HAS_WIFI
         if (sbyte > 0 && sbyte < 14) { eeprom_update(eeprom_addr(ADDR_CONF_WCHN), sbyte); }
       #endif
-    } else if (command == CMD_WIFI_MODE) {
+    } else if (cs->command == CMD_WIFI_MODE) {
       #if HAS_WIFI
         if (sbyte == WR_WIFI_OFF || sbyte == WR_WIFI_STA || sbyte == WR_WIFI_AP) {
           wr_conf_save(sbyte);
@@ -1152,73 +1237,163 @@ void serial_callback(uint8_t sbyte) {
           wifi_remote_init();
         }
       #endif
-    } else if (command == CMD_WIFI_SSID) {
+    } else if (cs->command == CMD_WIFI_SSID) {
       #if HAS_WIFI
-        if (sbyte == FESC) { ESCAPE = true; }
+        if (sbyte == FESC) { cs->escape = true; }
         else {
-          if (ESCAPE) {
+          if (cs->escape) {
             if (sbyte == TFEND) sbyte = FEND;
             if (sbyte == TFESC) sbyte = FESC;
-            ESCAPE = false;
+            cs->escape = false;
           }
-          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
         if (sbyte == 0x00) {
           for (uint8_t i = 0; i<33; i++) {
-            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_SSID+i), cmdbuf[i]); }
+            if (i<cs->frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_SSID+i), cs->cmdbuf[i]); }
             else                     { eeprom_update(config_addr(ADDR_CONF_SSID+i), 0x00); }
           }
         }
       #endif
-    } else if (command == CMD_WIFI_PSK) {
+    } else if (cs->command == CMD_WIFI_PSK) {
       #if HAS_WIFI
-        if (sbyte == FESC) { ESCAPE = true; }
+        if (sbyte == FESC) { cs->escape = true; }
         else {
-          if (ESCAPE) {
+          if (cs->escape) {
             if (sbyte == TFEND) sbyte = FEND;
             if (sbyte == TFESC) sbyte = FESC;
-            ESCAPE = false;
+            cs->escape = false;
           }
-          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
         if (sbyte == 0x00) {
           for (uint8_t i = 0; i<33; i++) {
-            if (i<frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_PSK+i), cmdbuf[i]); }
+            if (i<cs->frame_len && i<32) { eeprom_update(config_addr(ADDR_CONF_PSK+i), cs->cmdbuf[i]); }
             else                     { eeprom_update(config_addr(ADDR_CONF_PSK+i), 0x00); }
           }
         }
       #endif
-    } else if (command == CMD_WIFI_IP) {
+    } else if (cs->command == CMD_WIFI_IP) {
       #if HAS_WIFI
-        if (sbyte == FESC) { ESCAPE = true; }
+        if (sbyte == FESC) { cs->escape = true; }
         else {
-          if (ESCAPE) {
+          if (cs->escape) {
             if (sbyte == TFEND) sbyte = FEND;
             if (sbyte == TFESC) sbyte = FESC;
-            ESCAPE = false;
+            cs->escape = false;
           }
-          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_IP+i), cmdbuf[i]); } }
+        if (cs->frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_IP+i), cs->cmdbuf[i]); } }
       #endif
-    } else if (command == CMD_WIFI_NM) {
+    } else if (cs->command == CMD_WIFI_NM) {
       #if HAS_WIFI
-        if (sbyte == FESC) { ESCAPE = true; }
+        if (sbyte == FESC) { cs->escape = true; }
         else {
-          if (ESCAPE) {
+          if (cs->escape) {
             if (sbyte == TFEND) sbyte = FEND;
             if (sbyte == TFESC) sbyte = FESC;
-            ESCAPE = false;
+            cs->escape = false;
           }
-          if (frame_len < CMD_L) cmdbuf[frame_len++] = sbyte;
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
         }
 
-        if (frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_NM+i), cmdbuf[i]); } }
+        if (cs->frame_len == 4) { for (uint8_t i = 0; i<4; i++) { eeprom_update(config_addr(ADDR_CONF_NM+i), cs->cmdbuf[i]); } }
       #endif
-    } else if (command == CMD_BT_CTRL) {
+    } else if (cs->command == CMD_BCN_KEY) {
+      #if HAS_GPS == true
+        if (sbyte == FESC) { cs->escape = true; }
+        else {
+          if (cs->escape) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            cs->escape = false;
+          }
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
+        }
+        // 64 bytes: 32B X25519 pub key + 16B identity hash + 16B dest hash
+        if (cs->frame_len == 64) {
+          for (int i = 0; i < 32; i++)
+            eeprom_update(config_addr(ADDR_BCN_KEY + i), cs->cmdbuf[i]);
+          for (int i = 0; i < 16; i++)
+            eeprom_update(config_addr(ADDR_BCN_IHASH + i), cs->cmdbuf[32 + i]);
+          for (int i = 0; i < 16; i++)
+            eeprom_update(config_addr(ADDR_BCN_DHASH + i), cs->cmdbuf[48 + i]);
+          eeprom_update(config_addr(ADDR_BCN_OK), CONF_OK_BYTE);
+          // Load into RAM immediately
+          memcpy(collector_pub_key, cs->cmdbuf, 32);
+          memcpy(collector_identity_hash, cs->cmdbuf + 32, 16);
+          memcpy(collector_dest_hash, cs->cmdbuf + 48, 16);
+          beacon_crypto_configured = true;
+          lxmf_provisioned_at = millis();
+          kiss_indicate_ready();
+        }
+      #endif
+    } else if (cs->command == CMD_LXMF_HASH) {
+      #if HAS_GPS == true
+        // Return the RNode's LXMF source hash (16 bytes) for display/debugging.
+        // Any byte triggers the response (query command).
+        if (lxmf_identity_configured) {
+          serial_write(FEND);
+          serial_write(CMD_LXMF_HASH);
+          for (int i = 0; i < 16; i++) {
+            uint8_t b = lxmf_source_hash[i];
+            if (b == FEND) { serial_write(FESC); serial_write(TFEND); }
+            else if (b == FESC) { serial_write(FESC); serial_write(TFESC); }
+            else serial_write(b);
+          }
+          serial_write(FEND);
+        }
+      #endif
+    } else if (cs->command == CMD_LXMF_TEST) {
+      #if HAS_GPS == true
+        // Force-trigger LXMF announce + beacon for USB testing.
+        // Emits pre-encryption plaintext as CMD_DIAG frames.
+        lxmf_test_send();
+      #endif
+    } else if (cs->command == CMD_IFAC_KEY) {
+      #if HAS_GPS == true
+        if (sbyte == FESC) { cs->escape = true; }
+        else {
+          if (cs->escape) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            cs->escape = false;
+          }
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
+        }
+        // 64 bytes: IFAC key derived from network_name + passphrase
+        if (cs->frame_len == 64) {
+          memcpy(ifac_key, cs->cmdbuf, 64);
+          ifac_nvs_save();
+          ifac_derive_keypair();
+          ifac_configured = true;
+          kiss_indicate_ready();
+        }
+      #endif
+    } else if (cs->command == CMD_TRANSPORT_ID) {
+      #if HAS_GPS == true
+        if (sbyte == FESC) { cs->escape = true; }
+        else {
+          if (cs->escape) {
+            if (sbyte == TFEND) sbyte = FEND;
+            if (sbyte == TFESC) sbyte = FESC;
+            cs->escape = false;
+          }
+          if (cs->frame_len < CMD_L) cs->cmdbuf[cs->frame_len++] = sbyte;
+        }
+        // 16 bytes: transport node's identity hash
+        if (cs->frame_len == 16) {
+          memcpy(transport_id, cs->cmdbuf, 16);
+          lxmf_nvs_save_transport_id();
+          transport_configured = true;
+          kiss_indicate_ready();
+        }
+      #endif
+    } else if (cs->command == CMD_BT_CTRL) {
       #if HAS_BLUETOOTH || HAS_BLE
         if (sbyte == 0x00) {
           bt_stop();
@@ -1236,101 +1411,101 @@ void serial_callback(uint8_t sbyte) {
           }
         }
       #endif
-    } else if (command == CMD_BT_UNPAIR) {
+    } else if (cs->command == CMD_BT_UNPAIR) {
       #if HAS_BLE
         if (sbyte == 0x01) { bt_debond_all(); }
       #endif
-    } else if (command == CMD_DISP_INT) {
+    } else if (cs->command == CMD_DISP_INT) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
             display_intensity = sbyte;
             di_conf_save(display_intensity);
             display_unblank();
         }
       #endif
-    } else if (command == CMD_DISP_ADDR) {
+    } else if (cs->command == CMD_DISP_ADDR) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
             display_addr = sbyte;
             da_conf_save(display_addr);
         }
 
       #endif
-    } else if (command == CMD_DISP_BLNK) {
+    } else if (cs->command == CMD_DISP_BLNK) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
             db_conf_save(sbyte);
             display_unblank();
         }
       #endif
-    } else if (command == CMD_DISP_ROT) {
+    } else if (cs->command == CMD_DISP_ROT) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
             drot_conf_save(sbyte);
             display_unblank();
         }
       #endif
-    } else if (command == CMD_DIS_IA) {
+    } else if (cs->command == CMD_DIS_IA) {
       if (sbyte == FESC) {
-          ESCAPE = true;
+          cs->escape = true;
       } else {
-          if (ESCAPE) {
+          if (cs->escape) {
               if (sbyte == TFEND) sbyte = FEND;
               if (sbyte == TFESC) sbyte = FESC;
-              ESCAPE = false;
+              cs->escape = false;
           }
           dia_conf_save(sbyte);
       }
-    } else if (command == CMD_DISP_RCND) {
+    } else if (cs->command == CMD_DISP_RCND) {
       #if HAS_DISPLAY
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
             if (sbyte > 0x00) recondition_display = true;
         }
       #endif
-    } else if (command == CMD_NP_INT) {
+    } else if (cs->command == CMD_NP_INT) {
       #if HAS_NP
         if (sbyte == FESC) {
-            ESCAPE = true;
+            cs->escape = true;
         } else {
-            if (ESCAPE) {
+            if (cs->escape) {
                 if (sbyte == TFEND) sbyte = FEND;
                 if (sbyte == TFESC) sbyte = FESC;
-                ESCAPE = false;
+                cs->escape = false;
             }
             sbyte;
             led_set_intensity(sbyte);
@@ -1655,6 +1830,12 @@ void work_while_waiting() { loop(); }
 
 void loop() {
   if (radio_online) {
+    // Process deferred RX interrupt from main context
+    // (avoids SPI bus contention from ISR)
+    #if MODEM == SX1262
+      if (LoRa->rxPending()) { LoRa->processRxInterrupt(); }
+    #endif
+
     #if MCU_VARIANT == MCU_ESP32
       modem_packet_t *modem_packet = NULL;
       if(modem_packet_queue && xQueueReceive(modem_packet_queue, &modem_packet, 0) == pdTRUE && modem_packet) {
@@ -1665,6 +1846,7 @@ void loop() {
         free(modem_packet);
         modem_packet = NULL;
 
+        response_channel = data_channel;
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
         kiss_write_packet();
@@ -1686,6 +1868,7 @@ void loop() {
         last_rssi = LoRa->packetRssi();
         last_snr_raw = LoRa->packetSnrRaw();
         portEXIT_CRITICAL();
+        response_channel = data_channel;
         kiss_indicate_stat_rssi();
         kiss_indicate_stat_snr();
         kiss_write_packet();
@@ -1699,7 +1882,7 @@ void loop() {
 
     tx_queue_handler();
     check_modem_status();
-  
+
   } else {
     if (hw_ready) {
       if (console_active) {
@@ -1718,9 +1901,15 @@ void loop() {
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       buffer_serial();
-      if (!fifo_isempty(&serialFIFO)) serial_poll();
+      {
+        bool has_data = false;
+        for (uint8_t ch = 0; ch < NUM_CHANNELS; ch++) {
+          if (!fifo_isempty(&channelFIFO[ch])) { has_data = true; break; }
+        }
+        if (has_data) serial_poll();
+      }
   #else
-    if (!fifo_isempty_locked(&serialFIFO)) serial_poll();
+    if (!fifo_isempty_locked(&channelFIFO[CHANNEL_USB])) serial_poll();
   #endif
 
   #if HAS_DISPLAY
@@ -1729,6 +1918,24 @@ void loop() {
 
   #if HAS_PMU
     if (pmu_ready) update_pmu();
+  #endif
+
+  #if HAS_GPS == true
+    if (gps_ready) {
+      gps_update();
+      beacon_update();
+      #if HAS_RTC == true
+        if (gps_has_fix) rtc_sync_from_gps(gps_parser);
+      #endif
+    }
+  #endif
+
+  #if HAS_RTC == true
+    static uint32_t rtc_last_read = 0;
+    if (rtc_ready && (millis() - rtc_last_read >= 1000)) {
+      rtc_read_time();
+      rtc_last_read = millis();
+    }
   #endif
 
   #if HAS_BLUETOOTH || HAS_BLE == true
@@ -1754,6 +1961,7 @@ void loop() {
       kiss_indicate_error(ERROR_MEMORY_LOW); memory_low = false;
     #endif
   }
+
 }
 
 void sleep_now() {
@@ -1847,13 +2055,20 @@ void serial_poll() {
   serial_polling = true;
 
   #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-  while (!fifo_isempty_locked(&serialFIFO)) {
-  #else
-  while (!fifo_isempty(&serialFIFO)) {
-  #endif
-    char sbyte = fifo_pop(&serialFIFO);
-    serial_callback(sbyte);
+  while (!fifo_isempty_locked(&channelFIFO[CHANNEL_USB])) {
+    char sbyte = fifo_pop(&channelFIFO[CHANNEL_USB]);
+    response_channel = CHANNEL_USB;
+    serial_callback(sbyte, CHANNEL_USB);
   }
+  #else
+  for (uint8_t ch = 0; ch < NUM_CHANNELS; ch++) {
+    while (!fifo_isempty(&channelFIFO[ch])) {
+      char sbyte = fifo_pop(&channelFIFO[ch]);
+      response_channel = ch;
+      serial_callback(sbyte, ch);
+    }
+  }
+  #endif
 
   serial_polling = false;
 }
@@ -1867,35 +2082,37 @@ void buffer_serial() {
   if (!serial_buffering) {
     serial_buffering = true;
 
-    uint8_t c = 0;
+    uint8_t c;
+
+    // USB — always read
+    c = 0;
+    #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
+    while (c < MAX_CYCLES && Serial.available()) {
+      c++;
+      if (!fifo_isfull_locked(&channelFIFO[CHANNEL_USB])) { fifo_push_locked(&channelFIFO[CHANNEL_USB], Serial.read()); }
+    }
+    #else
+    while (c < MAX_CYCLES && Serial.available()) {
+      c++;
+      if (!fifo_isfull(&channelFIFO[CHANNEL_USB])) { fifo_push(&channelFIFO[CHANNEL_USB], Serial.read()); }
+    }
+    #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true
-    while (
-      c < MAX_CYCLES &&
-      #if HAS_WIFI
-      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) || (wr_state >= WR_STATE_ON && wifi_remote_available()) )
-      #else
-      ( (bt_state != BT_STATE_CONNECTED && Serial.available()) || (bt_state == BT_STATE_CONNECTED && SerialBT.available()) )
-      #endif
-      )
-    #else
-    while (c < MAX_CYCLES && Serial.available())
-    #endif
-    {
+    c = 0;
+    while (c < MAX_CYCLES && bt_state == BT_STATE_CONNECTED && SerialBT.available()) {
       c++;
-
-      #if MCU_VARIANT != MCU_ESP32 && MCU_VARIANT != MCU_NRF52
-        if (!fifo_isfull_locked(&serialFIFO)) { fifo_push_locked(&serialFIFO, Serial.read()); }
-      #elif HAS_BLUETOOTH || HAS_BLE == true || HAS_WIFI
-        if      (bt_state == BT_STATE_CONNECTED) { if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, SerialBT.read()); } }
-        #if HAS_WIFI
-        else if (wifi_host_is_connected())       { if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, wifi_remote_read()); } }
-        #endif
-        else                                     { if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, Serial.read()); } }
-      #else
-        if (!fifo_isfull(&serialFIFO)) { fifo_push(&serialFIFO, Serial.read()); }
-      #endif
+      if (!fifo_isfull(&channelFIFO[CHANNEL_BT])) { fifo_push(&channelFIFO[CHANNEL_BT], SerialBT.read()); }
     }
+    #endif
+
+    #if HAS_WIFI == true
+    c = 0;
+    while (c < MAX_CYCLES && wifi_host_is_connected() && wifi_remote_available()) {
+      c++;
+      if (!fifo_isfull(&channelFIFO[CHANNEL_WIFI])) { fifo_push(&channelFIFO[CHANNEL_WIFI], wifi_remote_read()); }
+    }
+    #endif
 
     serial_buffering = false;
   }

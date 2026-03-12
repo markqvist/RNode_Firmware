@@ -58,6 +58,14 @@
   #define ADDR_CONF_PSK  0x21
   #define ADDR_CONF_IP   0x42
   #define ADDR_CONF_NM   0x46
+
+  // Beacon encryption config — stored in config region via config_addr()
+  // Primary region (eeprom_addr) is full past 0xBB; these use config space
+  // after WiFi config (SSID/PSK/IP/NM end at 0x49)
+  #define ADDR_BCN_OK    0x50  // Config valid flag (0x73 = valid) — 1 byte
+  #define ADDR_BCN_KEY   0x51  // Collector X25519 public key — 32 bytes (0x51-0x70)
+  #define ADDR_BCN_IHASH 0x71  // Collector identity hash — 16 bytes (0x71-0x80)
+  #define ADDR_BCN_DHASH 0x81  // Collector dest hash — 16 bytes (0x81-0x90)
   //////////////////////////////////
 
 #endif

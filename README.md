@@ -86,6 +86,14 @@ The RNode Firmware supports the following boards:
 - Homebrew RNodes based on Adafruit Feather ESP32 boards
 - Homebrew RNodes based on generic ESP32 boards
 
+## Tested Devices (GPS + Beacon branch)
+The following devices have been tested with GPS and beacon support on the `gps-beacon` branch:
+
+| Device | Band | GPS | LoRa | Beacon | Notes |
+|--------|------|-----|------|--------|-------|
+| Heltec LoRa32 v4 | 868 MHz | L76K | SX1262 | Yes | Reference device for GPS+beacon implementation |
+| LilyGo T-Beam Supreme S3 | 868 MHz | L76K | SX1262 | Yes | Requires SPI.begin fix in sx126x.cpp; upload via USB CDC (ttyACM), not CH340 (ttyUSB) |
+
 ## Supported Transceiver Modules
 The RNode Firmware supports all transceiver modules based on Semtech **SX1276**, **SX1278**, **SX1262**, **SX1268** and **SX1280** chips, that have an **SPI interface** and expose the relevant **DIO** interrupt pins from the chip.
 

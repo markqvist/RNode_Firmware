@@ -17,14 +17,8 @@
 
 import os
 import sys
-import RNS
-import json
 import hashlib
 import subprocess
-
-major_version = None
-minor_version = None
-target_version = None
 
 target_file = os.path.join(sys.argv[1])
 
@@ -39,7 +33,9 @@ if not from_device:
     part_hash = firmware_data[-32:]
 
     if calc_hash == part_hash:
-        print(RNS.hexrep(part_hash, delimit=False))
+        print(part_hash.hex())
+    else:
+        sys.exit("ERROR: Embedded hash does not match calculated hash")
 
 else:
     try:

@@ -19,11 +19,24 @@ ARDUINO_ESP_CORE_VER = 2.0.17
 # Version 3.2.0 of the Arduino ESP core is based on ESP-IDF v5.4.1
 # ARDUINO_ESP_CORE_VER = 3.2.0
 
+PORT ?= /dev/ttyACM4
+
 all: release
 
 clean:
 	-rm -r ./build
 	-rm ./Release/rnode_firmware*
+
+# Stop any process holding the serial port (e.g. rnsd)
+free-port:
+	@if fuser $(PORT) >/dev/null 2>&1; then \
+		echo "Stopping process on $(PORT)..."; \
+		kill $$(fuser $(PORT) 2>/dev/null | tr -d ' :') 2>/dev/null; \
+		sleep 2; \
+	fi
+
+test-kiss: free-port
+	@python3 test_kiss.py $(PORT)
 
 prep: prep-avr prep-esp32 prep-samd
 
@@ -41,6 +54,7 @@ prep-esp32:
 	arduino-cli lib install "Adafruit NeoPixel"
 	arduino-cli lib install "XPowersLib"
 	arduino-cli lib install "Crypto"
+	arduino-cli lib install "TinyGPSPlus"
 
 prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
@@ -97,6 +111,11 @@ firmware-tdeck:
 
 firmware-tbeam_supreme:
 	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x3D"
+
+deploy-tbeam_supreme: firmware-tbeam_supreme free-port
+	./flash_parts.sh $(PORT)
+	@sleep 3
+	rnodeconf $(PORT) --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
 
 firmware-lora32_v10: check_bt_buffers
 	arduino-cli compile --log --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x39\""
@@ -214,6 +233,15 @@ upload-heltec32_v4:
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32-s3 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
+deploy-heltec32_v4: firmware-heltec32_v4
+	python3 $(HOME)/.arduino15/packages/esp32/tools/esptool_py/4.5.1/esptool.py \
+		--chip esp32s3 --port /dev/ttyACM0 --baud 115200 --no-stub \
+		--before default_reset --after hard_reset write_flash -z \
+		--flash_mode dio --flash_freq 80m --flash_size 8MB \
+		0x10000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin
+	@sleep 3
+	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+
 upload-tdeck:
 	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:esp32s3
 	@sleep 1
@@ -221,12 +249,12 @@ upload-tdeck:
 	@sleep 3
 	python ./Release/esptool/esptool.py --chip esp32-s3 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
-upload-tbeam_supreme:
-	arduino-cli upload -p /dev/ttyACM0 --fqbn esp32:esp32:esp32s3
-	@sleep 1
-	rnodeconf /dev/ttyACM0 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+upload-tbeam_supreme: free-port
+	arduino-cli upload -p $(PORT) --fqbn esp32:esp32:esp32s3
 	@sleep 3
-	python ./Release/esptool/esptool.py --chip esp32-s3 --port /dev/ttyACM0 --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
+	rnodeconf $(PORT) --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+	@sleep 3
+	python ./Release/esptool/esptool.py --chip esp32-s3 --port $(PORT) --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x210000 ./Release/console_image.bin
 
 upload-rnode_ng_20:
 	arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:ttgo-lora32

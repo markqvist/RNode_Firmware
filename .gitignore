@@ -7,3 +7,6 @@ Release/*.zip
 Release/*.json
 Console/build
 build/*
+*.svd
+debug.cfg
+debug_custom.json
