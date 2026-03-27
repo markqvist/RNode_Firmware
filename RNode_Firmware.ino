@@ -21,15 +21,10 @@
   #include "XL9555.h"
   #include "CO5300.h"
 
-  // BHI260AP sensor hub — provides GPIO expansion for display/haptic/touch power
-  #include <SensorBHI260AP.hpp>
-  // Select BHI260AP GPIO firmware, then include the firmware selector
-  #define BOSCH_BHI260_GPIO
-  #include <BoschFirmware.h>
-  SensorBHI260AP *bhi260 = NULL;
-  bool bhi260_ready = false;
-  uint8_t bhi260_product_id = 0;
-  uint8_t bhi260_i2c_err = 0xFF;
+  // I2C diagnostic storage
+  uint8_t i2c_scan_results[16];
+  uint8_t i2c_scan_count = 0;
+  bool i2c_wire_ok = false;
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -290,34 +285,39 @@ void setup() {
       //   beacon_wake_cycle();
       // }
 
-      // Initialize BHI260AP sensor hub with GPIO firmware
-      // This provides GPIO expansion for display power, haptic, and touch reset
-      delay(500);  // Allow BHI260AP to boot after ALDO4 power-on
-
-      // Probe BHI260AP at 0x28
-      Wire.beginTransmission(0x28);
-      bhi260_i2c_err = Wire.endTransmission();
-
-      // Initialize BHI260AP with GPIO firmware
-      bhi260 = new SensorBHI260AP();
-      Wire.setClock(1000000UL);  // 1MHz for firmware upload
-      bhi260->setPins(-1);
-      bhi260->setFirmware(bosch_firmware_image, bosch_firmware_size, false);
-      bhi260->setBootFromFlash(false);
-      if (bhi260->begin(Wire)) {
-        bhi260_ready = true;
-        bhi260->digitalWrite(SensorBHI260AP::M2SCX, HIGH);   // DISP_EN
-        delay(20);
-        bhi260->digitalWrite(SensorBHI260AP::M2SDX, HIGH);   // DISP_RST release
-        delay(200);
-        bhi260->digitalWrite(SensorBHI260AP::M2SDX, LOW);    // DISP_RST pulse
-        delay(300);
-        bhi260->digitalWrite(SensorBHI260AP::M2SDX, HIGH);   // DISP_RST release
-        delay(200);
-        bhi260->digitalWrite(SensorBHI260AP::M2SDI, HIGH);   // TOUCH_RST
-        bhi260->digitalWrite(SensorBHI260AP::MCSB4, HIGH);   // DRV_EN (haptic)
+      // Recovery: I2C bus may be stuck after deep sleep interrupted a transaction.
+      // Toggle SCL manually to clock out any stuck slave device.
+      gpio_deep_sleep_hold_dis();
+      gpio_reset_pin(GPIO_NUM_2);
+      gpio_reset_pin(GPIO_NUM_3);
+      pinMode(2, OUTPUT);    // SCL
+      pinMode(3, INPUT_PULLUP);  // SDA — let it float with pullup
+      for (int i = 0; i < 16; i++) {
+        digitalWrite(2, LOW);
+        delayMicroseconds(5);
+        digitalWrite(2, HIGH);
+        delayMicroseconds(5);
       }
-      Wire.setClock(400000UL);   // Restore normal I2C speed
+      // Send STOP condition
+      pinMode(3, OUTPUT);
+      digitalWrite(3, LOW);
+      delayMicroseconds(5);
+      digitalWrite(2, HIGH);
+      delayMicroseconds(5);
+      digitalWrite(3, HIGH);
+      delay(10);
+      // Now try Wire
+      i2c_wire_ok = Wire.begin(3, 2, 100000);
+      delay(200);
+
+      // I2C bus scan for peripheral discovery
+      i2c_scan_count = 0;
+      for (uint8_t addr = 0x10; addr < 0x78; addr++) {
+        Wire.beginTransmission(addr);
+        if (Wire.endTransmission() == 0 && i2c_scan_count < 16) {
+          i2c_scan_results[i2c_scan_count++] = addr;
+        }
+      }
     #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true
