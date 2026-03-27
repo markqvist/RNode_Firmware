@@ -31,7 +31,7 @@
 
   bool display_blanked = false;
   uint32_t last_unblank_event = 0;
-  uint32_t display_blanking_timeout = 15000;
+  uint32_t display_blanking_timeout = 0;  // Disabled until button wake is implemented
 
   // Partial framebuffer for clock region (410 x 60 = ~49KB, fits in DMA memory)
   #define CLOCK_FB_W CO5300_WIDTH
@@ -51,6 +51,9 @@
   bool display_init() {
     if (!co5300_init()) return false;
     co5300_set_brightness(128);
+
+    // Disable blanking until button wake is implemented
+    display_blanking_enabled = false;
 
     // Allocate partial framebuffer for clock region (PSRAM preferred for large buffers)
     clock_fb = (uint16_t *)heap_caps_malloc(CLOCK_FB_W * CLOCK_FB_H * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -101,10 +104,11 @@
     memset(clock_fb, 0, CLOCK_FB_W * CLOCK_FB_H * 2);
 
     char status[64];
-    snprintf(status, sizeof(status), "%s  %d%%  %d sats",
+    snprintf(status, sizeof(status), "%s  %d%%  %dsats  %lus",
              radio_online ? "RADIO" : "idle",
              (int)battery_percent,
-             gps_sats);
+             gps_sats,
+             millis() / 1000);
 
     co5300_draw_string(clock_fb, CLOCK_FB_W, CLOCK_FB_H,
                        10, 15, status, CO5300_GREY, &Org_01);
