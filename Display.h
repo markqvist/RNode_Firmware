@@ -52,8 +52,9 @@
     if (!co5300_init()) return false;
     co5300_set_brightness(128);
 
-    // Disable blanking until button wake is implemented
-    display_blanking_enabled = false;
+    // Enable blanking — touch input now available to unblank
+    display_blanking_enabled = true;
+    display_blanking_timeout = 10000;  // 10 seconds
 
     // Allocate partial framebuffer for clock region (PSRAM preferred for large buffers)
     clock_fb = (uint16_t *)heap_caps_malloc(CLOCK_FB_W * CLOCK_FB_H * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);

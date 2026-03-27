@@ -28,6 +28,14 @@
   #include <BoschFirmware.h>
   SensorBHI260AP *bhi260 = NULL;
   bool bhi260_ready = false;
+
+  // CST9217 capacitive touch panel
+  #include <touch/TouchDrvCST92xx.h>
+  TouchDrvCST92xx touch;
+  bool touch_ready = false;
+  volatile bool touch_irq = false;
+  #define TP_INT 12
+  void IRAM_ATTR touch_isr() { touch_irq = true; }
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -284,9 +292,17 @@ void setup() {
       xl9555_enable_lora_antenna();
       xl9555_set(EXPANDS_DRV_EN, true);   // Enable haptic motor driver
       xl9555_set(EXPANDS_DISP_EN, true);  // Enable display power gate
-      delay(10);
+      xl9555_set(EXPANDS_TOUCH_RST, true);  // Release touch reset
+      delay(100);
       drv2605_init();
       if (drv2605_ready) drv2605_play(HAPTIC_SHARP_CLICK);  // Boot feedback
+
+      // Init touch panel
+      touch.setPins(-1, TP_INT);  // No reset pin (handled by XL9555), INT on GPIO 12
+      if (touch.begin(Wire, 0x1A, I2C_SDA, I2C_SCL)) {
+        touch_ready = true;
+        attachInterrupt(TP_INT, touch_isr, FALLING);
+      }
 
       // BHI260AP init deferred — firmware upload takes ~10s at 1MHz I2C
       // and blocks serial communication during boot. Will be initialized
@@ -1995,6 +2011,21 @@ void loop() {
 
   #if HAS_INPUT
     input_read();
+  #endif
+
+  // Touch panel event handling
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
+    if (touch_ready && touch_irq) {
+      touch_irq = false;
+      int16_t tx, ty;
+      if (touch.getPoint(&tx, &ty, 1) > 0) {
+        // Touch detected — unblank display and update activity
+        #if HAS_DISPLAY
+          display_unblank();
+        #endif
+        last_unblank_event = millis();
+      }
+    }
   #endif
 
   // Deferred BHI260AP init — runs once after boot is complete
