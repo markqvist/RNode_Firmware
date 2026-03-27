@@ -20,6 +20,16 @@
 #if BOARD_MODEL == BOARD_TWATCH_ULT
   #include "XL9555.h"
   #include "CO5300.h"
+
+  // BHI260AP sensor hub — provides GPIO expansion for display/haptic/touch power
+  #include <SensorBHI260AP.hpp>
+  // Select BHI260AP GPIO firmware, then include the firmware selector
+  #define BOSCH_BHI260_GPIO
+  #include <BoschFirmware.h>
+  SensorBHI260AP *bhi260 = NULL;
+  bool bhi260_ready = false;
+  uint8_t bhi260_product_id = 0;
+  uint8_t bhi260_i2c_err = 0xFF;
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -274,15 +284,40 @@ void setup() {
       xl9555_init();
       xl9555_enable_lora_antenna();
 
-      // Check if this is a beacon timer wakeup — take fast path if so
-      if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
-        beacon_wake_cycle();  // Does not return — transmits and sleeps again
-      }
+      // Beacon timer wakeup — disabled pending proper cold boot detection
+      // TODO: Re-enable with reliable deep sleep vs cold boot discrimination
+      // if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
+      //   beacon_wake_cycle();
+      // }
 
-      // Normal boot: enable display and haptics
-      xl9555_set(EXPANDS_DRV_EN, true);
-      xl9555_set(EXPANDS_DISP_EN, true);
-      xl9555_set(EXPANDS_TOUCH_RST, true);
+      // Initialize BHI260AP sensor hub with GPIO firmware
+      // This provides GPIO expansion for display power, haptic, and touch reset
+      delay(500);  // Allow BHI260AP to boot after ALDO4 power-on
+
+      // Probe BHI260AP at 0x28
+      Wire.beginTransmission(0x28);
+      bhi260_i2c_err = Wire.endTransmission();
+
+      // Initialize BHI260AP with GPIO firmware
+      bhi260 = new SensorBHI260AP();
+      Wire.setClock(1000000UL);  // 1MHz for firmware upload
+      bhi260->setPins(-1);
+      bhi260->setFirmware(bosch_firmware_image, bosch_firmware_size, false);
+      bhi260->setBootFromFlash(false);
+      if (bhi260->begin(Wire)) {
+        bhi260_ready = true;
+        bhi260->digitalWrite(SensorBHI260AP::M2SCX, HIGH);   // DISP_EN
+        delay(20);
+        bhi260->digitalWrite(SensorBHI260AP::M2SDX, HIGH);   // DISP_RST release
+        delay(200);
+        bhi260->digitalWrite(SensorBHI260AP::M2SDX, LOW);    // DISP_RST pulse
+        delay(300);
+        bhi260->digitalWrite(SensorBHI260AP::M2SDX, HIGH);   // DISP_RST release
+        delay(200);
+        bhi260->digitalWrite(SensorBHI260AP::M2SDI, HIGH);   // TOUCH_RST
+        bhi260->digitalWrite(SensorBHI260AP::MCSB4, HIGH);   // DRV_EN (haptic)
+      }
+      Wire.setClock(400000UL);   // Restore normal I2C speed
     #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true

@@ -742,7 +742,7 @@
       #define HAS_BUSY true
       #define HAS_TCXO true
 
-      #define HAS_DISPLAY false  // CO5300 QSPI driver written but not yet functional
+      #define HAS_DISPLAY true
       #define HAS_CONSOLE true
       #define HAS_WIFI true
       #define HAS_BLUETOOTH false
