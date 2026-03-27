@@ -79,28 +79,34 @@ void gps_power_off() {
 
 void gps_setup() {
   gps_power_on();
-  delay(1000);  // Allow L76K time to boot after reset
+  delay(1000);  // Allow GPS module time to boot
   // PIN_GPS_TX/RX named from ESP32 perspective:
   // PIN_GPS_RX = ESP32 receives FROM GPS module
   // PIN_GPS_TX = ESP32 transmits TO GPS module
   gps_serial.begin(GPS_BAUD_RATE, SERIAL_8N1, PIN_GPS_RX, PIN_GPS_TX);
   delay(250);
 
-  // L76K init: force internal antenna (ceramic patch)
-  gps_serial.print("$PCAS15,0*19\r\n");
-  delay(250);
-  // Hot start — use cached ephemeris/almanac if available in L76K backup RAM
-  gps_serial.print("$PCAS10,0*1C\r\n");
-  delay(500);
-  // Enable GPS+GLONASS+BeiDou
-  gps_serial.print("$PCAS04,7*1E\r\n");
-  delay(250);
-  // Output GGA, GSA, GSV, and RMC
-  gps_serial.print("$PCAS03,1,0,1,1,1,0,0,0,0,0,,,0,0*02\r\n");
-  delay(250);
-  // Set navigation mode to Portable (general purpose, works stationary and moving)
-  gps_serial.print("$PCAS11,0*1D\r\n");
-  delay(250);
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
+    // MIA-M10Q (u-blox): outputs NMEA at 38400 baud by default.
+    // GGA, GSA, GSV, RMC are enabled out of the box.
+    // No vendor-specific init commands needed.
+  #else
+    // L76K init: force internal antenna (ceramic patch)
+    gps_serial.print("$PCAS15,0*19\r\n");
+    delay(250);
+    // Hot start — use cached ephemeris/almanac if available in L76K backup RAM
+    gps_serial.print("$PCAS10,0*1C\r\n");
+    delay(500);
+    // Enable GPS+GLONASS+BeiDou
+    gps_serial.print("$PCAS04,7*1E\r\n");
+    delay(250);
+    // Output GGA, GSA, GSV, and RMC
+    gps_serial.print("$PCAS03,1,0,1,1,1,0,0,0,0,0,,,0,0*02\r\n");
+    delay(250);
+    // Set navigation mode to Portable (general purpose, works stationary and moving)
+    gps_serial.print("$PCAS11,0*1D\r\n");
+    delay(250);
+  #endif
 
   gps_ready = true;
 }

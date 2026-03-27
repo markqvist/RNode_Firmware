@@ -19,7 +19,7 @@
 bool pmu_temp_sensor_ready = false;
 float pmu_temperature = PMU_TEMP_MIN-1;
 
-#if BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
+#if BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TWATCH_ULT
   #include <XPowersLib.h>
   XPowersLibInterface* PMU = NULL;
 
@@ -36,16 +36,53 @@ float pmu_temperature = PMU_TEMP_MIN-1;
 
   void disablePeripherals() {
     if (PMU) {
-      // GNSS RTC PowerVDD
-      PMU->enablePowerOutput(XPOWERS_VBACKUP);
-
-      // LoRa VDD
-      PMU->disablePowerOutput(XPOWERS_ALDO2);
-
-      // GNSS VDD
-      PMU->disablePowerOutput(XPOWERS_ALDO3);
+      #if BOARD_MODEL == BOARD_TWATCH_ULT
+        PMU->disablePowerOutput(XPOWERS_ALDO3);  // LoRa VDD
+        PMU->disablePowerOutput(XPOWERS_BLDO1);  // GPS VDD
+      #else
+        // GNSS RTC PowerVDD
+        PMU->enablePowerOutput(XPOWERS_VBACKUP);
+        // LoRa VDD
+        PMU->disablePowerOutput(XPOWERS_ALDO2);
+        // GNSS VDD
+        PMU->disablePowerOutput(XPOWERS_ALDO3);
+      #endif
     }
   }
+
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
+    void power_gps(bool on)     { if (PMU) { if (on) PMU->enablePowerOutput(XPOWERS_BLDO1); else PMU->disablePowerOutput(XPOWERS_BLDO1); } }
+    void power_radio(bool on)   { if (PMU) { if (on) PMU->enablePowerOutput(XPOWERS_ALDO3); else PMU->disablePowerOutput(XPOWERS_ALDO3); } }
+    void power_nfc(bool on)     { if (PMU) { if (on) PMU->enablePowerOutput(XPOWERS_DLDO1); else PMU->disablePowerOutput(XPOWERS_DLDO1); } }
+    void power_speaker(bool on) { if (PMU) { if (on) PMU->enablePowerOutput(XPOWERS_BLDO2); else PMU->disablePowerOutput(XPOWERS_BLDO2); } }
+    void power_sensor(bool on)  { if (PMU) { if (on) PMU->enablePowerOutput(XPOWERS_ALDO4); else PMU->disablePowerOutput(XPOWERS_ALDO4); } }
+    void power_sd(bool on)      { if (PMU) { if (on) PMU->enablePowerOutput(XPOWERS_ALDO1); else PMU->disablePowerOutput(XPOWERS_ALDO1); } }
+
+    void pmu_prepare_sleep() {
+      if (!PMU) return;
+      PMU->disableIRQ(XPOWERS_AXP2101_ALL_IRQ);
+      PMU->enableIRQ(XPOWERS_AXP2101_PKEY_SHORT_IRQ);
+
+      // Disable measurement ADCs
+      PMU->disableBattDetection();
+      PMU->disableVbusVoltageMeasure();
+      PMU->disableBattVoltageMeasure();
+      PMU->disableSystemVoltageMeasure();
+      PMU->disableTSPinMeasure();
+
+      PMU->enableSleep();
+
+      // Disable peripheral rails (NOT ALDO2 — causes 600µA anomaly!)
+      power_sd(false);
+      power_radio(false);
+      power_sensor(false);
+      power_gps(false);
+      power_speaker(false);
+      power_nfc(false);
+
+      PMU->clearIrqStatus();
+    }
+  #endif
 
   bool pmuInterrupt;
   void setPmuFlag()
@@ -308,7 +345,7 @@ void measure_battery() {
       // }
     }
 
-  #elif BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
+  #elif BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TWATCH_ULT
     if (PMU) {
       float discharge_current = 0;
       float charge_current    = 0;
@@ -644,7 +681,80 @@ bool init_pmu() {
     PMU->enableBattVoltageMeasure();
 
 
-    return true; 
+    return true;
+  #elif BOARD_MODEL == BOARD_TWATCH_ULT
+    Wire.begin(I2C_SDA, I2C_SCL);
+
+    if (!PMU) {
+        PMU = new XPowersAXP2101(PMU_WIRE_PORT);
+        if (!PMU->init()) {
+            delete PMU;
+            PMU = NULL;
+        }
+    }
+
+    if (!PMU) {
+      return false;
+    }
+
+    // Set voltages for all power rails
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO1, 3300);  // SD card
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO2, 3300);  // Display
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO3, 3300);  // LoRa radio
+    PMU->setPowerChannelVoltage(XPOWERS_ALDO4, 1800);  // BHI260AP sensor (1.8V!)
+    PMU->setPowerChannelVoltage(XPOWERS_BLDO1, 3300);  // GPS
+    PMU->setPowerChannelVoltage(XPOWERS_BLDO2, 3300);  // Speaker
+    PMU->setPowerChannelVoltage(XPOWERS_VBACKUP, 3300); // RTC button battery
+
+    // Enable needed rails
+    PMU->enablePowerOutput(XPOWERS_ALDO1);   // SD card
+    PMU->enablePowerOutput(XPOWERS_ALDO2);   // Display
+    PMU->enablePowerOutput(XPOWERS_ALDO3);   // LoRa radio
+    PMU->enablePowerOutput(XPOWERS_ALDO4);   // IMU sensor
+    PMU->enablePowerOutput(XPOWERS_BLDO1);   // GPS
+    PMU->enablePowerOutput(XPOWERS_BLDO2);   // Speaker
+    PMU->enablePowerOutput(XPOWERS_DLDO1);   // NFC
+    PMU->enablePowerOutput(XPOWERS_VBACKUP); // RTC battery
+
+    // Disable unused rails
+    PMU->disablePowerOutput(XPOWERS_DCDC2);
+    PMU->disablePowerOutput(XPOWERS_DCDC3);
+    PMU->disablePowerOutput(XPOWERS_DCDC4);
+    PMU->disablePowerOutput(XPOWERS_DCDC5);
+
+    // Protect ESP32-S3 main power
+    PMU->setProtectedChannel(XPOWERS_DCDC1);
+
+    // Configure charging: 4.2V target, 500mA current
+    PMU->setChargeTargetVoltage(XPOWERS_AXP2101_CHG_VOL_4V2);
+    PMU->setChargerConstantCurr(XPOWERS_AXP2101_CHG_CUR_500MA);
+    PMU->setChargingLedMode(XPOWERS_CHG_LED_OFF);
+
+    // Set power button timing
+    PMU->setPowerKeyPressOffTime(XPOWERS_POWEROFF_4S);
+    PMU->setPowerKeyPressOnTime(XPOWERS_POWERON_128MS);
+
+    // Enable battery and temperature monitoring
+    PMU->enableBattDetection();
+    PMU->enableVbusVoltageMeasure();
+    PMU->enableBattVoltageMeasure();
+    PMU->enableSystemVoltageMeasure();
+    PMU->enableTSPinMeasure();
+
+    // Configure interrupts
+    PMU->disableIRQ(XPOWERS_AXP2101_ALL_IRQ);
+    PMU->enableIRQ(XPOWERS_AXP2101_PKEY_SHORT_IRQ |
+                    XPOWERS_AXP2101_PKEY_LONG_IRQ |
+                    XPOWERS_AXP2101_VBUS_INSERT_IRQ |
+                    XPOWERS_AXP2101_VBUS_REMOVE_IRQ |
+                    XPOWERS_AXP2101_BAT_CHG_START_IRQ |
+                    XPOWERS_AXP2101_BAT_CHG_DONE_IRQ);
+    PMU->clearIrqStatus();
+
+    pinMode(PMU_IRQ, INPUT_PULLUP);
+    attachInterrupt(PMU_IRQ, setPmuFlag, FALLING);
+
+    return true;
   #else
     return false;
   #endif

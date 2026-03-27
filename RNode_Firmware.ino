@@ -17,6 +17,11 @@
 #include <SPI.h>
 #include "Utilities.h"
 
+#if BOARD_MODEL == BOARD_TWATCH_ULT
+  #include "XL9555.h"
+  #include "CO5300.h"
+#endif
+
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
 FIFOBuffer   channelFIFO[NUM_CHANNELS];
 uint8_t      channelBuffer[NUM_CHANNELS][CHANNEL_FIFO_SIZE + 1];
@@ -135,7 +140,7 @@ void setup() {
     boot_seq();
   #endif
 
-  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114 && BOARD_MODEL != BOARD_TECHO && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1 && BOARD_MODEL != BOARD_HELTEC32_V4
+  #if BOARD_MODEL != BOARD_RAK4631 && BOARD_MODEL != BOARD_HELTEC_T114 && BOARD_MODEL != BOARD_TECHO && BOARD_MODEL != BOARD_T3S3 && BOARD_MODEL != BOARD_TBEAM_S_V1 && BOARD_MODEL != BOARD_HELTEC32_V4 && BOARD_MODEL != BOARD_TWATCH_ULT
     // Some boards need to wait until the hardware UART is set up before booting
     // the full firmware. In the case of the RAK4631 and Heltec T114, the line below will wait
     // until a serial connection is actually established with a master. Thus, it
@@ -151,8 +156,8 @@ void setup() {
   #endif
 
   #if HAS_NP == false
-    pinMode(pin_led_rx, OUTPUT);
-    pinMode(pin_led_tx, OUTPUT);
+    if (pin_led_rx >= 0) pinMode(pin_led_rx, OUTPUT);
+    if (pin_led_tx >= 0) pinMode(pin_led_tx, OUTPUT);
   #endif
 
   #if HAS_TCXO == true
@@ -263,6 +268,21 @@ void setup() {
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
     #if HAS_PMU == true
       pmu_ready = init_pmu();
+    #endif
+
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+      xl9555_init();
+      xl9555_enable_lora_antenna();
+
+      // Check if this is a beacon timer wakeup — take fast path if so
+      if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
+        beacon_wake_cycle();  // Does not return — transmits and sleeps again
+      }
+
+      // Normal boot: enable display and haptics
+      xl9555_set(EXPANDS_DRV_EN, true);
+      xl9555_set(EXPANDS_DISP_EN, true);
+      xl9555_set(EXPANDS_TOUCH_RST, true);
     #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true
@@ -1927,6 +1947,15 @@ void loop() {
       #if HAS_RTC == true
         if (gps_has_fix) rtc_sync_from_gps(gps_parser);
       #endif
+
+      // Enter beacon sleep cycle when in standalone mode after beacon TX
+      #if BOARD_MODEL == BOARD_TWATCH_ULT
+        if (beacon_mode_active && beacon_gate == 6 &&
+            (last_host_activity == 0 || (millis() - last_host_activity >= BEACON_NO_HOST_TIMEOUT_MS))) {
+          // Beacon was just sent and no host is connected — sleep until next interval
+          sleep_now();
+        }
+      #endif
     }
   #endif
 
@@ -1964,6 +1993,72 @@ void loop() {
 
 }
 
+#if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_GPS == true
+// Minimal boot path for beacon timer wakeup.
+// Inits only GPS + LoRa, waits for fix, transmits beacon, sleeps again.
+// Called from setup() before BLE/display init. Does not return.
+void beacon_wake_cycle() {
+  // GPS is not yet initialized at this point — init it now
+  gps_setup();
+
+  // Load beacon crypto config from EEPROM
+  if (EEPROM.read(config_addr(ADDR_BCN_OK)) == CONF_OK_BYTE) {
+    for (int i = 0; i < 32; i++)
+      collector_pub_key[i] = EEPROM.read(config_addr(ADDR_BCN_KEY + i));
+    for (int i = 0; i < 16; i++)
+      collector_identity_hash[i] = EEPROM.read(config_addr(ADDR_BCN_IHASH + i));
+    for (int i = 0; i < 16; i++)
+      collector_dest_hash[i] = EEPROM.read(config_addr(ADDR_BCN_DHASH + i));
+    beacon_crypto_configured = true;
+  }
+  lxmf_init_identity();
+
+  // Wait for GPS fix (up to 60 seconds for warm start)
+  uint32_t fix_start = millis();
+  while (!gps_has_fix && (millis() - fix_start < 60000)) {
+    gps_update();
+    delay(100);
+  }
+
+  // Attempt beacon transmission if we have a fix
+  if (gps_has_fix) {
+    last_host_activity = 0;         // ensure beacon_update doesn't think host is active
+    last_beacon_tx = 0;             // force immediate beacon
+    beacon_update();
+  }
+
+  // Go back to sleep with timer for next beacon cycle
+  gps_serial.end();
+  stopRadio();
+  xl9555_sleep_prepare();
+  pmu_prepare_sleep();
+  Serial1.end();
+  SPI.end();
+  Wire.end();
+
+  // Set GPIOs to open drain
+  const uint8_t sleep_pins[] = {
+    DISP_D0, DISP_D1, DISP_D2, DISP_D3,
+    DISP_SCK, DISP_CS, DISP_TE, DISP_RST,
+    RTC_INT, NFC_INT, SENSOR_INT, NFC_CS,
+    I2S_BCLK, I2S_WCLK, I2S_DOUT, SD_CS,
+    I2C_SDA, I2C_SCL,
+    pin_mosi, pin_miso, pin_sclk, pin_cs,
+    PIN_GPS_TX, PIN_GPS_RX, PIN_GPS_PPS,
+    pin_reset, pin_busy, pin_dio,
+  };
+  for (auto p : sleep_pins) {
+    gpio_reset_pin((gpio_num_t)p);
+    pinMode(p, OPEN_DRAIN);
+  }
+
+  // Timer wakeup for next beacon, also allow PMU button to wake
+  esp_sleep_enable_timer_wakeup((uint64_t)BEACON_INTERVAL_MS * 1000ULL);
+  esp_sleep_enable_ext1_wakeup(1ULL << PMU_IRQ, ESP_EXT1_WAKEUP_ANY_LOW);
+  esp_deep_sleep_start();
+}
+#endif
+
 void sleep_now() {
   #if HAS_SLEEP == true
     stopRadio(); // TODO: Check this on all platforms
@@ -1990,8 +2085,58 @@ void sleep_now() {
           delay(100);
         }
       #endif
-      esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
-      esp_deep_sleep_start();
+
+      #if BOARD_MODEL == BOARD_TWATCH_ULT
+        // T-Watch Ultra deep sleep sequence
+        // Following LilyGo's proven power-down order
+
+        #if HAS_GPS
+          gps_serial.end();
+        #endif
+
+        // XL9555: disable display and haptics
+        xl9555_sleep_prepare();
+
+        // PMU: disable peripheral rails, enable sleep mode
+        pmu_prepare_sleep();
+
+        // Close all buses
+        Serial1.end();
+        SPI.end();
+        Wire.end();
+
+        // Set all unused GPIOs to OPEN_DRAIN to prevent current leaks
+        const uint8_t sleep_pins[] = {
+          DISP_D0, DISP_D1, DISP_D2, DISP_D3,
+          DISP_SCK, DISP_CS, DISP_TE, DISP_RST,
+          RTC_INT, NFC_INT, SENSOR_INT, NFC_CS,
+          I2S_BCLK, I2S_WCLK, I2S_DOUT, SD_CS,
+          I2C_SDA, I2C_SCL,
+          pin_mosi, pin_miso, pin_sclk, pin_cs,
+          PIN_GPS_TX, PIN_GPS_RX, PIN_GPS_PPS,
+          pin_reset, pin_busy, pin_dio,
+        };
+        for (auto p : sleep_pins) {
+          gpio_reset_pin((gpio_num_t)p);
+          pinMode(p, OPEN_DRAIN);
+        }
+
+        // Always allow PMU button wakeup
+        esp_sleep_enable_ext1_wakeup(1ULL << PMU_IRQ, ESP_EXT1_WAKEUP_ANY_LOW);
+
+        // If in beacon mode, also set timer wakeup for next beacon cycle
+        #if HAS_GPS == true
+          if (beacon_mode_active) {
+            esp_sleep_enable_timer_wakeup((uint64_t)BEACON_INTERVAL_MS * 1000ULL);
+          }
+        #endif
+
+        esp_deep_sleep_start();
+
+      #else
+        esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
+        esp_deep_sleep_start();
+      #endif
     #elif PLATFORM == PLATFORM_NRF52
       #if BOARD_MODEL == BOARD_HELTEC_T114
         npset(0,0,0);

@@ -128,7 +128,7 @@ bool sx126x::preInit() {
   pinMode(_ss, OUTPUT);
   digitalWrite(_ss, HIGH);
   
-  #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_XIAO_S3 || BOARD_MODEL == BOARD_TBEAM_S_V1
+  #if BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_XIAO_S3 || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TWATCH_ULT
     SPI.begin(pin_sclk, pin_miso, pin_mosi, pin_cs);
   #elif BOARD_MODEL == BOARD_TECHO
     SPI.setPins(pin_miso, pin_sclk, pin_mosi);
@@ -337,7 +337,7 @@ int sx126x::begin(long frequency) {
   // Default after reset is LDO-only. Heltec V4 (and most SX1262
   // boards) have the DC-DC inductor on VREGSW and need this set
   // before TCXO/calibration per datasheet Section 13.1.
-  #if BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TDECK
+  #if BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_TWATCH_ULT
     uint8_t reg_mode = 0x01; // DC-DC + LDO
     executeOpcode(OP_REGULATOR_MODE_6X, &reg_mode, 1);
   #endif
@@ -684,6 +684,8 @@ void sx126x::enableTCXO() {
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #elif BOARD_MODEL == BOARD_HELTEC32_V4
       uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0xC8, 0x00}; // 800ms timeout
+    #elif BOARD_MODEL == BOARD_TWATCH_ULT
+      uint8_t buf[4] = {MODE_TCXO_1_8V_6X, 0x00, 0x00, 0xFF};
     #endif
     executeOpcode(OP_DIO3_TCXO_CTRL_6X, buf, 4);
     delay(10); // Allow TCXO to stabilize

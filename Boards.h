@@ -70,6 +70,11 @@
   #define MODEL_DE            0xDE // Xiao ESP32S3 with Wio-SX1262 module, 433 MHz
   #define MODEL_DD            0xDD // Xiao ESP32S3 with Wio-SX1262 module, 868 MHz
 
+  #define PRODUCT_TWATCH_ULT  0xEC
+  #define BOARD_TWATCH_ULT    0x45
+  #define MODEL_D5            0xD5 // LilyGO T-Watch Ultra, 433 MHz
+  #define MODEL_DA            0xDA // LilyGO T-Watch Ultra, 868 MHz
+
   #define PRODUCT_T32_10      0xB2
   #define BOARD_LORA32_V1_0   0x39
   #define MODEL_BA            0xBA // LilyGO T3 v1.0, 433 MHz
@@ -729,6 +734,94 @@
           const int pin_led_tx = 48;
         #endif
       #endif
+
+    #elif BOARD_MODEL == BOARD_TWATCH_ULT
+      #define IS_ESP32S3 true
+      #define MODEM SX1262
+      #define DIO2_AS_RF_SWITCH true
+      #define HAS_BUSY true
+      #define HAS_TCXO true
+
+      #define HAS_DISPLAY false  // CO5300 QSPI driver written but not yet functional
+      #define HAS_CONSOLE true
+      #define HAS_WIFI true
+      #define HAS_BLUETOOTH false
+      #define HAS_BLE true
+      #define HAS_PMU true
+      #define HAS_NP false
+      #define HAS_SD true
+      #define HAS_EEPROM true
+
+      #define HAS_INPUT true
+      #define HAS_SLEEP true
+      #define PIN_WAKEUP GPIO_NUM_0
+      #define WAKEUP_LEVEL 0
+
+      #define HAS_GPS true
+      #define PIN_GPS_TX  43
+      #define PIN_GPS_RX  44
+      #define PIN_GPS_PPS 13
+      #define GPS_BAUD_RATE 38400
+
+      #define HAS_RTC true
+
+      // I2C bus (shared: PMU, touch, IMU, RTC, haptic, GPIO expander)
+      #define PMU_IRQ 7
+      #define I2C_SCL 2
+      #define I2C_SDA 3
+
+      // LoRa SPI (shared bus with NFC and SD)
+      const int pin_cs    = 36;
+      const int pin_reset = 47;
+      const int pin_sclk  = 35;
+      const int pin_mosi  = 34;
+      const int pin_miso  = 33;
+      const int pin_tcxo_enable = -1;
+      const int pin_dio   = 14;
+      const int pin_busy  = 48;
+
+      // Display (CO5300 QSPI)
+      #define DISP_CS    41
+      #define DISP_RST   37
+      #define DISP_SCK   40
+      #define DISP_D0    38
+      #define DISP_D1    39
+      #define DISP_D2    42
+      #define DISP_D3    45
+      #define DISP_TE    6
+      #define DISP_W     410
+      #define DISP_H     502
+
+      // Touch (CST9217, I2C addr 0x1A)
+      // INT and RST managed via XL9555 GPIO expander
+
+      // IMU (BHI260AP, I2C addr 0x28)
+      #define SENSOR_INT 8
+
+      // RTC (PCF85063A, I2C addr 0x51)
+      #define RTC_INT 1
+
+      // NFC (ST25R3916, shared SPI bus)
+      #define NFC_CS  4
+      #define NFC_INT 5
+
+      // SD card (shared SPI bus)
+      const int SD_MISO = 33;
+      const int SD_MOSI = 34;
+      const int SD_CLK  = 35;
+      const int SD_CS   = 21;
+
+      // Audio (MAX98357A I2S)
+      #define I2S_BCLK 9
+      #define I2S_WCLK 10
+      #define I2S_DOUT 11
+
+      // Buttons
+      const int pin_btn_usr1 = 0;
+
+      // No discrete LEDs on watch
+      const int pin_led_rx = -1;
+      const int pin_led_tx = -1;
 
     #else
       #error An unsupported ESP32 board was selected. Cannot compile RNode firmware.

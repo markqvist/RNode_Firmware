@@ -262,6 +262,13 @@ uint8_t boot_vector = 0x00;
 		void led_tx_off() { }
 		void led_id_on()  { }
 		void led_id_off() { }
+	#elif BOARD_MODEL == BOARD_TWATCH_ULT
+		void led_rx_on()  { }
+		void led_rx_off() {	}
+		void led_tx_on()  { }
+		void led_tx_off() { }
+		void led_id_on()  { }
+		void led_id_off() { }
 	#elif BOARD_MODEL == BOARD_LORA32_V1_0
 		#if defined(EXTERNAL_LEDS)
 			void led_rx_on()  { digitalWrite(pin_led_rx, HIGH); }
@@ -1202,7 +1209,7 @@ void kiss_indicate_fbstate() {
 void kiss_indicate_fb() {
 	serial_write(FEND);
 	serial_write(CMD_FB_READ);
-	#if HAS_DISPLAY
+	#if HAS_DISPLAY && BOARD_MODEL != BOARD_TWATCH_ULT
 		for (int i = 0; i < 512; i++) {
 			uint8_t byte = fb[i];
 			escaped_serial_write(byte);
@@ -1216,7 +1223,7 @@ void kiss_indicate_fb() {
 void kiss_indicate_disp() {
 	serial_write(FEND);
 	serial_write(CMD_DISP_READ);
-	#if HAS_DISPLAY
+	#if HAS_DISPLAY && BOARD_MODEL != BOARD_TWATCH_ULT
 		uint8_t *da = disp_area.getBuffer();
 		uint8_t *sa = stat_area.getBuffer();
 		for (int i = 0; i < 512; i++) { escaped_serial_write(da[i]); }
@@ -1680,7 +1687,7 @@ bool eeprom_product_valid() {
 	#if PLATFORM == PLATFORM_AVR
 	if (rval == PRODUCT_RNODE || rval == PRODUCT_HMBRW) {
 	#elif PLATFORM == PLATFORM_ESP32
-	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3 || rval == PRODUCT_H32_V4 || rval == PRODUCT_TDECK_V1 || rval == PRODUCT_TBEAM_S_V1  || rval == PRODUCT_XIAO_S3) {
+	if (rval == PRODUCT_RNODE || rval == BOARD_RNODE_NG_20 || rval == BOARD_RNODE_NG_21 || rval == PRODUCT_HMBRW || rval == PRODUCT_TBEAM || rval == PRODUCT_T32_10 || rval == PRODUCT_T32_20 || rval == PRODUCT_T32_21 || rval == PRODUCT_H32_V2 || rval == PRODUCT_H32_V3 || rval == PRODUCT_H32_V4 || rval == PRODUCT_TDECK_V1 || rval == PRODUCT_TBEAM_S_V1  || rval == PRODUCT_XIAO_S3 || rval == PRODUCT_TWATCH_ULT) {
 	#elif PLATFORM == PLATFORM_NRF52
 	if (rval == PRODUCT_RAK4631 || rval == PRODUCT_HELTEC_T114 || rval == PRODUCT_TECHO || rval == PRODUCT_HMBRW) {
 	#else
@@ -1718,6 +1725,8 @@ bool eeprom_model_valid() {
 	if (model == MODEL_DB || model == MODEL_DC) {
 	#elif BOARD_MODEL == BOARD_XIAO_S3
 	if (model == MODEL_DD || model == MODEL_DE) {
+	#elif BOARD_MODEL == BOARD_TWATCH_ULT
+	if (model == MODEL_D5 || model == MODEL_DA || model == MODEL_FF || model == MODEL_FE) {
 	#elif BOARD_MODEL == BOARD_LORA32_V1_0
 	if (model == MODEL_BA || model == MODEL_BB) {
 	#elif BOARD_MODEL == BOARD_LORA32_V2_0

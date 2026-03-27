@@ -20,15 +20,32 @@
 
 #include <Wire.h>
 
-// PCF8563 I2C address and registers
-#define PCF8563_ADDR     0x51
-#define PCF8563_REG_SEC  0x02
-#define PCF8563_REG_MIN  0x03
-#define PCF8563_REG_HOUR 0x04
-#define PCF8563_REG_DAY  0x05
-#define PCF8563_REG_WDAY 0x06
-#define PCF8563_REG_MON  0x07
-#define PCF8563_REG_YEAR 0x08
+// RTC I2C address (shared by PCF8563 and PCF85063A)
+#define RTC_I2C_ADDR     0x51
+
+#if BOARD_MODEL == BOARD_TWATCH_ULT
+  // PCF85063A registers (T-Watch Ultra)
+  #define RTC_REG_CTRL1  0x00
+  #define RTC_REG_CTRL2  0x01
+  #define RTC_REG_SEC    0x04
+  #define RTC_REG_MIN    0x05
+  #define RTC_REG_HOUR   0x06
+  #define RTC_REG_DAY    0x07
+  #define RTC_REG_WDAY   0x08
+  #define RTC_REG_MON    0x09
+  #define RTC_REG_YEAR   0x0A
+#else
+  // PCF8563 registers (T-Beam Supreme, etc.)
+  #define RTC_REG_CTRL1  0x00
+  #define RTC_REG_CTRL2  0x01
+  #define RTC_REG_SEC    0x02
+  #define RTC_REG_MIN    0x03
+  #define RTC_REG_HOUR   0x04
+  #define RTC_REG_DAY    0x05
+  #define RTC_REG_WDAY   0x06
+  #define RTC_REG_MON    0x07
+  #define RTC_REG_YEAR   0x08
+#endif
 
 bool rtc_ready = false;
 bool rtc_synced = false;   // true once GPS time has been written to RTC
@@ -47,16 +64,14 @@ static uint8_t bcd_to_dec(uint8_t bcd) { return (bcd >> 4) * 10 + (bcd & 0x0F); 
 static uint8_t dec_to_bcd(uint8_t dec) { return ((dec / 10) << 4) | (dec % 10); }
 
 void rtc_setup() {
-  // The sensor I2C bus (Wire) is already initialised by Display.h
-  // on pins SDA_OLED/SCL_OLED (17/18 for T-Beam Supreme).
-  // Just probe for the PCF8563.
-  Wire.beginTransmission(PCF8563_ADDR);
+  // Wire is already initialised by Power.h (PMU init) or Display.h.
+  Wire.beginTransmission(RTC_I2C_ADDR);
   if (Wire.endTransmission() == 0) {
     rtc_ready = true;
 
     // Clear control registers (normal mode, no alarms)
-    Wire.beginTransmission(PCF8563_ADDR);
-    Wire.write(0x00);  // control/status 1
+    Wire.beginTransmission(RTC_I2C_ADDR);
+    Wire.write(RTC_REG_CTRL1);
     Wire.write(0x00);  // normal mode
     Wire.write(0x00);  // control/status 2: no alarms/timer
     Wire.endTransmission();
@@ -66,11 +81,11 @@ void rtc_setup() {
 bool rtc_read_time() {
   if (!rtc_ready) return false;
 
-  Wire.beginTransmission(PCF8563_ADDR);
-  Wire.write(PCF8563_REG_SEC);
+  Wire.beginTransmission(RTC_I2C_ADDR);
+  Wire.write(RTC_REG_SEC);
   if (Wire.endTransmission() != 0) return false;
 
-  Wire.requestFrom((uint8_t)PCF8563_ADDR, (uint8_t)7);
+  Wire.requestFrom((uint8_t)RTC_I2C_ADDR, (uint8_t)7);
   if (Wire.available() < 7) return false;
 
   uint8_t sec  = Wire.read();
@@ -81,8 +96,9 @@ bool rtc_read_time() {
   uint8_t mon  = Wire.read();
   uint8_t year = Wire.read();
 
-  // Check clock integrity bit (sec register bit 7)
-  if (sec & 0x80) return false;  // clock integrity not guaranteed
+  // Check oscillator stop bit (sec register bit 7)
+  // Set on both PCF8563 and PCF85063A when clock integrity is lost
+  if (sec & 0x80) return false;
 
   rtc_second = bcd_to_dec(sec & 0x7F);
   rtc_minute = bcd_to_dec(min & 0x7F);
@@ -98,8 +114,8 @@ bool rtc_write_time(uint16_t year, uint8_t month, uint8_t day,
                     uint8_t hour, uint8_t minute, uint8_t second) {
   if (!rtc_ready) return false;
 
-  Wire.beginTransmission(PCF8563_ADDR);
-  Wire.write(PCF8563_REG_SEC);
+  Wire.beginTransmission(RTC_I2C_ADDR);
+  Wire.write(RTC_REG_SEC);
   Wire.write(dec_to_bcd(second));
   Wire.write(dec_to_bcd(minute));
   Wire.write(dec_to_bcd(hour));
