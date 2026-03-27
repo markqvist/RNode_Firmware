@@ -20,6 +20,7 @@
 #if BOARD_MODEL == BOARD_TWATCH_ULT
   #include "XL9555.h"
   #include "CO5300.h"
+  #include "DRV2605.h"
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -274,6 +275,11 @@ void setup() {
     #if BOARD_MODEL == BOARD_TWATCH_ULT
       xl9555_init();
       xl9555_enable_lora_antenna();
+      xl9555_set(EXPANDS_DRV_EN, true);   // Enable haptic motor driver
+      xl9555_set(EXPANDS_DISP_EN, true);  // Enable display power gate
+      delay(10);
+      drv2605_init();
+      if (drv2605_ready) drv2605_play(HAPTIC_SHARP_CLICK);  // Boot feedback
 
       // Beacon timer wakeup: if we woke from deep sleep via timer,
       // take the fast path — init GPS/LoRa only, transmit, sleep again.
@@ -1999,6 +2005,12 @@ void loop() {
 // Safely shuts down peripherals and enters ESP32 deep sleep.
 // Does not return — device reboots on wake.
 void twatch_enter_deep_sleep(bool beacon_timer) {
+  // 0. Haptic feedback before sleep
+  if (drv2605_ready) {
+    drv2605_play(HAPTIC_SOFT_BUMP);
+    delay(150);  // Let the motor spin briefly before powering down
+  }
+
   // 1. Put display controller into sleep mode (must happen before SPI.end)
   #if HAS_DISPLAY
     co5300_sleep();

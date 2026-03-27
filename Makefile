@@ -121,11 +121,13 @@ firmware-twatch_ultra:
 	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45"
 
 upload-twatch_ultra: firmware-twatch_ultra
-	@echo "Flashing T-Watch Ultra via OpenOCD JTAG..."
+	@echo "Flashing T-Watch Ultra app via JTAG (no BOOT+RST needed)..."
 	$(HOME)/.arduino15/packages/esp32/tools/openocd-esp32/v0.12.0-esp32-20230921/bin/openocd \
 		-s $(HOME)/.arduino15/packages/esp32/tools/openocd-esp32/v0.12.0-esp32-20230921/share/openocd/scripts \
 		-f board/esp32s3-builtin.cfg \
 		-c "program_esp build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin 0x10000 verify reset exit"
+	@sleep 5
+	rnodeconf /dev/ttyACM4 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
 
 firmware-lora32_v10: check_bt_buffers
 	arduino-cli compile --log --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x39\""
