@@ -70,7 +70,9 @@ float pmu_temperature = PMU_TEMP_MIN-1;
       PMU->disableSystemVoltageMeasure();
       PMU->disableTSPinMeasure();
 
-      PMU->enableSleep();
+      // DO NOT call PMU->enableSleep() — it puts the AXP2101 into a
+      // persistent sleep mode that survives battery-backed resets and
+      // disables its I2C slave interface, bricking the bus.
 
       // Disable peripheral rails (NOT ALDO2 — causes 600µA anomaly!)
       power_sd(false);

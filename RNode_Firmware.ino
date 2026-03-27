@@ -274,6 +274,16 @@ void setup() {
     #if BOARD_MODEL == BOARD_TWATCH_ULT
       xl9555_init();
       xl9555_enable_lora_antenna();
+
+      // Beacon timer wakeup: if we woke from deep sleep via timer,
+      // take the fast path — init GPS/LoRa only, transmit, sleep again.
+      // esp_reset_reason() reliably distinguishes deep sleep from cold boot.
+      #if HAS_GPS == true
+        if (esp_reset_reason() == ESP_RST_DEEPSLEEP &&
+            esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
+          beacon_wake_cycle();  // Does not return
+        }
+      #endif
     #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true
@@ -1984,12 +1994,61 @@ void loop() {
 
 }
 
-#if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_GPS == true
+#if BOARD_MODEL == BOARD_TWATCH_ULT
+// Shared deep sleep entry for T-Watch Ultra.
+// Safely shuts down peripherals and enters ESP32 deep sleep.
+// Does not return — device reboots on wake.
+void twatch_enter_deep_sleep(bool beacon_timer) {
+  // 1. Put display controller into sleep mode (must happen before SPI.end)
+  #if HAS_DISPLAY
+    co5300_sleep();
+  #endif
+
+  // 2. Gate display VCI power and disable haptics via XL9555
+  xl9555_sleep_prepare();
+
+  // 3. Disable PMU peripheral rails (no PMU->enableSleep — that bricks I2C!)
+  pmu_prepare_sleep();
+
+  // 4. Close communication buses
+  #if HAS_GPS
+    gps_serial.end();
+  #endif
+  Serial1.end();
+  SPI.end();
+  Wire.end();
+
+  // 5. Reset unused GPIOs to INPUT (minimal leakage)
+  // DO NOT touch I2C pins (GPIO 2/3) — external pullups, and setting
+  // them to OPEN_DRAIN persists across battery-backed resets, bricking I2C.
+  const uint8_t sleep_pins[] = {
+    DISP_D0, DISP_D1, DISP_D2, DISP_D3,
+    DISP_SCK, DISP_CS, DISP_TE, DISP_RST,
+    RTC_INT, NFC_INT, SENSOR_INT, NFC_CS,
+    I2S_BCLK, I2S_WCLK, I2S_DOUT, SD_CS,
+    pin_mosi, pin_miso, pin_sclk, pin_cs,
+    PIN_GPS_TX, PIN_GPS_RX, PIN_GPS_PPS,
+    pin_reset, pin_busy, pin_dio,
+  };
+  for (auto p : sleep_pins) {
+    gpio_reset_pin((gpio_num_t)p);  // Resets to INPUT, clears any drive
+  }
+
+  // 6. Configure wakeup sources
+  esp_sleep_enable_ext1_wakeup(1ULL << PMU_IRQ, ESP_EXT1_WAKEUP_ANY_LOW);
+  if (beacon_timer) {
+    esp_sleep_enable_timer_wakeup((uint64_t)BEACON_INTERVAL_MS * 1000ULL);
+  }
+
+  // 7. Enter deep sleep (does not return)
+  esp_deep_sleep_start();
+}
+
+#if HAS_GPS == true
 // Minimal boot path for beacon timer wakeup.
 // Inits only GPS + LoRa, waits for fix, transmits beacon, sleeps again.
-// Called from setup() before BLE/display init. Does not return.
+// Called from setup() on timer wake. Does not return.
 void beacon_wake_cycle() {
-  // GPS is not yet initialized at this point — init it now
   gps_setup();
 
   // Load beacon crypto config from EEPROM
@@ -2011,43 +2070,16 @@ void beacon_wake_cycle() {
     delay(100);
   }
 
-  // Attempt beacon transmission if we have a fix
   if (gps_has_fix) {
-    last_host_activity = 0;         // ensure beacon_update doesn't think host is active
-    last_beacon_tx = 0;             // force immediate beacon
+    last_host_activity = 0;
+    last_beacon_tx = 0;
     beacon_update();
   }
 
-  // Go back to sleep with timer for next beacon cycle
-  gps_serial.end();
   stopRadio();
-  xl9555_sleep_prepare();
-  pmu_prepare_sleep();
-  Serial1.end();
-  SPI.end();
-  Wire.end();
-
-  // Set GPIOs to open drain
-  const uint8_t sleep_pins[] = {
-    DISP_D0, DISP_D1, DISP_D2, DISP_D3,
-    DISP_SCK, DISP_CS, DISP_TE, DISP_RST,
-    RTC_INT, NFC_INT, SENSOR_INT, NFC_CS,
-    I2S_BCLK, I2S_WCLK, I2S_DOUT, SD_CS,
-    I2C_SDA, I2C_SCL,
-    pin_mosi, pin_miso, pin_sclk, pin_cs,
-    PIN_GPS_TX, PIN_GPS_RX, PIN_GPS_PPS,
-    pin_reset, pin_busy, pin_dio,
-  };
-  for (auto p : sleep_pins) {
-    gpio_reset_pin((gpio_num_t)p);
-    pinMode(p, OPEN_DRAIN);
-  }
-
-  // Timer wakeup for next beacon, also allow PMU button to wake
-  esp_sleep_enable_timer_wakeup((uint64_t)BEACON_INTERVAL_MS * 1000ULL);
-  esp_sleep_enable_ext1_wakeup(1ULL << PMU_IRQ, ESP_EXT1_WAKEUP_ANY_LOW);
-  esp_deep_sleep_start();
+  twatch_enter_deep_sleep(true);  // Sleep with beacon timer
 }
+#endif
 #endif
 
 void sleep_now() {
@@ -2078,51 +2110,12 @@ void sleep_now() {
       #endif
 
       #if BOARD_MODEL == BOARD_TWATCH_ULT
-        // T-Watch Ultra deep sleep sequence
-        // Following LilyGo's proven power-down order
-
-        #if HAS_GPS
-          gps_serial.end();
-        #endif
-
-        // XL9555: disable display and haptics
-        xl9555_sleep_prepare();
-
-        // PMU: disable peripheral rails, enable sleep mode
-        pmu_prepare_sleep();
-
-        // Close all buses
-        Serial1.end();
-        SPI.end();
-        Wire.end();
-
-        // Set all unused GPIOs to OPEN_DRAIN to prevent current leaks
-        const uint8_t sleep_pins[] = {
-          DISP_D0, DISP_D1, DISP_D2, DISP_D3,
-          DISP_SCK, DISP_CS, DISP_TE, DISP_RST,
-          RTC_INT, NFC_INT, SENSOR_INT, NFC_CS,
-          I2S_BCLK, I2S_WCLK, I2S_DOUT, SD_CS,
-          I2C_SDA, I2C_SCL,
-          pin_mosi, pin_miso, pin_sclk, pin_cs,
-          PIN_GPS_TX, PIN_GPS_RX, PIN_GPS_PPS,
-          pin_reset, pin_busy, pin_dio,
-        };
-        for (auto p : sleep_pins) {
-          gpio_reset_pin((gpio_num_t)p);
-          pinMode(p, OPEN_DRAIN);
-        }
-
-        // Always allow PMU button wakeup
-        esp_sleep_enable_ext1_wakeup(1ULL << PMU_IRQ, ESP_EXT1_WAKEUP_ANY_LOW);
-
-        // If in beacon mode, also set timer wakeup for next beacon cycle
         #if HAS_GPS == true
-          if (beacon_mode_active) {
-            esp_sleep_enable_timer_wakeup((uint64_t)BEACON_INTERVAL_MS * 1000ULL);
-          }
+          bool use_beacon_timer = beacon_mode_active;
+        #else
+          bool use_beacon_timer = false;
         #endif
-
-        esp_deep_sleep_start();
+        twatch_enter_deep_sleep(use_beacon_timer);
 
       #else
         esp_sleep_enable_ext0_wakeup(PIN_WAKEUP, WAKEUP_LEVEL);
