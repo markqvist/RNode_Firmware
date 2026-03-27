@@ -20,13 +20,6 @@
 #if BOARD_MODEL == BOARD_TWATCH_ULT
   #include "XL9555.h"
   #include "CO5300.h"
-
-  // I2C diagnostic storage
-  uint8_t i2c_scan_results[16];
-  uint8_t i2c_scan_count = 0;
-  bool i2c_wire_ok = false;
-  uint8_t i2c_sda_level = 0xFF;  // SDA pin level before Wire.begin
-  uint8_t i2c_scl_level = 0xFF;  // SCL pin level before Wire.begin
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -279,22 +272,6 @@ void setup() {
     #endif
 
     #if BOARD_MODEL == BOARD_TWATCH_ULT
-      // I2C scan AFTER PMU init (which calls Wire.begin)
-      i2c_scan_count = 0;  // reuse as AXP2101 probe result
-      if (pmu_ready) {
-        // PMU worked — scan for all devices
-        for (uint8_t addr = 0x08; addr < 0x78; addr++) {
-          Wire.beginTransmission(addr);
-          if (Wire.endTransmission() == 0 && i2c_scan_count < 16) {
-            i2c_scan_results[i2c_scan_count++] = addr;
-          }
-        }
-      } else {
-        // PMU failed — probe AXP2101 directly for diagnostics
-        Wire.beginTransmission(0x34);
-        i2c_scan_count = Wire.endTransmission();  // store error code
-      }
-
       xl9555_init();
       xl9555_enable_lora_antenna();
     #endif

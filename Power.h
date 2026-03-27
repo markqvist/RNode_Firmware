@@ -683,10 +683,12 @@ bool init_pmu() {
 
     return true;
   #elif BOARD_MODEL == BOARD_TWATCH_ULT
-    Wire.begin(I2C_SDA, I2C_SCL);
-
+    // Pass explicit SDA/SCL pins to XPowersLib constructor.
+    // The generic esp32s3 FQBN defaults to SDA=8, SCL=9 which are WRONG
+    // for the T-Watch Ultra (SDA=3, SCL=2). XPowersLib's begin() calls
+    // Wire.begin(__sda, __scl) internally, so we must set the correct pins here.
     if (!PMU) {
-        PMU = new XPowersAXP2101(PMU_WIRE_PORT);
+        PMU = new XPowersAXP2101(PMU_WIRE_PORT, I2C_SDA, I2C_SCL);
         if (!PMU->init()) {
             delete PMU;
             PMU = NULL;
