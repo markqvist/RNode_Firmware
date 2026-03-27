@@ -12,7 +12,7 @@
 #define SPK_BCLK   I2S_BCLK
 #define SPK_WCLK   I2S_WCLK
 #define SPK_DOUT   I2S_DOUT
-#define SPK_I2S_PORT I2S_NUM_0
+#define SPK_I2S_PORT I2S_NUM_1  // I2S_NUM_0 reserved for PDM microphone
 #define SPK_SAMPLE_RATE 16000
 #define SPK_TONE_BUF_SIZE 512
 

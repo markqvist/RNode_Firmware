@@ -29,8 +29,9 @@
   SensorBHI260AP *bhi260 = NULL;
   bool bhi260_ready = false;
 
-  // MAX98357A I2S speaker
+  // MAX98357A I2S speaker + SPM1423 PDM microphone
   #include "Speaker.h"
+  #include "Microphone.h"
 
   // CST9217 capacitive touch panel
   #include <touch/TouchDrvCST92xx.h>
@@ -307,9 +308,9 @@ void setup() {
         attachInterrupt(TP_INT, touch_isr, FALLING);
       }
 
-      // Init speaker (BLDO2 already enabled by PMU init)
+      // Init speaker (BLDO2 already enabled by PMU init) and microphone
       speaker_init();
-      if (speaker_ready) speaker_beep();  // Boot audio feedback
+      mic_init();
 
       // BHI260AP init deferred — firmware upload takes ~10s at 1MHz I2C
       // and blocks serial communication during boot. Will be initialized
@@ -2078,6 +2079,7 @@ void twatch_enter_deep_sleep(bool beacon_timer) {
   }
 
   // 1. Shut down audio and display before closing buses
+  mic_end();
   speaker_end();
   #if HAS_DISPLAY
     co5300_sleep();
