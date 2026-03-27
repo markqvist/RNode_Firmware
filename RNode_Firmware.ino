@@ -21,6 +21,13 @@
   #include "XL9555.h"
   #include "CO5300.h"
   #include "DRV2605.h"
+
+  // BHI260AP sensor hub — IMU + GPIO expansion
+  #include <SensorBHI260AP.hpp>
+  #define BOSCH_BHI260_GPIO
+  #include <BoschFirmware.h>
+  SensorBHI260AP *bhi260 = NULL;
+  bool bhi260_ready = false;
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -280,6 +287,10 @@ void setup() {
       delay(10);
       drv2605_init();
       if (drv2605_ready) drv2605_play(HAPTIC_SHARP_CLICK);  // Boot feedback
+
+      // BHI260AP init deferred — firmware upload takes ~10s at 1MHz I2C
+      // and blocks serial communication during boot. Will be initialized
+      // lazily from the main loop after radio is up.
 
       // Beacon timer wakeup: if we woke from deep sleep via timer,
       // take the fast path — init GPS/LoRa only, transmit, sleep again.
@@ -1984,6 +1995,23 @@ void loop() {
 
   #if HAS_INPUT
     input_read();
+  #endif
+
+  // Deferred BHI260AP init — runs once after boot is complete
+  // Firmware upload takes ~10s and blocks, so we do it after radio is up
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
+    if (!bhi260_ready && bhi260 == NULL && hw_ready && millis() > 5000) {
+      Wire.setClock(1000000UL);
+      bhi260 = new SensorBHI260AP();
+      bhi260->setPins(-1);
+      bhi260->setFirmware(bosch_firmware_image, bosch_firmware_size, false);
+      bhi260->setBootFromFlash(false);
+      if (bhi260->begin(Wire, 0x28, I2C_SDA, I2C_SCL)) {
+        bhi260_ready = true;
+        pinMode(SENSOR_INT, INPUT);
+      }
+      Wire.setClock(400000UL);
+    }
   #endif
 
   if (memory_low) {
