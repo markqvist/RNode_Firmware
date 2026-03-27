@@ -25,6 +25,8 @@
   uint8_t i2c_scan_results[16];
   uint8_t i2c_scan_count = 0;
   bool i2c_wire_ok = false;
+  uint8_t i2c_sda_level = 0xFF;  // SDA pin level before Wire.begin
+  uint8_t i2c_scl_level = 0xFF;  // SCL pin level before Wire.begin
 #endif
 
 #define CHANNEL_FIFO_SIZE (CONFIG_UART_BUFFER_SIZE / NUM_CHANNELS)
@@ -271,53 +273,30 @@ void setup() {
   #endif
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
+
     #if HAS_PMU == true
       pmu_ready = init_pmu();
     #endif
 
     #if BOARD_MODEL == BOARD_TWATCH_ULT
+      // I2C scan AFTER PMU init (which calls Wire.begin)
+      i2c_scan_count = 0;  // reuse as AXP2101 probe result
+      if (pmu_ready) {
+        // PMU worked — scan for all devices
+        for (uint8_t addr = 0x08; addr < 0x78; addr++) {
+          Wire.beginTransmission(addr);
+          if (Wire.endTransmission() == 0 && i2c_scan_count < 16) {
+            i2c_scan_results[i2c_scan_count++] = addr;
+          }
+        }
+      } else {
+        // PMU failed — probe AXP2101 directly for diagnostics
+        Wire.beginTransmission(0x34);
+        i2c_scan_count = Wire.endTransmission();  // store error code
+      }
+
       xl9555_init();
       xl9555_enable_lora_antenna();
-
-      // Beacon timer wakeup — disabled pending proper cold boot detection
-      // TODO: Re-enable with reliable deep sleep vs cold boot discrimination
-      // if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
-      //   beacon_wake_cycle();
-      // }
-
-      // Recovery: I2C bus may be stuck after deep sleep interrupted a transaction.
-      // Toggle SCL manually to clock out any stuck slave device.
-      gpio_deep_sleep_hold_dis();
-      gpio_reset_pin(GPIO_NUM_2);
-      gpio_reset_pin(GPIO_NUM_3);
-      pinMode(2, OUTPUT);    // SCL
-      pinMode(3, INPUT_PULLUP);  // SDA — let it float with pullup
-      for (int i = 0; i < 16; i++) {
-        digitalWrite(2, LOW);
-        delayMicroseconds(5);
-        digitalWrite(2, HIGH);
-        delayMicroseconds(5);
-      }
-      // Send STOP condition
-      pinMode(3, OUTPUT);
-      digitalWrite(3, LOW);
-      delayMicroseconds(5);
-      digitalWrite(2, HIGH);
-      delayMicroseconds(5);
-      digitalWrite(3, HIGH);
-      delay(10);
-      // Now try Wire
-      i2c_wire_ok = Wire.begin(3, 2, 100000);
-      delay(200);
-
-      // I2C bus scan for peripheral discovery
-      i2c_scan_count = 0;
-      for (uint8_t addr = 0x10; addr < 0x78; addr++) {
-        Wire.beginTransmission(addr);
-        if (Wire.endTransmission() == 0 && i2c_scan_count < 16) {
-          i2c_scan_results[i2c_scan_count++] = addr;
-        }
-      }
     #endif
 
     #if HAS_BLUETOOTH || HAS_BLE == true
