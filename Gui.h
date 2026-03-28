@@ -519,11 +519,13 @@ static void gui_update_data() {
         lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_DIM), 0);
     }
 
-    // GPS complication
+    // GPS complication — color by fix quality
     #if HAS_GPS == true
     if (gps_sats > 0) {
         lv_label_set_text_fmt(gui_gps_value, "%d sats", gps_sats);
-        lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(GUI_COL_TEAL), 0);
+        uint32_t gps_col = (gps_hdop < 5.0) ? GUI_COL_TEAL :
+                           (gps_hdop < 15.0) ? GUI_COL_AMBER : GUI_COL_MID;
+        lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(gps_col), 0);
     } else {
         lv_label_set_text(gui_gps_value, "no fix");
         lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(GUI_COL_DIM), 0);
@@ -608,17 +610,37 @@ static void gui_update_data() {
     // ---- GPS screen ----
     #if HAS_GPS == true
     if (gui_gps_coords) {
-        if (gps_sats > 0 && gps_lat != 0.0) {
+        bool good_fix = (gps_sats >= 4 && gps_hdop < 10.0 && gps_lat != 0.0);
+        bool any_fix  = (gps_sats > 0 && gps_lat != 0.0);
+
+        // Coordinates — show when any fix, but dim when HDOP is poor
+        if (any_fix) {
             lv_label_set_text_fmt(gui_gps_coords, "%.6f\n%.6f", gps_lat, gps_lon);
-            lv_obj_set_style_text_color(gui_gps_coords, lv_color_hex(GUI_COL_TEAL), 0);
+            lv_obj_set_style_text_color(gui_gps_coords,
+                lv_color_hex(good_fix ? GUI_COL_TEAL : GUI_COL_MID), 0);
         } else {
             lv_label_set_text(gui_gps_coords, "No fix");
             lv_obj_set_style_text_color(gui_gps_coords, lv_color_hex(GUI_COL_DIM), 0);
         }
 
+        // Fix quality — color HDOP by quality
+        uint32_t hdop_col = (gps_hdop < 2.0) ? GUI_COL_GREEN :
+                            (gps_hdop < 5.0) ? GUI_COL_TEAL :
+                            (gps_hdop < 10.0) ? GUI_COL_AMBER : GUI_COL_RED;
         lv_label_set_text_fmt(gui_gps_fix, "Sats: %d  HDOP: %.1f", gps_sats, gps_hdop);
+        lv_obj_set_style_text_color(gui_gps_fix, lv_color_hex(hdop_col), 0);
 
-        lv_label_set_text_fmt(gui_gps_alt, "Alt: %.0fm  Spd: %.1fkm/h", gps_alt, gps_speed);
+        // Alt/Speed — suppress speed when HDOP is poor (it's just noise)
+        if (good_fix) {
+            lv_label_set_text_fmt(gui_gps_alt, "Alt: %.0fm  Spd: %.1fkm/h", gps_alt, gps_speed);
+            lv_obj_set_style_text_color(gui_gps_alt, lv_color_hex(GUI_COL_MID), 0);
+        } else if (any_fix) {
+            lv_label_set_text_fmt(gui_gps_alt, "Alt: %.0fm  Spd: ---", gps_alt);
+            lv_obj_set_style_text_color(gui_gps_alt, lv_color_hex(GUI_COL_DIM), 0);
+        } else {
+            lv_label_set_text(gui_gps_alt, "Alt: ---  Spd: ---");
+            lv_obj_set_style_text_color(gui_gps_alt, lv_color_hex(GUI_COL_DIM), 0);
+        }
 
         if (beacon_mode_active) {
             lv_label_set_text(gui_gps_beacon, "Beacon: active");
