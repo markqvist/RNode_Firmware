@@ -1,0 +1,9 @@
+# T-Watch Ultimate partition table — 16MB flash, no OTA, large app
+# Requires FlashSize=16M in the Arduino FQBN or the bootloader can't map beyond 4MB.
+# Copy this file to ~/.arduino15/packages/esp32/hardware/esp32/<ver>/tools/partitions/
+# Name,   Type, SubType, Offset,   Size,     Flags
+nvs,       data, nvs,     0x9000,   0x5000,
+otadata,   data, ota,     0xe000,   0x2000,
+app0,      app,  ota_0,   0x10000,  0x800000,
+spiffs,    data, spiffs,  0x810000, 0x7E0000,
+coredump,  data, coredump,0xFF0000, 0x10000,

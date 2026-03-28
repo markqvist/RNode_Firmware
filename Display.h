@@ -14,9 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #if BOARD_MODEL == BOARD_TWATCH_ULT
-  // T-Watch Ultra uses CO5300 QSPI AMOLED — separate display path
+  // T-Watch Ultra — LVGL GUI on CO5300 QSPI AMOLED (410x502)
   #include <Adafruit_GFX.h>
-  #include <Fonts/FreeSansBold24pt7b.h>
   #include "Fonts/Org_01.h"
   #include "XL9555.h"
   #include "CO5300.h"
@@ -27,16 +26,14 @@
   bool recondition_display = false;
   void ext_fb_enable() { }
   void ext_fb_disable() { }
-  uint8_t fb[0];  // empty framebuffer stub
+  uint8_t fb[0];
 
   bool display_blanked = false;
   uint32_t last_unblank_event = 0;
-  uint32_t display_blanking_timeout = 0;  // Disabled until button wake is implemented
+  uint32_t display_blanking_timeout = 0;
 
-  // Partial framebuffer for clock region (410 x 60 = ~49KB, fits in DMA memory)
-  #define CLOCK_FB_W CO5300_WIDTH
-  #define CLOCK_FB_H 60
-  static uint16_t *clock_fb = NULL;
+  // LVGL GUI (must come after variable declarations above)
+  #include "Gui.h"
 
   void display_unblank() {
     if (display_blanked) {
@@ -44,6 +41,7 @@
       xl9555_set(EXPANDS_DISP_EN, true);
       co5300_set_brightness(128);
       display_blanked = false;
+      if (gui_screen) lv_obj_invalidate(gui_screen);
     }
     last_unblank_event = millis();
   }
@@ -52,21 +50,16 @@
     if (!co5300_init()) return false;
     co5300_set_brightness(128);
 
-    // Enable blanking — touch input now available to unblank
     display_blanking_enabled = true;
-    display_blanking_timeout = 10000;  // 10 seconds
+    display_blanking_timeout = 10000;
 
-    // Allocate partial framebuffer for clock region (PSRAM preferred for large buffers)
-    clock_fb = (uint16_t *)heap_caps_malloc(CLOCK_FB_W * CLOCK_FB_H * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (!clock_fb) clock_fb = (uint16_t *)malloc(CLOCK_FB_W * CLOCK_FB_H * 2);
-
+    if (!gui_init()) return false;
     return true;
   }
 
   void update_display(bool force = false) {
     if (!co5300_ready) return;
 
-    // Handle display blanking
     if (display_blanking_enabled && !display_blanked) {
       if (millis() - last_unblank_event > display_blanking_timeout) {
         co5300_set_brightness(0);
@@ -77,45 +70,9 @@
       }
     }
     if (display_blanked && !force) return;
-    if (!clock_fb) return;
 
     display_updating = true;
-
-    // Render clock in partial framebuffer
-    memset(clock_fb, 0, CLOCK_FB_W * CLOCK_FB_H * 2);
-
-    char time_str[6];
-    snprintf(time_str, sizeof(time_str), "%02d:%02d", rtc_hour, rtc_minute);
-
-    // Draw time centered, large font
-    const GFXfont *font = &FreeSansBold24pt7b;
-    uint16_t tw = co5300_draw_string(clock_fb, CLOCK_FB_W, CLOCK_FB_H,
-                                      0, 45, time_str, CO5300_WHITE, font);
-    // Re-render centered
-    if (tw > 0 && tw < CLOCK_FB_W) {
-      memset(clock_fb, 0, CLOCK_FB_W * CLOCK_FB_H * 2);
-      co5300_draw_string(clock_fb, CLOCK_FB_W, CLOCK_FB_H,
-                         (CLOCK_FB_W - tw) / 2, 45, time_str, CO5300_WHITE, font);
-    }
-
-    // Push clock region to display (upper area)
-    co5300_push_pixels(0, 80, CLOCK_FB_W, CLOCK_FB_H, clock_fb);
-
-    // Render status line below clock
-    memset(clock_fb, 0, CLOCK_FB_W * CLOCK_FB_H * 2);
-
-    char status[64];
-    snprintf(status, sizeof(status), "%s  %d%%  %dsats  %lus",
-             radio_online ? "RADIO" : "idle",
-             (int)battery_percent,
-             gps_sats,
-             millis() / 1000);
-
-    co5300_draw_string(clock_fb, CLOCK_FB_W, CLOCK_FB_H,
-                       10, 15, status, CO5300_GREY, &Org_01);
-
-    co5300_push_pixels(0, 150, CLOCK_FB_W, CLOCK_FB_H, clock_fb);
-
+    gui_update();
     display_updating = false;
   }
 

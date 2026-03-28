@@ -55,6 +55,7 @@ prep-esp32:
 	arduino-cli lib install "XPowersLib"
 	arduino-cli lib install "Crypto"
 	arduino-cli lib install "TinyGPSPlus"
+	arduino-cli lib install "lvgl@9.5.0"
 
 prep-samd:
 	arduino-cli core update-index --config-file arduino-cli.yaml
@@ -117,17 +118,29 @@ deploy-tbeam_supreme: firmware-tbeam_supreme free-port
 	@sleep 3
 	rnodeconf $(PORT) --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
 
+# T-Watch Ultra: 16MB flash, 8MB app partition, LVGL GUI
+# FlashSize=16M is critical — the bootloader embeds flash size and defaults to 4MB.
+# Without it, flash mapping fails silently beyond 0x400000 (black screen, no crash).
+# partition_twatch.csv must be copied to the Arduino ESP32 tools/partitions/ directory.
+# When changing partition scheme, flash ALL THREE binaries (bootloader + partition + app).
 firmware-twatch_ultra:
-	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45"
+	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PSRAM=enabled" -e --build-property "build.partitions=partition_twatch" --build-property "upload.maximum_size=8388608" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45"
 
 upload-twatch_ultra: firmware-twatch_ultra
-	@echo "Flashing T-Watch Ultra app via JTAG (no BOOT+RST needed)..."
+	@echo "Flashing T-Watch Ultra via JTAG..."
 	$(HOME)/.arduino15/packages/esp32/tools/openocd-esp32/v0.12.0-esp32-20230921/bin/openocd \
 		-s $(HOME)/.arduino15/packages/esp32/tools/openocd-esp32/v0.12.0-esp32-20230921/share/openocd/scripts \
 		-f board/esp32s3-builtin.cfg \
 		-c "program_esp build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin 0x10000 verify reset exit"
 	@sleep 5
 	rnodeconf /dev/ttyACM4 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+
+# Full flash including bootloader and partition table (needed after partition changes)
+flash-twatch_ultra-full: firmware-twatch_ultra
+	esptool.py --chip esp32s3 --port /dev/ttyACM4 --baud 921600 write_flash \
+		0x0000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bootloader.bin \
+		0x8000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.partitions.bin \
+		0x10000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin
 
 firmware-lora32_v10: check_bt_buffers
 	arduino-cli compile --log --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x39\""

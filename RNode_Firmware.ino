@@ -280,6 +280,12 @@ void setup() {
       display_add_callback(work_while_waiting);
     #endif
 
+    // T-Watch init order: display_init() MUST run BEFORE xl9555_init().
+    // The XL9555 GPIO expander controls the display power gate (EXPANDS_DISP_EN),
+    // but its outputs default HIGH at power-on, so the display is powered before
+    // the expander is explicitly configured. Moving display_init() after xl9555_init()
+    // causes a black screen because the power gate cycling disrupts the CO5300 QSPI
+    // init sequence. Do not reorder.
     display_unblank();
     disp_ready = display_init();
     update_display();
@@ -295,7 +301,7 @@ void setup() {
       xl9555_init();
       xl9555_enable_lora_antenna();
       xl9555_set(EXPANDS_DRV_EN, true);   // Enable haptic motor driver
-      xl9555_set(EXPANDS_DISP_EN, true);  // Enable display power gate
+      xl9555_set(EXPANDS_DISP_EN, true);  // Confirm display power gate on
       xl9555_set(EXPANDS_TOUCH_RST, true);  // Release touch reset
       delay(100);
       drv2605_init();
@@ -306,6 +312,14 @@ void setup() {
       if (touch.begin(Wire, 0x1A, I2C_SDA, I2C_SCL)) {
         touch_ready = true;
         attachInterrupt(TP_INT, touch_isr, FALLING);
+
+        // Register touch with LVGL GUI
+        #if HAS_DISPLAY == true
+        gui_set_touch_handler([](int16_t *x, int16_t *y) -> bool {
+          if (!touch_ready) return false;
+          return touch.getPoint(x, y, 1) > 0;
+        });
+        #endif
       }
 
       // Init speaker (BLDO2 already enabled by PMU init) and microphone
@@ -2021,19 +2035,33 @@ void loop() {
     input_read();
   #endif
 
-  // Touch panel event handling
+  // Touch panel — IRQ-driven display wake (LVGL handles touch input via polling)
   #if BOARD_MODEL == BOARD_TWATCH_ULT
     if (touch_ready && touch_irq) {
       touch_irq = false;
-      int16_t tx, ty;
-      if (touch.getPoint(&tx, &ty, 1) > 0) {
-        // Touch detected — unblank display and update activity
-        #if HAS_DISPLAY
-          display_unblank();
-        #endif
-        last_unblank_event = millis();
+      #if HAS_DISPLAY
+        if (display_blanked) display_unblank();
+      #endif
+    }
+
+    // Screenshot: long-press BOOT button (GPIO 0) for 2 seconds
+    #if HAS_SD && HAS_DISPLAY
+    {
+      static uint32_t btn_down_since = 0;
+      static bool btn_screenshot_taken = false;
+      if (digitalRead(0) == LOW) {
+        if (btn_down_since == 0) btn_down_since = millis();
+        if (!btn_screenshot_taken && millis() - btn_down_since > 2000) {
+          btn_screenshot_taken = true;
+          if (drv2605_ready) drv2605_play(HAPTIC_DOUBLE_CLICK);
+          gui_screenshot_sd();
+        }
+      } else {
+        btn_down_since = 0;
+        btn_screenshot_taken = false;
       }
     }
+    #endif
   #endif
 
   // Deferred BHI260AP init — runs once after boot is complete
@@ -2304,7 +2332,11 @@ void buffer_serial() {
     #else
     while (c < MAX_CYCLES && Serial.available()) {
       c++;
-      if (!fifo_isfull(&channelFIFO[CHANNEL_USB])) { fifo_push(&channelFIFO[CHANNEL_USB], Serial.read()); }
+      uint8_t sb = Serial.read();
+      #if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_DISPLAY
+        gui_check_screenshot_trigger(sb);
+      #endif
+      if (!fifo_isfull(&channelFIFO[CHANNEL_USB])) { fifo_push(&channelFIFO[CHANNEL_USB], sb); }
     }
     #endif
 
