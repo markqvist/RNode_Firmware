@@ -81,12 +81,12 @@ def capture(port, output_path):
     if received < expected:
         print(f"Warning: got {received}/{expected} bytes ({received*100//expected}%)")
 
-    # Convert RGB565 LE to PNG
+    # Convert RGB565 BE (swapped) to PNG
     img = Image.new("RGB", (w, h))
     pixels = img.load()
     npx = min(w * h, received // 2)
     for i in range(npx):
-        pixel = struct.unpack_from("<H", data, i * 2)[0]
+        pixel = struct.unpack_from(">H", data, i * 2)[0]
         r = ((pixel >> 11) & 0x1F) * 255 // 31
         g = ((pixel >> 5) & 0x3F) * 255 // 63
         b = (pixel & 0x1F) * 255 // 31

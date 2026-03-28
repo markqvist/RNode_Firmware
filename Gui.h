@@ -9,7 +9,8 @@
 
 #include <lvgl.h>
 
-// Custom font: 96px Montserrat Bold for time display (digits + colon only)
+// Custom fonts: generated with lv_font_conv --no-compress from Montserrat Bold
+// IMPORTANT: must use --no-compress or set LV_USE_FONT_COMPRESSED=1 in lv_conf.h
 #include "Fonts/montserrat_bold_96.c"
 
 // ---------------------------------------------------------------------------
@@ -47,7 +48,9 @@
 static lv_display_t *gui_display = NULL;
 static lv_indev_t   *gui_indev   = NULL;
 
-#define GUI_BUF_LINES 120  // Must be >= tallest glyph (96px time font)
+// Full-frame buffer: renders entire screen at once (eliminates tearing during scroll)
+// 410*502*2 = 411,640 bytes per buffer — fits in PSRAM
+#define GUI_BUF_LINES GUI_H
 static uint8_t *gui_buf1 = NULL;
 static uint8_t *gui_buf2 = NULL;
 
@@ -104,45 +107,25 @@ static uint8_t gui_last_tile_row = 1;
 // ---------------------------------------------------------------------------
 // LVGL display flush callback
 // ---------------------------------------------------------------------------
-// Swap buffer for byte-order conversion (avoids corrupting LVGL's draw buffer)
-static uint16_t *gui_swap_buf = NULL;
-#define GUI_SWAP_BUF_PX (GUI_W * GUI_BUF_LINES)
-
-// Shadow framebuffer for screenshots (native RGB565 LE, readable via JTAG)
-// Use: openocd -c "dump_image /tmp/screen.bin [gui_screenshot_buf address] 411640"
-// Then convert with scripts/screenshot.py
-uint16_t *gui_screenshot_buf = NULL;  // non-static: visible to JTAG/nm for screenshots
+// Shadow framebuffer for screenshots (RGB565 swapped / big-endian — same as display)
+uint16_t *gui_screenshot_buf = NULL;
 
 static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     uint16_t x1 = area->x1;
     uint16_t y1 = area->y1;
     uint16_t w  = area->x2 - area->x1 + 1;
     uint16_t h  = area->y2 - area->y1 + 1;
+    uint16_t *pixels = (uint16_t *)px_map;
 
-    uint16_t *src = (uint16_t *)px_map;
-    uint32_t count = (uint32_t)w * h;
-
-    // Copy pre-swap pixels to shadow framebuffer for JTAG screenshot
+    // Copy to shadow framebuffer for screenshots
     if (gui_screenshot_buf) {
         for (uint16_t row = 0; row < h; row++) {
             memcpy(&gui_screenshot_buf[(y1 + row) * GUI_W + x1],
-                   &src[row * w], w * sizeof(uint16_t));
+                   &pixels[row * w], w * sizeof(uint16_t));
         }
     }
 
-    // Byte-swap RGB565 into separate buffer for CO5300 SPI (big-endian)
-    if (gui_swap_buf && count <= GUI_SWAP_BUF_PX) {
-        for (uint32_t i = 0; i < count; i++) {
-            gui_swap_buf[i] = (src[i] >> 8) | (src[i] << 8);
-        }
-        co5300_push_pixels(x1, y1, w, h, gui_swap_buf);
-    } else {
-        for (uint32_t i = 0; i < count; i++) {
-            src[i] = (src[i] >> 8) | (src[i] << 8);
-        }
-        co5300_push_pixels(x1, y1, w, h, src);
-    }
-
+    co5300_push_pixels(x1, y1, w, h, pixels);
     lv_display_flush_ready(disp);
 }
 
@@ -239,8 +222,7 @@ static void gui_create_watchface(lv_obj_t *parent) {
     lv_obj_align(gui_batt_label, LV_ALIGN_TOP_RIGHT, -GUI_PAD, GUI_STATUS_Y);
 
     // Time (96px custom font — digits and colon only)
-    gui_time_label = gui_label(parent, &lv_font_montserrat_48, GUI_COL_WHITE, "00:00");
-    // TODO: custom 96px font not rendering — using built-in 48 until debugged
+    gui_time_label = gui_label(parent, &montserrat_bold_96, GUI_COL_WHITE, "00:00");
     lv_obj_set_style_text_letter_space(gui_time_label, 2, 0);
     lv_obj_set_width(gui_time_label, GUI_W);
     lv_obj_set_style_text_align(gui_time_label, LV_TEXT_ALIGN_CENTER, 0);
@@ -537,6 +519,7 @@ bool gui_init() {
     // --- Display driver ---
     gui_display = lv_display_create(GUI_W, GUI_H);
     if (!gui_display) return false;
+    lv_display_set_color_format(gui_display, LV_COLOR_FORMAT_RGB565_SWAPPED);
     lv_display_set_flush_cb(gui_display, gui_flush_cb);
 
     uint32_t buf_size = GUI_W * GUI_BUF_LINES * sizeof(uint16_t);
@@ -550,14 +533,9 @@ bool gui_init() {
         if (!gui_buf1) return false;
     }
     lv_display_set_buffers(gui_display, gui_buf1, gui_buf2, buf_size,
-                            LV_DISPLAY_RENDER_MODE_PARTIAL);
+                            LV_DISPLAY_RENDER_MODE_FULL);
 
-    // Swap buffer for byte-order conversion (same size as draw buffer)
-    gui_swap_buf = (uint16_t *)heap_caps_malloc(GUI_W * GUI_BUF_LINES * sizeof(uint16_t),
-                                                 MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (!gui_swap_buf) gui_swap_buf = (uint16_t *)malloc(GUI_W * GUI_BUF_LINES * sizeof(uint16_t));
-
-    // Shadow framebuffer for JTAG screenshots (410*502*2 = 411,640 bytes)
+    // Shadow framebuffer for screenshots (410*502*2 = 411,640 bytes)
     gui_screenshot_buf = (uint16_t *)heap_caps_malloc(GUI_W * GUI_H * sizeof(uint16_t),
                                                        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (gui_screenshot_buf) {
@@ -586,7 +564,7 @@ bool gui_init() {
     lv_obj_set_style_bg_opa(gui_tileview, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(gui_tileview, 0, 0);
     lv_obj_set_style_pad_all(gui_tileview, 0, 0);
-    // Note: do NOT clear LV_OBJ_FLAG_SCROLLABLE — tileview needs it for swipe
+    lv_obj_set_scrollbar_mode(gui_tileview, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_size(gui_tileview, GUI_W, GUI_H);
 
     gui_tile_watch = lv_tileview_add_tile(gui_tileview, 1, 1, LV_DIR_ALL);
