@@ -55,9 +55,10 @@ static const lv_font_t &font_mid  = _f28::montserrat_bold_28;
 static lv_display_t *gui_display = NULL;
 static lv_indev_t   *gui_indev   = NULL;
 
-// Full-frame buffer: renders entire screen at once (eliminates tearing during scroll)
-// 410*502*2 = 411,640 bytes per buffer — fits in PSRAM
-#define GUI_BUF_LINES GUI_H
+// Draw buffer height — partial rendering only redraws dirty areas.
+// 120 lines covers the tallest glyph (96px) with margin.
+// Two buffers: 410*120*2 = 98,400 bytes each in PSRAM.
+#define GUI_BUF_LINES 120
 static uint8_t *gui_buf1 = NULL;
 static uint8_t *gui_buf2 = NULL;
 
@@ -111,11 +112,27 @@ static uint32_t gui_last_data_update = 0;
 static uint8_t gui_last_tile_col = 1;
 static uint8_t gui_last_tile_row = 1;
 
+// Frame timing metrics
+static uint32_t gui_frame_count = 0;
+static uint32_t gui_flush_us_total = 0;
+static uint32_t gui_flush_us_last = 0;
+static uint32_t gui_render_us_last = 0;
+static uint32_t gui_render_start = 0;
+
+// Remote touch injection
+static int16_t gui_inject_x = -1;
+static int16_t gui_inject_y = -1;
+static bool    gui_inject_pressed = false;
+static uint32_t gui_inject_until = 0;  // millis() deadline for injected touch
+
 // ---------------------------------------------------------------------------
 // LVGL display flush callback
 // ---------------------------------------------------------------------------
 // Shadow framebuffer for screenshots (RGB565 swapped / big-endian — same as display)
 uint16_t *gui_screenshot_buf = NULL;
+
+// Forward declaration — defined in Display.h after Gui.h is included
+void display_unblank();
 static volatile bool gui_screenshot_pending = false;  // set true to capture next frame
 
 static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
@@ -125,16 +142,20 @@ static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_
     uint16_t h  = area->y2 - area->y1 + 1;
     uint16_t *pixels = (uint16_t *)px_map;
 
-    // Copy to shadow framebuffer only when screenshot requested
+    // Copy to shadow framebuffer when screenshot capture is active
+    // Flag stays true across all partial flushes — cleared by screenshot command
     if (gui_screenshot_buf && gui_screenshot_pending) {
         for (uint16_t row = 0; row < h; row++) {
             memcpy(&gui_screenshot_buf[(y1 + row) * GUI_W + x1],
                    &pixels[row * w], w * sizeof(uint16_t));
         }
-        gui_screenshot_pending = false;
     }
 
+    uint32_t t0 = micros();
     co5300_push_pixels(x1, y1, w, h, pixels);
+    gui_flush_us_last = micros() - t0;
+    gui_flush_us_total += gui_flush_us_last;
+    gui_frame_count++;
     lv_display_flush_ready(disp);
 }
 
@@ -142,6 +163,17 @@ static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_
 // LVGL touch input read callback
 // ---------------------------------------------------------------------------
 static void gui_touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data) {
+    // Check for injected remote touch first
+    if (gui_inject_pressed && millis() < gui_inject_until) {
+        data->point.x = gui_inject_x;
+        data->point.y = gui_inject_y;
+        data->state = LV_INDEV_STATE_PRESSED;
+        last_unblank_event = millis();
+        return;
+    }
+    gui_inject_pressed = false;
+
+    // Real touch hardware
     int16_t tx, ty;
     if (gui_touch_fn && gui_touch_fn(&tx, &ty)) {
         data->point.x = tx;
@@ -542,7 +574,7 @@ bool gui_init() {
         if (!gui_buf1) return false;
     }
     lv_display_set_buffers(gui_display, gui_buf1, gui_buf2, buf_size,
-                            LV_DISPLAY_RENDER_MODE_FULL);
+                            LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     // Shadow framebuffer for screenshots (410*502*2 = 411,640 bytes)
     gui_screenshot_buf = (uint16_t *)heap_caps_malloc(GUI_W * GUI_H * sizeof(uint16_t),
@@ -605,45 +637,148 @@ bool gui_init() {
 // Call gui_screenshot() to write /screenshot.raw to SPIFFS (if mounted),
 // or read gui_screenshot_buf directly via debugger.
 // ---------------------------------------------------------------------------
-// Serial screenshot protocol:
-// Trigger: host sends 4 bytes [0x52, 0x57, 0x53, 0x53] ("RWSS" = R-Watch Screen Shot)
-// Response: "RWSS" + uint16_t(width) + uint16_t(height) + raw RGB565 LE pixels
-#define GUI_SS_MAGIC_0 0x52
-#define GUI_SS_MAGIC_1 0x57
-#define GUI_SS_MAGIC_2 0x53
-#define GUI_SS_MAGIC_3 0x53
-static uint8_t gui_ss_state = 0;
+// ---------------------------------------------------------------------------
+// Remote debug protocol over serial
+// ---------------------------------------------------------------------------
+// Trigger: 3-byte prefix [0x52, 0x57, 0x53] ("RWS") + command byte + optional payload
+//
+// Commands:
+//   'S' (0x53) — Screenshot: captures next frame, responds RWSS + u16 w + u16 h + pixels
+//   'T' (0x54) — Touch inject: reads 5 bytes (u16 x, u16 y, u8 duration_100ms)
+//   'N' (0x4E) — Navigate: reads 2 bytes (u8 col, u8 row) — jump to tile
+//   'M' (0x4D) — Metrics: responds RWSM + JSON stats
+//   'I' (0x49) — Invalidate: force full screen redraw
 
-void gui_check_screenshot_trigger(uint8_t byte_in) {
-    const uint8_t magic[] = {GUI_SS_MAGIC_0, GUI_SS_MAGIC_1, GUI_SS_MAGIC_2, GUI_SS_MAGIC_3};
-    if (byte_in == magic[gui_ss_state]) {
-        gui_ss_state++;
-        if (gui_ss_state == 4) {
-            gui_ss_state = 0;
+#define GUI_CMD_PREFIX_LEN 3
+static const uint8_t gui_cmd_prefix[] = {0x52, 0x57, 0x53};  // "RWS"
+static uint8_t gui_cmd_state = 0;
+static uint8_t gui_cmd_id = 0;
+static uint8_t gui_cmd_payload[8];
+static uint8_t gui_cmd_payload_pos = 0;
+static uint8_t gui_cmd_payload_len = 0;
+
+static void gui_cmd_execute();
+
+void gui_process_serial_byte(uint8_t b) {
+    // Match prefix
+    if (gui_cmd_state < GUI_CMD_PREFIX_LEN) {
+        if (b == gui_cmd_prefix[gui_cmd_state]) {
+            gui_cmd_state++;
+        } else {
+            gui_cmd_state = (b == gui_cmd_prefix[0]) ? 1 : 0;
+        }
+        return;
+    }
+
+    // Prefix matched — next byte is command
+    if (gui_cmd_state == GUI_CMD_PREFIX_LEN) {
+        gui_cmd_id = b;
+        gui_cmd_payload_pos = 0;
+        switch (b) {
+            case 'T': gui_cmd_payload_len = 5; break;  // x(2) + y(2) + duration(1)
+            case 'N': gui_cmd_payload_len = 2; break;  // col(1) + row(1)
+            default:  gui_cmd_payload_len = 0; break;  // S, M, I — no payload
+        }
+        gui_cmd_state++;
+        if (gui_cmd_payload_len == 0) {
+            gui_cmd_execute();
+            gui_cmd_state = 0;
+        }
+        return;
+    }
+
+    // Collecting payload
+    if (gui_cmd_payload_pos < gui_cmd_payload_len) {
+        gui_cmd_payload[gui_cmd_payload_pos++] = b;
+        if (gui_cmd_payload_pos >= gui_cmd_payload_len) {
+            gui_cmd_execute();
+            gui_cmd_state = 0;
+        }
+    }
+}
+
+static void gui_cmd_execute() {
+    const uint8_t hdr[] = {'R', 'W', 'S', gui_cmd_id};
+
+    switch (gui_cmd_id) {
+        case 'S': {  // Screenshot
             if (gui_screenshot_buf) {
-                // Request capture of next rendered frame
+                // Unblank and force full redraw so screenshot captures entire screen
+                if (display_blanked) display_unblank();
+                lv_obj_invalidate(lv_screen_active());
                 gui_screenshot_pending = true;
-                // Wait for the next flush to capture (max 100ms)
-                uint32_t t0 = millis();
-                while (gui_screenshot_pending && millis() - t0 < 100) { delay(1); }
-
-                Serial.write(magic, 4);
+                // Force full-screen render into screenshot buffer
+                lv_tick_inc(1);
+                lv_timer_handler();
+                gui_screenshot_pending = false;
+                Serial.write(hdr, 4);
                 uint16_t w = GUI_W, h = GUI_H;
                 Serial.write((uint8_t *)&w, 2);
                 Serial.write((uint8_t *)&h, 2);
                 Serial.write((uint8_t *)gui_screenshot_buf, GUI_W * GUI_H * 2);
                 Serial.flush();
             } else {
-                // Buffer not allocated — send error marker
-                Serial.write(magic, 4);
-                uint16_t w = 0, h = 0;
-                Serial.write((uint8_t *)&w, 2);
-                Serial.write((uint8_t *)&h, 2);
+                Serial.write(hdr, 4);
+                uint16_t z = 0;
+                Serial.write((uint8_t *)&z, 2);
+                Serial.write((uint8_t *)&z, 2);
                 Serial.flush();
             }
+            break;
         }
-    } else {
-        gui_ss_state = (byte_in == magic[0]) ? 1 : 0;
+
+        case 'T': {  // Touch inject
+            gui_inject_x = gui_cmd_payload[0] | (gui_cmd_payload[1] << 8);
+            gui_inject_y = gui_cmd_payload[2] | (gui_cmd_payload[3] << 8);
+            uint32_t dur = gui_cmd_payload[4] * 100;  // duration in 100ms units
+            if (dur == 0) dur = 200;
+            gui_inject_pressed = true;
+            gui_inject_until = millis() + dur;
+            // Unblank display on injected touch
+            if (display_blanked) display_unblank();
+            break;
+        }
+
+        case 'N': {  // Navigate to tile
+            uint8_t col = gui_cmd_payload[0];
+            uint8_t row = gui_cmd_payload[1];
+            if (gui_tileview) {
+                // Find tile at position
+                lv_obj_t *target = NULL;
+                if (col == 1 && row == 1) target = gui_tile_watch;
+                else if (col == 1 && row == 0) target = gui_tile_radio;
+                else if (col == 0 && row == 1) target = gui_tile_gps;
+                else if (col == 2 && row == 1) target = gui_tile_msg;
+                else if (col == 1 && row == 2) target = gui_tile_set;
+                if (target) {
+                    lv_tileview_set_tile(gui_tileview, target, LV_ANIM_ON);
+                }
+            }
+            if (display_blanked) display_unblank();
+            break;
+        }
+
+        case 'M': {  // Metrics
+            Serial.write(hdr, 4);
+            char buf[192];
+            uint32_t avg_flush = gui_frame_count > 0 ? gui_flush_us_total / gui_frame_count : 0;
+            snprintf(buf, sizeof(buf),
+                "{\"frames\":%lu,\"flush_last_us\":%lu,\"flush_avg_us\":%lu,"
+                "\"render_last_us\":%lu,\"heap_free\":%lu,\"psram_free\":%lu}\n",
+                gui_frame_count, gui_flush_us_last, avg_flush,
+                gui_render_us_last,
+                (uint32_t)esp_get_free_heap_size(),
+                (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+            Serial.write((uint8_t *)buf, strlen(buf));
+            Serial.flush();
+            break;
+        }
+
+        case 'I': {  // Invalidate — force full redraw
+            if (gui_screen) lv_obj_invalidate(gui_screen);
+            if (display_blanked) display_unblank();
+            break;
+        }
     }
 }
 
@@ -736,9 +871,10 @@ void gui_update() {
     last_tick = now;
 
     gui_update_data();
+
+    gui_render_start = micros();
     lv_timer_handler();
-    // After timer_handler, a new flush may have been queued via gui_flush_cb.
-    // DMA runs in background until next gui_update() call.
+    gui_render_us_last = micros() - gui_render_start;
 }
 
 #endif // BOARD_MODEL == BOARD_TWATCH_ULT

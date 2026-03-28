@@ -2334,7 +2334,7 @@ void buffer_serial() {
       c++;
       uint8_t sb = Serial.read();
       #if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_DISPLAY
-        gui_check_screenshot_trigger(sb);
+        gui_process_serial_byte(sb);
       #endif
       if (!fifo_isfull(&channelFIFO[CHANNEL_USB])) { fifo_push(&channelFIFO[CHANNEL_USB], sb); }
     }
