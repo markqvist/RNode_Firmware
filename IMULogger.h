@@ -11,6 +11,7 @@
 #if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_SD
 
 #include <SD.h>
+#include "SharedSPI.h"
 
 // Ring buffer for sensor samples (stored in PSRAM)
 struct imu_sample_t {
@@ -89,9 +90,12 @@ bool imu_log_start(SensorBHI260AP *bhi) {
     imu_log_head = 0;
     imu_log_tail = 0;
 
-    // Init SD
+    // Init SD (acquire shared SPI mutex)
+    if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
     SPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
-    if (!SD.begin(SD_CS, SPI)) {
+    bool sd_ok = SD.begin(SD_CS, SPI, 4000000, "/sd", 5);
+    if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
+    if (!sd_ok) {
         Serial.println("[imu_log] SD init failed");
         return false;
     }
@@ -144,15 +148,16 @@ void imu_log_stop(SensorBHI260AP *bhi) {
                   imu_log_samples, duration,
                   duration > 0 ? (float)imu_log_samples / duration : 0);
 
+    if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
     imu_log_file.close();
-    SD.end();
-    SPI.end();
+    if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
     imu_logging = false;
 }
 
 // Flush ring buffer to SD — call from main loop
 void imu_log_flush() {
     if (!imu_logging || !imu_log_buf) return;
+    if (shared_spi_mutex && xSemaphoreTake(shared_spi_mutex, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
     char line[80];
     uint32_t flushed = 0;
@@ -169,6 +174,7 @@ void imu_log_flush() {
     if (flushed > 0) {
         imu_log_file.flush();
     }
+    if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 }
 
 #endif // BOARD_MODEL == BOARD_TWATCH_ULT && HAS_SD

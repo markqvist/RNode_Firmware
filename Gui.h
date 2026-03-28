@@ -145,6 +145,11 @@ uint16_t *gui_screenshot_buf = NULL;
 void display_unblank();
 extern float pmu_temperature;
 extern volatile uint32_t imu_step_count;
+#if !ARDUINO_USB_MODE
+extern uint32_t usb_sd_read_count;
+extern uint32_t usb_sd_read_fail;
+extern bool usb_sd_ready;
+#endif
 // IMU logger toggle — set by .ino after IMULogger.h is included
 typedef bool (*gui_log_toggle_fn_t)();
 static gui_log_toggle_fn_t gui_log_toggle_fn = NULL;
@@ -775,6 +780,7 @@ bool gui_init() {
 //   'M' (0x4D) — Metrics: responds RWSM + JSON stats
 //   'I' (0x49) — Invalidate: force full screen redraw
 //   'L' (0x4C) — Log toggle: start/stop IMU logging to SD card
+//   'F' (0x46) — File download: reads 1 byte filename length + filename, sends file contents
 
 #define GUI_CMD_PREFIX_LEN 3
 static const uint8_t gui_cmd_prefix[] = {0x52, 0x57, 0x53};  // "RWS"
@@ -891,15 +897,28 @@ static void gui_cmd_execute() {
             Serial.write(hdr, 4);
             char buf[192];
             uint32_t avg_flush = gui_frame_count > 0 ? gui_flush_us_total / gui_frame_count : 0;
+            #if !ARDUINO_USB_MODE
             snprintf(buf, sizeof(buf),
-                "{\"frames\":%lu,\"flush_us\":%lu,\"flush_avg\":%lu,"
-                "\"render_us\":%lu,\"loop_us\":%lu,\"loop_max_us\":%lu,"
+                "{\"frames\":%lu,\"flush_us\":%lu,\"render_us\":%lu,"
+                "\"loop_us\":%lu,\"loop_max\":%lu,"
+                "\"sd_ready\":%d,\"sd_reads\":%lu,\"sd_fails\":%lu,"
                 "\"heap\":%lu,\"psram\":%lu}\n",
-                gui_frame_count, gui_flush_us_last, avg_flush,
+                gui_frame_count, gui_flush_us_last,
+                gui_render_us_last, gui_loop_us_last, gui_loop_us_max,
+                usb_sd_ready ? 1 : 0, usb_sd_read_count, usb_sd_read_fail,
+                (uint32_t)esp_get_free_heap_size(),
+                (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+            #else
+            snprintf(buf, sizeof(buf),
+                "{\"frames\":%lu,\"flush_us\":%lu,\"render_us\":%lu,"
+                "\"loop_us\":%lu,\"loop_max\":%lu,"
+                "\"heap\":%lu,\"psram\":%lu}\n",
+                gui_frame_count, gui_flush_us_last,
                 gui_render_us_last, gui_loop_us_last, gui_loop_us_max,
                 (uint32_t)esp_get_free_heap_size(),
                 (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
-            gui_loop_us_max = 0;  // reset max after reading
+            #endif
+            gui_loop_us_max = 0;
             Serial.write((uint8_t *)buf, strlen(buf));
             Serial.flush();
             break;
@@ -937,20 +956,23 @@ void gui_screenshot_info() {
 // Write screenshot to SD card as raw RGB565 + BMP header
 #if HAS_SD
 #include <SD.h>
+#include "SharedSPI.h"
 bool gui_screenshot_sd(const char *path = "/screenshot.bmp") {
     if (!gui_screenshot_buf) return false;
 
-    // Init SD on shared SPI bus
+    // Acquire shared SPI mutex for SD access
+    if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
     SPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
-    if (!SD.begin(SD_CS, SPI)) {
+    if (!SD.begin(SD_CS, SPI, 4000000, "/sd", 5)) {
+        if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
         Serial.println("[screenshot] SD init failed");
         return false;
     }
 
     File f = SD.open(path, FILE_WRITE);
     if (!f) {
+        if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
         Serial.println("[screenshot] file open failed");
-        SD.end();
         return false;
     }
 
@@ -994,10 +1016,7 @@ bool gui_screenshot_sd(const char *path = "/screenshot.bmp") {
     f.write((uint8_t *)gui_screenshot_buf, img_size);
 
     f.close();
-    SD.end();
-
-    // Restart LoRa SPI after SD use (shared bus)
-    SPI.end();
+    if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 
     Serial.printf("[screenshot] saved %s (%u bytes)\n", path, file_size);
     return true;

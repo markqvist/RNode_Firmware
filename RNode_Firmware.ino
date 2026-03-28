@@ -50,6 +50,15 @@
   // IMU data logger to SD card
   #include "IMULogger.h"
 
+  // Shared SPI bus mutex (LoRa + SD + NFC)
+  #include "SharedSPI.h"
+  SemaphoreHandle_t shared_spi_mutex = NULL;  // definition (declared extern in SharedSPI.h)
+
+  // USB Mass Storage for SD card access (TinyUSB OTG mode only)
+  #if !ARDUINO_USB_MODE
+    #include "USBSD.h"
+  #endif
+
   // CST9217 capacitive touch panel
   #include <touch/TouchDrvCST92xx.h>
   TouchDrvCST92xx touch;
@@ -105,6 +114,12 @@ char sbuf[128];
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
+
+    // Init shared SPI bus mutex before any SPI users
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+      shared_spi_init();
+    #endif
+
     EEPROM.begin(EEPROM_SIZE);
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
 
@@ -168,6 +183,8 @@ void setup() {
   }
 
   Serial.begin(serial_baudrate);
+
+  // USB MSC init moved to after T-Watch hardware init (see below)
 
   #if HAS_NP
     led_init();
@@ -342,6 +359,8 @@ void setup() {
       // Init speaker (BLDO2 already enabled by PMU init) and microphone
       speaker_init();
       mic_init();
+
+      // USB MSC SD card — deferred to main loop (SPI bus needs LoRa init first)
 
       // BHI260AP init deferred — firmware upload takes ~10s at 1MHz I2C
       // and blocks serial communication during boot. Will be initialized
@@ -2089,6 +2108,15 @@ void loop() {
       }
     }
     #endif
+  #endif
+
+  // Deferred USB MSC SD card init — needs SPI bus configured by LoRa first
+  #if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_SD && !ARDUINO_USB_MODE
+    if (!usb_sd_ready && millis() > 3000) {
+      if (usb_sd_init()) {
+        Serial.println("[usb_sd] SD card mounted");
+      }
+    }
   #endif
 
   // Deferred BHI260AP init — runs once after boot is complete

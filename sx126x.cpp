@@ -100,6 +100,8 @@
 
 extern SPIClass SPI;
 
+#include "SharedSPI.h"
+
 #define MAX_PKT_LENGTH 255
 
 sx126x::sx126x() :
@@ -170,6 +172,7 @@ uint8_t ISR_VECT sx126x::singleTransfer(uint8_t opcode, uint16_t address, uint8_
   waitOnBusy();
   
   uint8_t response;
+  if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
@@ -178,8 +181,8 @@ uint8_t ISR_VECT sx126x::singleTransfer(uint8_t opcode, uint16_t address, uint8_
   if (opcode == OP_READ_REGISTER_6X) { SPI.transfer(0x00); }
   response = SPI.transfer(value);
   SPI.endTransaction();
-
   digitalWrite(_ss, HIGH);
+  if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 
   return response;
 }
@@ -205,16 +208,19 @@ void sx126x::waitOnBusy() {
 
 void sx126x::executeOpcode(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   waitOnBusy();
+  if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
   for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
+  if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 }
 
 void sx126x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   waitOnBusy();
+  if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(opcode);
@@ -222,10 +228,12 @@ void sx126x::executeOpcodeRead(uint8_t opcode, uint8_t *buffer, uint8_t size) {
   for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
+  if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 }
 
 void sx126x::writeBuffer(const uint8_t* buffer, size_t size) {
   waitOnBusy();
+  if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(OP_FIFO_WRITE_6X);
@@ -233,10 +241,12 @@ void sx126x::writeBuffer(const uint8_t* buffer, size_t size) {
   for (int i = 0; i < size; i++) { SPI.transfer(buffer[i]); _fifo_tx_addr_ptr++; }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
+  if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 }
 
 void sx126x::readBuffer(uint8_t* buffer, size_t size) {
   waitOnBusy();
+  if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(OP_FIFO_READ_6X);
@@ -245,6 +255,7 @@ void sx126x::readBuffer(uint8_t* buffer, size_t size) {
   for (int i = 0; i < size; i++) { buffer[i] = SPI.transfer(0x00); }
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
+  if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
 }
 
 void sx126x::setModulationParams(uint8_t sf, uint8_t bw, uint8_t cr, int ldro) {
@@ -873,12 +884,14 @@ uint8_t sx126x::getModemStatus() {
   // byte after the opcode, not in the data buffer.
   waitOnBusy();
   uint8_t status;
+  if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
   digitalWrite(_ss, LOW);
   SPI.beginTransaction(_spiSettings);
   SPI.transfer(OP_STATUS_6X);
   status = SPI.transfer(0x00);
   SPI.endTransaction();
   digitalWrite(_ss, HIGH);
+  if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
   return status;
 }
 
