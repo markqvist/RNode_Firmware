@@ -2048,17 +2048,27 @@ void loop() {
     #if HAS_SD && HAS_DISPLAY
     {
       static uint32_t btn_down_since = 0;
-      static bool btn_screenshot_taken = false;
+      static bool btn_action_taken = false;
       if (digitalRead(0) == LOW) {
         if (btn_down_since == 0) btn_down_since = millis();
-        if (!btn_screenshot_taken && millis() - btn_down_since > 2000) {
-          btn_screenshot_taken = true;
+        // Long press (2s): screenshot to SD
+        if (!btn_action_taken && millis() - btn_down_since > 2000) {
+          btn_action_taken = true;
           if (drv2605_ready) drv2605_play(HAPTIC_DOUBLE_CLICK);
           gui_screenshot_sd();
         }
       } else {
+        // Short press: navigate home
+        if (btn_down_since > 0 && !btn_action_taken && millis() - btn_down_since > 50) {
+          if (display_blanked) {
+            display_unblank();
+          } else {
+            lv_tileview_set_tile(gui_tileview, gui_tile_watch, LV_ANIM_ON);
+            if (drv2605_ready) drv2605_play(HAPTIC_LIGHT_CLICK);
+          }
+        }
         btn_down_since = 0;
-        btn_screenshot_taken = false;
+        btn_action_taken = false;
       }
     }
     #endif
