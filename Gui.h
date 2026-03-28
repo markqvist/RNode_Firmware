@@ -116,6 +116,7 @@ static uint8_t gui_last_tile_row = 1;
 // ---------------------------------------------------------------------------
 // Shadow framebuffer for screenshots (RGB565 swapped / big-endian — same as display)
 uint16_t *gui_screenshot_buf = NULL;
+static volatile bool gui_screenshot_pending = false;  // set true to capture next frame
 
 static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     uint16_t x1 = area->x1;
@@ -124,12 +125,13 @@ static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_
     uint16_t h  = area->y2 - area->y1 + 1;
     uint16_t *pixels = (uint16_t *)px_map;
 
-    // Copy to shadow framebuffer for screenshots
-    if (gui_screenshot_buf) {
+    // Copy to shadow framebuffer only when screenshot requested
+    if (gui_screenshot_buf && gui_screenshot_pending) {
         for (uint16_t row = 0; row < h; row++) {
             memcpy(&gui_screenshot_buf[(y1 + row) * GUI_W + x1],
                    &pixels[row * w], w * sizeof(uint16_t));
         }
+        gui_screenshot_pending = false;
     }
 
     co5300_push_pixels(x1, y1, w, h, pixels);
@@ -572,6 +574,7 @@ bool gui_init() {
     lv_obj_set_style_border_width(gui_tileview, 0, 0);
     lv_obj_set_style_pad_all(gui_tileview, 0, 0);
     lv_obj_set_scrollbar_mode(gui_tileview, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_style_anim_duration(gui_tileview, 150, 0);  // Snappy 150ms scroll snap
     lv_obj_set_size(gui_tileview, GUI_W, GUI_H);
 
     gui_tile_watch = lv_tileview_add_tile(gui_tileview, 1, 1, LV_DIR_ALL);
@@ -618,6 +621,12 @@ void gui_check_screenshot_trigger(uint8_t byte_in) {
         if (gui_ss_state == 4) {
             gui_ss_state = 0;
             if (gui_screenshot_buf) {
+                // Request capture of next rendered frame
+                gui_screenshot_pending = true;
+                // Wait for the next flush to capture (max 100ms)
+                uint32_t t0 = millis();
+                while (gui_screenshot_pending && millis() - t0 < 100) { delay(1); }
+
                 Serial.write(magic, 4);
                 uint16_t w = GUI_W, h = GUI_H;
                 Serial.write((uint8_t *)&w, 2);
@@ -728,6 +737,8 @@ void gui_update() {
 
     gui_update_data();
     lv_timer_handler();
+    // After timer_handler, a new flush may have been queued via gui_flush_cb.
+    // DMA runs in background until next gui_update() call.
 }
 
 #endif // BOARD_MODEL == BOARD_TWATCH_ULT

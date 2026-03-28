@@ -54,18 +54,18 @@ static spi_device_handle_t co5300_spi = NULL;
 static bool co5300_ready = false;
 static uint8_t co5300_brightness = 0;
 
-// Send a command with optional data bytes via QSPI
+// Send a command with optional data bytes via QSPI (DMA-based)
 static void co5300_write_cmd(uint8_t cmd, uint8_t *data, uint32_t len) {
   digitalWrite(DISP_CS, LOW);
   spi_transaction_t t = {};
   t.flags = SPI_TRANS_MULTILINE_CMD | SPI_TRANS_MULTILINE_ADDR;
-  t.cmd = 0x02;          // QSPI write command
-  t.addr = cmd << 8;     // Display command in address field
+  t.cmd = 0x02;
+  t.addr = cmd << 8;
   if (len > 0 && data) {
     t.tx_buffer = data;
     t.length = 8 * len;
   }
-  spi_device_polling_transmit(co5300_spi, &t);
+  spi_device_transmit(co5300_spi, &t);
   digitalWrite(DISP_CS, HIGH);
 }
 
@@ -83,11 +83,10 @@ static void co5300_set_window(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2
   co5300_write_cmd(CO5300_CMD_RAMWR, NULL, 0);
 }
 
-// Push pixel data to the display (RGB565, big-endian)
+// Push pixel data to the display (RGB565, DMA-based, blocking)
 void co5300_push_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *pixels) {
   if (!co5300_ready) return;
 
-  spi_device_acquire_bus(co5300_spi, portMAX_DELAY);
   co5300_set_window(x, y, x + w - 1, y + h - 1);
 
   uint32_t total = w * h;
@@ -112,32 +111,96 @@ void co5300_push_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t
     }
     t.base.tx_buffer = p;
     t.base.length = chunk * 16;
-    spi_device_polling_transmit(co5300_spi, (spi_transaction_t *)&t);
+    spi_device_transmit(co5300_spi, (spi_transaction_t *)&t);
     p += chunk;
     total -= chunk;
   }
   digitalWrite(DISP_CS, HIGH);
+}
 
-  spi_device_release_bus(co5300_spi);
+// --- Async pixel push ---
+// Queues all DMA transactions and returns immediately.
+// co5300_push_done() returns true when all transactions complete.
+// co5300_push_finish() blocks until complete.
+#define CO5300_MAX_ASYNC_TXNS 14  // 410*502 / 16384 = ~13 chunks
+static spi_transaction_ext_t co5300_async_txns[CO5300_MAX_ASYNC_TXNS];
+static int co5300_async_queued = 0;
+
+void co5300_push_pixels_start(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *pixels) {
+  if (!co5300_ready) return;
+
+  // Must not have pending async work
+  co5300_set_window(x, y, x + w - 1, y + h - 1);
+
+  uint32_t total = w * h;
+  uint16_t *p = pixels;
+  bool first = true;
+  co5300_async_queued = 0;
+
+  digitalWrite(DISP_CS, LOW);
+  while (total > 0 && co5300_async_queued < CO5300_MAX_ASYNC_TXNS) {
+    uint32_t chunk = (total > CO5300_SEND_BUF_SIZE) ? CO5300_SEND_BUF_SIZE : total;
+    int i = co5300_async_queued;
+    memset(&co5300_async_txns[i], 0, sizeof(spi_transaction_ext_t));
+    if (first) {
+      co5300_async_txns[i].base.flags = SPI_TRANS_MODE_QIO;
+      co5300_async_txns[i].base.cmd = 0x32;
+      co5300_async_txns[i].base.addr = 0x002C00;
+      first = false;
+    } else {
+      co5300_async_txns[i].base.flags = SPI_TRANS_MODE_QIO | SPI_TRANS_VARIABLE_CMD |
+                                         SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_DUMMY;
+      co5300_async_txns[i].command_bits = 0;
+      co5300_async_txns[i].address_bits = 0;
+      co5300_async_txns[i].dummy_bits = 0;
+    }
+    co5300_async_txns[i].base.tx_buffer = p;
+    co5300_async_txns[i].base.length = chunk * 16;
+    spi_device_queue_trans(co5300_spi, (spi_transaction_t *)&co5300_async_txns[i], portMAX_DELAY);
+    p += chunk;
+    total -= chunk;
+    co5300_async_queued++;
+  }
+}
+
+void co5300_push_finish() {
+  spi_transaction_t *rtrans;
+  while (co5300_async_queued > 0) {
+    spi_device_get_trans_result(co5300_spi, &rtrans, portMAX_DELAY);
+    co5300_async_queued--;
+  }
+  digitalWrite(DISP_CS, HIGH);
+}
+
+bool co5300_push_done() {
+  if (co5300_async_queued == 0) return true;
+  spi_transaction_t *rtrans;
+  // Non-blocking check
+  while (co5300_async_queued > 0) {
+    if (spi_device_get_trans_result(co5300_spi, &rtrans, 0) == ESP_OK) {
+      co5300_async_queued--;
+    } else {
+      return false;  // Still in progress
+    }
+  }
+  digitalWrite(DISP_CS, HIGH);
+  return true;
 }
 
 // Fill a rectangle with a solid colour
 void co5300_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
   if (!co5300_ready) return;
 
-  // Polling SPI doesn't need DMA memory — use PSRAM-capable heap
   uint32_t total = w * h;
   uint32_t buf_size = (total > CO5300_SEND_BUF_SIZE) ? CO5300_SEND_BUF_SIZE : total;
   uint16_t *buf = (uint16_t *)heap_caps_malloc(buf_size * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (!buf) {
-    // Fallback to internal RAM
     buf = (uint16_t *)malloc(buf_size * 2);
     if (!buf) return;
   }
 
   for (uint32_t i = 0; i < buf_size; i++) buf[i] = color;
 
-  spi_device_acquire_bus(co5300_spi, portMAX_DELAY);
   co5300_set_window(x, y, x + w - 1, y + h - 1);
 
   uint32_t remaining = total;
@@ -160,11 +223,10 @@ void co5300_fill_rect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t c
     }
     t.base.tx_buffer = buf;
     t.base.length = chunk * 16;
-    spi_device_polling_transmit(co5300_spi, (spi_transaction_t *)&t);
+    spi_device_transmit(co5300_spi, (spi_transaction_t *)&t);
     remaining -= chunk;
   }
   digitalWrite(DISP_CS, HIGH);
-  spi_device_release_bus(co5300_spi);
 
   heap_caps_free(buf);
 }
