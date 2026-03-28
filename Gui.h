@@ -85,6 +85,7 @@ static lv_obj_t *gui_gps_value   = NULL;
 static lv_obj_t *gui_gps_label   = NULL;
 static lv_obj_t *gui_batt_value  = NULL;  // battery detail in complications
 static lv_obj_t *gui_batt_detail = NULL;
+static lv_obj_t *gui_step_label  = NULL;  // step count below complications
 
 // Radio status widgets
 static lv_obj_t *gui_radio_freq  = NULL;
@@ -140,9 +141,10 @@ static uint32_t gui_inject_until = 0;  // millis() deadline for injected touch
 // Shadow framebuffer for screenshots (RGB565 swapped / big-endian — same as display)
 uint16_t *gui_screenshot_buf = NULL;
 
-// Forward declarations — defined in Display.h / Power.h after Gui.h is included
+// Forward declarations — defined in Display.h / Power.h / .ino after Gui.h is included
 void display_unblank();
 extern float pmu_temperature;
+extern volatile uint32_t imu_step_count;
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -305,6 +307,12 @@ static void gui_create_watchface(lv_obj_t *parent) {
 
     // Rule 2
     gui_create_rule(parent, GUI_RULE2_Y);
+
+    // Step counter below complications
+    gui_step_label = gui_label(parent, &lv_font_montserrat_20, GUI_COL_DIM, "");
+    lv_obj_set_width(gui_step_label, GUI_W);
+    lv_obj_set_style_text_align(gui_step_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(gui_step_label, 0, GUI_RULE2_Y + 15);
 }
 
 // ---------------------------------------------------------------------------
@@ -531,6 +539,16 @@ static void gui_update_data() {
         lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(GUI_COL_DIM), 0);
     }
     #endif
+
+    // Step counter
+    if (gui_step_label) {
+        if (imu_step_count > 0) {
+            lv_label_set_text_fmt(gui_step_label, "%lu steps", imu_step_count);
+            lv_obj_set_style_text_color(gui_step_label, lv_color_hex(GUI_COL_MID), 0);
+        } else {
+            lv_label_set_text(gui_step_label, "");
+        }
+    }
 
     // Battery complication — voltage and state
     if (battery_state == BATTERY_STATE_CHARGING) {

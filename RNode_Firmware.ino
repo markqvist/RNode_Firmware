@@ -22,12 +22,26 @@
   #include "CO5300.h"
   #include "DRV2605.h"
 
-  // BHI260AP sensor hub — IMU + GPIO expansion
+  // BHI260AP sensor hub — IMU + step counter + wrist wake
   #include <SensorBHI260AP.hpp>
+  #include <bosch/BoschSensorDataHelper.hpp>
   #define BOSCH_BHI260_GPIO
   #include <BoschFirmware.h>
   SensorBHI260AP *bhi260 = NULL;
   bool bhi260_ready = false;
+  volatile uint32_t imu_step_count = 0;
+  volatile bool imu_wrist_tilt = false;
+
+  // IMU sensor callbacks
+  void imu_step_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
+    if (size >= 4) {
+      imu_step_count = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+    }
+  }
+
+  void imu_wrist_tilt_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
+    imu_wrist_tilt = true;
+  }
 
   // MAX98357A I2S speaker + SPM1423 PDM microphone
   #include "Speaker.h"
@@ -2086,8 +2100,30 @@ void loop() {
       if (bhi260->begin(Wire, 0x28, I2C_SDA, I2C_SCL)) {
         bhi260_ready = true;
         pinMode(SENSOR_INT, INPUT);
+
+        // Enable wrist tilt gesture for display wake
+        bhi260->configure(SensorBHI260AP::WRIST_TILT_GESTURE, 1.0, 0);
+        bhi260->onResultEvent(SensorBHI260AP::WRIST_TILT_GESTURE, imu_wrist_tilt_cb);
+
+        // Enable step counter (low power, always-on)
+        bhi260->configure(SensorBHI260AP::STEP_COUNTER, 1.0, 0);
+        bhi260->onResultEvent(SensorBHI260AP::STEP_COUNTER, imu_step_cb);
       }
       Wire.setClock(400000UL);
+    }
+
+    // Process IMU events and handle wrist wake
+    if (bhi260_ready) {
+      bhi260->update();
+      if (imu_wrist_tilt) {
+        imu_wrist_tilt = false;
+        #if HAS_DISPLAY
+          if (display_blanked) {
+            display_unblank();
+            if (drv2605_ready) drv2605_play(HAPTIC_LIGHT_CLICK);
+          }
+        #endif
+      }
     }
   #endif
 
