@@ -373,11 +373,16 @@ static void gui_create_radio_screen(lv_obj_t *parent) {
 static void gui_create_gps_screen(lv_obj_t *parent) {
     gui_style_black_container(parent);
 
-    gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "GPS", GUI_PAD, 12);
+    lv_obj_t *gps_title = gui_label(parent, &lv_font_montserrat_14, GUI_COL_DIM, "GPS");
+    lv_obj_set_width(gps_title, GUI_W);
+    lv_obj_set_style_text_align(gps_title, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(gps_title, 0, 12);
 
-    // Coordinates
-    gui_gps_coords = gui_label_at(parent, &font_mid, GUI_COL_TEAL,
-                                   "-- --", GUI_PAD, 40);
+    // Coordinates — centered for rounded corner clearance
+    gui_gps_coords = gui_label(parent, &font_mid, GUI_COL_TEAL, "-- --");
+    lv_obj_set_width(gui_gps_coords, GUI_W);
+    lv_obj_set_style_text_align(gui_gps_coords, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(gui_gps_coords, 0, 40);
 
     // Fix quality
     gui_create_rule(parent, 110);
@@ -785,7 +790,9 @@ static void gui_cmd_execute() {
                 lv_obj_invalidate(lv_screen_active());
                 gui_screenshot_pending = true;
                 // Force full-screen render into screenshot buffer
-                lv_tick_inc(1);
+                // Advance tick past the refresh period to ensure render fires
+                lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+                gui_update_data();
                 lv_timer_handler();
                 gui_screenshot_pending = false;
                 Serial.write(hdr, 4);
