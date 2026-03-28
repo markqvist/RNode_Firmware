@@ -83,8 +83,8 @@ static lv_obj_t *gui_lora_value  = NULL;
 static lv_obj_t *gui_lora_label  = NULL;
 static lv_obj_t *gui_gps_value   = NULL;
 static lv_obj_t *gui_gps_label   = NULL;
-static lv_obj_t *gui_steps_value = NULL;
-static lv_obj_t *gui_steps_label = NULL;
+static lv_obj_t *gui_batt_value  = NULL;  // battery detail in complications
+static lv_obj_t *gui_batt_detail = NULL;
 
 // Radio status widgets
 static lv_obj_t *gui_radio_freq  = NULL;
@@ -94,6 +94,10 @@ static lv_obj_t *gui_radio_rssi_lbl = NULL;
 static lv_obj_t *gui_radio_util  = NULL;
 static lv_obj_t *gui_radio_ble   = NULL;
 static lv_obj_t *gui_radio_pkts  = NULL;
+
+// Radio screen additional widgets
+static lv_obj_t *gui_radio_temp = NULL;
+static lv_obj_t *gui_radio_batt = NULL;
 
 // GPS screen widgets
 static lv_obj_t *gui_gps_coords  = NULL;
@@ -136,8 +140,12 @@ static uint32_t gui_inject_until = 0;  // millis() deadline for injected touch
 // Shadow framebuffer for screenshots (RGB565 swapped / big-endian — same as display)
 uint16_t *gui_screenshot_buf = NULL;
 
-// Forward declaration — defined in Display.h after Gui.h is included
+// Forward declarations — defined in Display.h / Power.h after Gui.h is included
 void display_unblank();
+extern float pmu_temperature;
+#ifndef PMU_TEMP_MIN
+#define PMU_TEMP_MIN -30
+#endif
 static volatile bool gui_screenshot_pending = false;  // set true to capture next frame
 
 static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
@@ -293,7 +301,7 @@ static void gui_create_watchface(lv_obj_t *parent) {
     int cw = (GUI_W - GUI_PAD * 2) / 3;
     gui_create_complication(comp, GUI_PAD,          cw, GUI_COL_AMBER, "LoRa",  &gui_lora_value,  &gui_lora_label);
     gui_create_complication(comp, GUI_PAD + cw,     cw, GUI_COL_TEAL,  "GPS",   &gui_gps_value,   &gui_gps_label);
-    gui_create_complication(comp, GUI_PAD + cw * 2, cw, GUI_COL_WHITE, "Steps", &gui_steps_value, &gui_steps_label);
+    gui_create_complication(comp, GUI_PAD + cw * 2, cw, GUI_COL_WHITE, "Batt", &gui_batt_value, &gui_batt_detail);
 
     // Rule 2
     gui_create_rule(parent, GUI_RULE2_Y);
@@ -346,6 +354,17 @@ static void gui_create_radio_screen(lv_obj_t *parent) {
     gui_create_rule(parent, 275);
     gui_radio_pkts = gui_label_at(parent, &font_mid, GUI_COL_MID,
                                    "RX: 0  TX: 0", GUI_PAD, 290);
+
+    // Battery and temperature
+    gui_create_rule(parent, 325);
+    gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "BATTERY", GUI_PAD, 338);
+    gui_radio_batt = gui_label(parent, &font_mid, GUI_COL_MID, "---");
+    lv_obj_align(gui_radio_batt, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 335);
+
+    gui_create_rule(parent, 370);
+    gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "TEMPERATURE", GUI_PAD, 383);
+    gui_radio_temp = gui_label(parent, &font_mid, GUI_COL_MID, "---");
+    lv_obj_align(gui_radio_temp, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 380);
 }
 
 // ---------------------------------------------------------------------------
@@ -506,8 +525,28 @@ static void gui_update_data() {
     }
     #endif
 
-    // Steps placeholder
-    lv_label_set_text(gui_steps_value, "--");
+    // Battery complication — voltage and state
+    if (battery_state == BATTERY_STATE_CHARGING) {
+        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
+        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_GREEN), 0);
+        lv_label_set_text(gui_batt_detail, "Charging");
+        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_GREEN), 0);
+    } else if (battery_state == BATTERY_STATE_CHARGED) {
+        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
+        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_GREEN), 0);
+        lv_label_set_text(gui_batt_detail, "Full");
+        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_GREEN), 0);
+    } else if (battery_percent < 15) {
+        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
+        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_RED), 0);
+        lv_label_set_text(gui_batt_detail, "Low");
+        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_RED), 0);
+    } else {
+        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
+        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_WHITE), 0);
+        lv_label_set_text(gui_batt_detail, "Batt");
+        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_DIM), 0);
+    }
 
     // ---- Radio status screen ----
     if (gui_radio_freq) {
@@ -543,6 +582,22 @@ static void gui_update_data() {
         }
 
         lv_label_set_text_fmt(gui_radio_pkts, "RX: %lu  TX: %lu", stat_rx, stat_tx);
+
+        // Battery detail
+        if (gui_radio_batt) {
+            lv_label_set_text_fmt(gui_radio_batt, "%.2fV  %d%%", battery_voltage, (int)battery_percent);
+            lv_obj_align(gui_radio_batt, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 335);
+        }
+
+        // Temperature
+        if (gui_radio_temp) {
+            if (pmu_temperature > (PMU_TEMP_MIN - 1)) {
+                lv_label_set_text_fmt(gui_radio_temp, "%.1f C", pmu_temperature);
+            } else {
+                lv_label_set_text(gui_radio_temp, "---");
+            }
+            lv_obj_align(gui_radio_temp, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 380);
+        }
     }
 
     // ---- GPS screen ----
