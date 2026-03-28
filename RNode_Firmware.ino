@@ -47,6 +47,9 @@
   #include "Speaker.h"
   #include "Microphone.h"
 
+  // IMU data logger to SD card
+  #include "IMULogger.h"
+
   // CST9217 capacitive touch panel
   #include <touch/TouchDrvCST92xx.h>
   TouchDrvCST92xx touch;
@@ -2091,7 +2094,7 @@ void loop() {
   // Deferred BHI260AP init — runs once after boot is complete
   // Firmware upload takes ~10s and blocks, so we do it after radio is up
   #if BOARD_MODEL == BOARD_TWATCH_ULT
-    if (!bhi260_ready && bhi260 == NULL && hw_ready && millis() > 5000) {
+    if (!bhi260_ready && bhi260 == NULL && millis() > 5000) {
       Wire.setClock(1000000UL);
       bhi260 = new SensorBHI260AP();
       bhi260->setPins(-1);
@@ -2104,6 +2107,18 @@ void loop() {
         // Enable wrist tilt gesture for display wake
         bhi260->configure(SensorBHI260AP::WRIST_TILT_GESTURE, 1.0, 0);
         bhi260->onResultEvent(SensorBHI260AP::WRIST_TILT_GESTURE, imu_wrist_tilt_cb);
+
+        // Register IMU log toggle for remote debug
+        #if HAS_SD && HAS_DISPLAY
+        gui_log_toggle_fn = []() -> bool {
+          if (!imu_logging) {
+            return imu_log_start(bhi260);
+          } else {
+            imu_log_stop(bhi260);
+            return false;
+          }
+        };
+        #endif
 
         // Enable step counter (low power, always-on)
         bhi260->configure(SensorBHI260AP::STEP_COUNTER, 1.0, 0);
@@ -2124,6 +2139,9 @@ void loop() {
           }
         #endif
       }
+      #if HAS_SD
+        if (imu_logging) imu_log_flush();
+      #endif
     }
   #endif
 

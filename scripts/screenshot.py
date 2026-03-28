@@ -158,6 +158,24 @@ def cmd_invalidate(s):
     print("Invalidated — full redraw requested")
 
 
+def cmd_log(s):
+    send_cmd(s, ord('L'))
+    buf = b""
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        chunk = s.read(max(1, s.in_waiting or 1))
+        if chunk:
+            buf += chunk
+        magic = PREFIX + b"L"
+        idx = buf.find(magic)
+        if idx >= 0:
+            nl = buf.find(b"\n", idx + 4)
+            if nl >= 0:
+                print(buf[idx + 4:nl].decode())
+                return
+    print(f"Timeout ({len(buf)} bytes)")
+
+
 def main():
     parser = argparse.ArgumentParser(description="R-Watch remote debug")
     parser.add_argument("-p", "--port", default=DEFAULT_PORT)
@@ -181,6 +199,9 @@ def main():
 
     sub.add_parser("invalidate", aliases=["inv"])
 
+    sub.add_parser("log", aliases=["l"],
+                    help="Toggle IMU logging to SD card")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -200,6 +221,8 @@ def main():
             cmd_navigate(s, args.screen)
         elif args.command in ("invalidate", "inv"):
             cmd_invalidate(s)
+        elif args.command in ("log", "l"):
+            cmd_log(s)
     finally:
         s.close()
 

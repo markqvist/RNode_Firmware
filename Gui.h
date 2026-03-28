@@ -145,6 +145,10 @@ uint16_t *gui_screenshot_buf = NULL;
 void display_unblank();
 extern float pmu_temperature;
 extern volatile uint32_t imu_step_count;
+// IMU logger toggle — set by .ino after IMULogger.h is included
+typedef bool (*gui_log_toggle_fn_t)();
+static gui_log_toggle_fn_t gui_log_toggle_fn = NULL;
+static bool gui_imu_logging = false;
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -770,6 +774,7 @@ bool gui_init() {
 //   'N' (0x4E) — Navigate: reads 2 bytes (u8 col, u8 row) — jump to tile
 //   'M' (0x4D) — Metrics: responds RWSM + JSON stats
 //   'I' (0x49) — Invalidate: force full screen redraw
+//   'L' (0x4C) — Log toggle: start/stop IMU logging to SD card
 
 #define GUI_CMD_PREFIX_LEN 3
 static const uint8_t gui_cmd_prefix[] = {0x52, 0x57, 0x53};  // "RWS"
@@ -903,6 +908,18 @@ static void gui_cmd_execute() {
         case 'I': {  // Invalidate — force full redraw
             if (gui_screen) lv_obj_invalidate(gui_screen);
             if (display_blanked) display_unblank();
+            break;
+        }
+
+        case 'L': {  // Toggle IMU logging
+            Serial.write(hdr, 4);
+            if (gui_log_toggle_fn) {
+                gui_imu_logging = gui_log_toggle_fn();
+                Serial.printf("{\"logging\":%s}\n", gui_imu_logging ? "true" : "false");
+            } else {
+                Serial.println("{\"logging\":false,\"error\":\"not_available\"}");
+            }
+            Serial.flush();
             break;
         }
     }
