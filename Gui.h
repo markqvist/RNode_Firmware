@@ -11,7 +11,14 @@
 
 // Custom fonts: generated with lv_font_conv --no-compress from Montserrat Bold
 // IMPORTANT: must use --no-compress or set LV_USE_FONT_COMPRESSED=1 in lv_conf.h
-#include "Fonts/montserrat_bold_96.c"
+namespace _f96 {
+  #include "Fonts/montserrat_bold_96.c"
+}
+namespace _f28 {
+  #include "Fonts/montserrat_bold_28.c"
+}
+static const lv_font_t &font_time = _f96::montserrat_bold_96;
+static const lv_font_t &font_mid  = _f28::montserrat_bold_28;
 
 // ---------------------------------------------------------------------------
 // Color palette (24-bit hex for lv_color_hex)
@@ -196,7 +203,7 @@ static void gui_create_complication(lv_obj_t *parent, lv_coord_t x, lv_coord_t w
     lv_obj_set_size(cell, w, GUI_COMP_H);
     lv_obj_set_pos(cell, x, 0);
 
-    lv_obj_t *val = gui_label(cell, &lv_font_montserrat_20, color, "--");
+    lv_obj_t *val = gui_label(cell, &font_mid, color, "--");
     lv_obj_set_width(val, w);
     lv_obj_set_style_text_align(val, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(val, LV_ALIGN_TOP_MID, 0, 4);
@@ -222,14 +229,14 @@ static void gui_create_watchface(lv_obj_t *parent) {
     lv_obj_align(gui_batt_label, LV_ALIGN_TOP_RIGHT, -GUI_PAD, GUI_STATUS_Y);
 
     // Time (96px custom font — digits and colon only)
-    gui_time_label = gui_label(parent, &montserrat_bold_96, GUI_COL_WHITE, "00:00");
+    gui_time_label = gui_label(parent, &font_time, GUI_COL_WHITE, "00:00");
     lv_obj_set_style_text_letter_space(gui_time_label, 2, 0);
     lv_obj_set_width(gui_time_label, GUI_W);
     lv_obj_set_style_text_align(gui_time_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_pos(gui_time_label, 0, GUI_TIME_Y);
 
     // Date
-    gui_date_label = gui_label(parent, &lv_font_montserrat_20, GUI_COL_MID, "--- -- ---");
+    gui_date_label = gui_label(parent, &font_mid, GUI_COL_MID, "--- -- ---");
     lv_obj_set_width(gui_date_label, GUI_W);
     lv_obj_set_style_text_align(gui_date_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_pos(gui_date_label, 0, GUI_DATE_Y);
@@ -262,15 +269,15 @@ static void gui_create_radio_screen(lv_obj_t *parent) {
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "RADIO STATUS", GUI_PAD, 12);
 
     // Frequency
-    gui_radio_freq = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_AMBER, "--- MHz", GUI_PAD, 40);
+    gui_radio_freq = gui_label_at(parent, &font_mid, GUI_COL_AMBER, "--- MHz", GUI_PAD, 40);
 
     // LoRa parameters
-    gui_radio_params = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_MID, "SF- BW- CR-", GUI_PAD, 80);
+    gui_radio_params = gui_label_at(parent, &font_mid, GUI_COL_MID, "SF- BW- CR-", GUI_PAD, 80);
 
     // RSSI
     gui_create_rule(parent, 115);
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "RSSI", GUI_PAD, 125);
-    gui_radio_rssi_lbl = gui_label(parent, &lv_font_montserrat_20, GUI_COL_AMBER, "---");
+    gui_radio_rssi_lbl = gui_label(parent, &font_mid, GUI_COL_AMBER, "---");
     lv_obj_align(gui_radio_rssi_lbl, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 122);
 
     lv_obj_t *bar = lv_bar_create(parent);
@@ -287,18 +294,18 @@ static void gui_create_radio_screen(lv_obj_t *parent) {
     // Channel utilization
     gui_create_rule(parent, 185);
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "CHANNEL", GUI_PAD, 198);
-    gui_radio_util = gui_label(parent, &lv_font_montserrat_20, GUI_COL_MID, "-- %");
+    gui_radio_util = gui_label(parent, &font_mid, GUI_COL_MID, "-- %");
     lv_obj_align(gui_radio_util, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 195);
 
     // BLE status
     gui_create_rule(parent, 230);
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "BLE", GUI_PAD, 243);
-    gui_radio_ble = gui_label(parent, &lv_font_montserrat_20, GUI_COL_BLUE, "---");
+    gui_radio_ble = gui_label(parent, &font_mid, GUI_COL_BLUE, "---");
     lv_obj_align(gui_radio_ble, LV_ALIGN_TOP_RIGHT, -GUI_PAD, 240);
 
     // Packet counts
     gui_create_rule(parent, 275);
-    gui_radio_pkts = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_MID,
+    gui_radio_pkts = gui_label_at(parent, &font_mid, GUI_COL_MID,
                                    "RX: 0  TX: 0", GUI_PAD, 290);
 }
 
@@ -311,22 +318,22 @@ static void gui_create_gps_screen(lv_obj_t *parent) {
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "GPS", GUI_PAD, 12);
 
     // Coordinates
-    gui_gps_coords = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_TEAL,
+    gui_gps_coords = gui_label_at(parent, &font_mid, GUI_COL_TEAL,
                                    "-- --", GUI_PAD, 40);
 
     // Fix quality
     gui_create_rule(parent, 110);
-    gui_gps_fix = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_MID,
+    gui_gps_fix = gui_label_at(parent, &font_mid, GUI_COL_MID,
                                 "Sats: --  HDOP: --", GUI_PAD, 125);
 
     // Altitude and speed
     gui_create_rule(parent, 160);
-    gui_gps_alt = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_MID,
+    gui_gps_alt = gui_label_at(parent, &font_mid, GUI_COL_MID,
                                 "Alt: --  Spd: --", GUI_PAD, 175);
 
     // Beacon status
     gui_create_rule(parent, 215);
-    gui_gps_beacon = gui_label_at(parent, &lv_font_montserrat_20, GUI_COL_AMBER,
+    gui_gps_beacon = gui_label_at(parent, &font_mid, GUI_COL_AMBER,
                                    "Beacon: --", GUI_PAD, 230);
 }
 
@@ -336,7 +343,7 @@ static void gui_create_gps_screen(lv_obj_t *parent) {
 static void gui_create_msg_screen(lv_obj_t *parent) {
     gui_style_black_container(parent);
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "MESSAGES", GUI_PAD, 12);
-    lv_obj_t *lbl = gui_label(parent, &lv_font_montserrat_20, GUI_COL_DIM, "No messages");
+    lv_obj_t *lbl = gui_label(parent, &font_mid, GUI_COL_DIM, "No messages");
     lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
 }
 
@@ -346,7 +353,7 @@ static void gui_create_msg_screen(lv_obj_t *parent) {
 static void gui_create_settings_screen(lv_obj_t *parent) {
     gui_style_black_container(parent);
     gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "SETTINGS", GUI_PAD, 12);
-    lv_obj_t *lbl = gui_label(parent, &lv_font_montserrat_20, GUI_COL_MID, "Coming soon");
+    lv_obj_t *lbl = gui_label(parent, &font_mid, GUI_COL_MID, "Coming soon");
     lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
 }
 
