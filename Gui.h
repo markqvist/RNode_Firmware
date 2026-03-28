@@ -55,10 +55,11 @@ static const lv_font_t &font_mid  = _f28::montserrat_bold_28;
 static lv_display_t *gui_display = NULL;
 static lv_indev_t   *gui_indev   = NULL;
 
-// Draw buffer height — partial rendering only redraws dirty areas.
-// 120 lines covers the tallest glyph (96px) with margin.
-// Two buffers: 410*120*2 = 98,400 bytes each in PSRAM.
-#define GUI_BUF_LINES 120
+// Full-frame double buffer in PSRAM — tear-free rendering.
+// LVGL only re-renders dirty areas within the buffer but always
+// flushes the complete frame (~18ms via DMA SPI, CPU yields).
+// Two buffers: 410*502*2 = 411,640 bytes each (823KB total).
+#define GUI_BUF_LINES GUI_H
 static uint8_t *gui_buf1 = NULL;
 static uint8_t *gui_buf2 = NULL;
 
@@ -111,6 +112,7 @@ static uint32_t gui_last_data_update = 0;
 // Track current tile for haptic feedback
 static uint8_t gui_last_tile_col = 1;
 static uint8_t gui_last_tile_row = 1;
+static bool gui_was_scrolling = false;
 
 // Frame timing metrics
 static uint32_t gui_frame_count = 0;
@@ -118,6 +120,9 @@ static uint32_t gui_flush_us_total = 0;
 static uint32_t gui_flush_us_last = 0;
 static uint32_t gui_render_us_last = 0;
 static uint32_t gui_render_start = 0;
+static uint32_t gui_loop_us_last = 0;     // time between gui_update() calls
+static uint32_t gui_loop_us_max = 0;      // worst case loop time
+static uint32_t gui_last_update_us = 0;
 
 // Remote touch injection
 static int16_t gui_inject_x = -1;
@@ -418,8 +423,23 @@ static void gui_tile_change_cb(lv_event_t *e) {
 static const char *gui_month_names[] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN",
                                          "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
 
+static bool gui_is_scrolling() {
+    if (!gui_tileview) return false;
+    lv_obj_t *tile = (lv_obj_t *)lv_tileview_get_tile_active(gui_tileview);
+    if (!tile) return false;
+    // Check if scroll position doesn't match tile alignment
+    lv_coord_t sx = lv_obj_get_scroll_x(gui_tileview);
+    lv_coord_t sy = lv_obj_get_scroll_y(gui_tileview);
+    lv_coord_t tx = lv_obj_get_x(tile);
+    lv_coord_t ty = lv_obj_get_y(tile);
+    return (sx != tx || sy != ty);
+}
+
 static void gui_update_data() {
     if (!gui_time_label) return;
+
+    // Skip data updates during scroll animation — frees CPU for rendering
+    if (gui_is_scrolling()) return;
 
     uint32_t now = millis();
     if (now - gui_last_data_update < GUI_DATA_UPDATE_MS) return;
@@ -574,7 +594,7 @@ bool gui_init() {
         if (!gui_buf1) return false;
     }
     lv_display_set_buffers(gui_display, gui_buf1, gui_buf2, buf_size,
-                            LV_DISPLAY_RENDER_MODE_PARTIAL);
+                            LV_DISPLAY_RENDER_MODE_FULL);
 
     // Shadow framebuffer for screenshots (410*502*2 = 411,640 bytes)
     gui_screenshot_buf = (uint16_t *)heap_caps_malloc(GUI_W * GUI_H * sizeof(uint16_t),
@@ -590,6 +610,7 @@ bool gui_init() {
     if (gui_indev) {
         lv_indev_set_type(gui_indev, LV_INDEV_TYPE_POINTER);
         lv_indev_set_read_cb(gui_indev, gui_touch_read_cb);
+        lv_indev_set_scroll_throw(gui_indev, 2);  // Very low friction: momentum carries past snap threshold
     }
 
     // --- Screen setup ---
@@ -607,6 +628,7 @@ bool gui_init() {
     lv_obj_set_style_pad_all(gui_tileview, 0, 0);
     lv_obj_set_scrollbar_mode(gui_tileview, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_style_anim_duration(gui_tileview, 150, 0);  // Snappy 150ms scroll snap
+    lv_obj_clear_flag(gui_tileview, LV_OBJ_FLAG_SCROLL_ELASTIC);  // No bounce at tile edges
     lv_obj_set_size(gui_tileview, GUI_W, GUI_H);
 
     gui_tile_watch = lv_tileview_add_tile(gui_tileview, 1, 1, LV_DIR_ALL);
@@ -763,12 +785,14 @@ static void gui_cmd_execute() {
             char buf[192];
             uint32_t avg_flush = gui_frame_count > 0 ? gui_flush_us_total / gui_frame_count : 0;
             snprintf(buf, sizeof(buf),
-                "{\"frames\":%lu,\"flush_last_us\":%lu,\"flush_avg_us\":%lu,"
-                "\"render_last_us\":%lu,\"heap_free\":%lu,\"psram_free\":%lu}\n",
+                "{\"frames\":%lu,\"flush_us\":%lu,\"flush_avg\":%lu,"
+                "\"render_us\":%lu,\"loop_us\":%lu,\"loop_max_us\":%lu,"
+                "\"heap\":%lu,\"psram\":%lu}\n",
                 gui_frame_count, gui_flush_us_last, avg_flush,
-                gui_render_us_last,
+                gui_render_us_last, gui_loop_us_last, gui_loop_us_max,
                 (uint32_t)esp_get_free_heap_size(),
                 (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+            gui_loop_us_max = 0;  // reset max after reading
             Serial.write((uint8_t *)buf, strlen(buf));
             Serial.flush();
             break;
@@ -869,6 +893,14 @@ void gui_update() {
     uint32_t now = millis();
     lv_tick_inc(now - last_tick);
     last_tick = now;
+
+    // Measure loop interval
+    uint32_t now_us = micros();
+    if (gui_last_update_us > 0) {
+        gui_loop_us_last = now_us - gui_last_update_us;
+        if (gui_loop_us_last > gui_loop_us_max) gui_loop_us_max = gui_loop_us_last;
+    }
+    gui_last_update_us = now_us;
 
     gui_update_data();
 
