@@ -83,7 +83,12 @@ bool fw_signature_validated = true;
 #define dev_fwhash_addr(a) (a+DEV_FWHASH_OFFSET)
 
 bool device_signatures_ok() {
-  return dev_signature_validated && fw_signature_validated;
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
+    // T-Watch development: skip signature validation for self-signed devices
+    return true;
+  #else
+    return dev_signature_validated && fw_signature_validated;
+  #endif
 }
 
 void device_validate_signature() {
@@ -259,6 +264,11 @@ bool device_init() {
     nRFCrypto.end();
     #endif
     device_init_done = true;
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+      // T-Watch development: skip firmware/device signature validation
+      fw_signature_validated = true;
+      dev_signature_validated = true;
+    #endif
     return device_init_done && fw_signature_validated;
   } else {
     return false;
