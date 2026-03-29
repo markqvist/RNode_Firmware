@@ -1159,6 +1159,8 @@ void serial_callback(uint8_t sbyte, uint8_t ch) {
         stopRadio();
         kiss_indicate_radiostate();
       } else if (sbyte == 0x01) {
+        // Force full restart to ensure clean SX1262 init with current params
+        if (radio_online) stopRadio();
         startRadio();
         kiss_indicate_radiostate();
       }
