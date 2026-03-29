@@ -800,6 +800,7 @@ bool gui_init() {
 //   'L' (0x4C) — Log toggle: start/stop IMU logging to SD card
 //   'F' (0x46) — File list: lists files on SD card
 //   'P' (0x50) — Profile: runs standardized performance test, reports JSON results
+//   'B' (0x42) — Beacon dump: dumps last beacon packet pre/post IFAC
 //   'C' (0x43) — Crypto test: runs IFAC test vectors, reports pass/fail
 
 #define GUI_CMD_PREFIX_LEN 3
@@ -1026,6 +1027,29 @@ static void gui_cmd_execute() {
             break;
         }
 
+        case 'B': {  // Beacon packet dump
+            extern uint8_t diag_beacon_pre[];
+            extern uint16_t diag_beacon_pre_len;
+            extern uint8_t diag_beacon_post[];
+            extern uint16_t diag_beacon_post_len;
+
+            Serial.write(hdr, 4);
+            Serial.printf("{\"pre_len\":%d,\"post_len\":%d", diag_beacon_pre_len, diag_beacon_post_len);
+            if (diag_beacon_pre_len > 0) {
+                Serial.printf(",\"pre\":\"");
+                for (int i = 0; i < diag_beacon_pre_len; i++) Serial.printf("%02x", diag_beacon_pre[i]);
+                Serial.printf("\"");
+            }
+            if (diag_beacon_post_len > 0) {
+                Serial.printf(",\"post\":\"");
+                for (int i = 0; i < diag_beacon_post_len; i++) Serial.printf("%02x", diag_beacon_post[i]);
+                Serial.printf("\"");
+            }
+            Serial.println("}");
+            Serial.flush();
+            break;
+        }
+
         case 'C': {  // Crypto test — IFAC test vectors
             #if HAS_GPS == true
             Serial.write(hdr, 4);
@@ -1072,11 +1096,16 @@ static void gui_cmd_execute() {
             ifac_configured = saved_configured;
 
             // Report
-            Serial.printf("{\"pk\":%s,\"sig\":%s,\"hkdf\":%s,\"ifac\":%s",
+            // Dump the live IFAC key for verification
+            Serial.printf("{\"pk\":%s,\"sig\":%s,\"hkdf\":%s,\"ifac\":%s,\"configured\":%s",
                 pk_match ? "true" : "false",
                 sig_match ? "true" : "false",
                 mask_match ? "true" : "false",
-                result_match ? "true" : "false");
+                result_match ? "true" : "false",
+                ifac_configured ? "true" : "false");
+            Serial.printf(",\"live_key\":\"");
+            for (int i = 0; i < 64; i++) Serial.printf("%02x", ifac_key[i]);
+            Serial.printf("\"");
 
             // Dump actual values on failure for debugging
             if (!sig_match) {

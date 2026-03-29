@@ -264,8 +264,8 @@ bool device_init() {
     nRFCrypto.end();
     #endif
     device_init_done = true;
-    #if BOARD_MODEL == BOARD_TWATCH_ULT
-      // T-Watch development: skip firmware/device signature validation
+    #if BOARD_MODEL == BOARD_TWATCH_ULT || BOARD_MODEL == BOARD_TBEAM_S_V1
+      // Development: skip firmware/device signature validation
       fw_signature_validated = true;
       dev_signature_validated = true;
     #endif

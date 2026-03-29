@@ -933,11 +933,30 @@ void transmit(uint16_t size) {
 // Transmit raw RNS packet without the 1-byte RNode LoRa header.
 // Used by beacon mode so the receiving RNode passes the packet
 // directly to Reticulum without a spurious header byte.
+// Diagnostic: dump last beacon packet (pre and post IFAC)
+uint8_t  diag_beacon_pre[256];
+uint16_t diag_beacon_pre_len = 0;
+uint8_t  diag_beacon_post[256];
+uint16_t diag_beacon_post_len = 0;
+
 void beacon_transmit(uint16_t size) {
   if (radio_online) {
+    // Save pre-IFAC packet for diagnostics
+    if (size <= 256) {
+      memcpy(diag_beacon_pre, tbuf, size);
+      diag_beacon_pre_len = size;
+    }
+
     #if HAS_GPS == true
       size = ifac_apply(tbuf, size);
     #endif
+
+    // Save post-IFAC packet
+    if (size <= 256) {
+      memcpy(diag_beacon_post, tbuf, size);
+      diag_beacon_post_len = size;
+    }
+
     LoRa->beginPacket();
     for (uint16_t i = 0; i < size; i++) {
       LoRa->write(tbuf[i]);
@@ -2032,7 +2051,8 @@ void loop() {
     } else {
 
       led_indicate_not_ready();
-      if (radio_online) stopRadio();  // only stop once
+      // Don't call stopRadio() — it calls SPI.end() which kills the bus.
+      // rnsd can still configure the radio via KISS even without hw_ready.
     }
   }
 
