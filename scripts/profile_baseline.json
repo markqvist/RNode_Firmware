@@ -1,0 +1,18 @@
+{
+  "test": "profile",
+  "build": "Mar 29 2026 10:57:00",
+  "date": "2026-03-29",
+  "device": "T-Watch Ultimate (unprovisioned, hwcdc)",
+  "notes": "Baseline after beacon/stopRadio loop fix. GPS active with fix, radio not provisioned.",
+  "idle_us": 914,
+  "idle_flush_us": 0,
+  "full_us": 79592,
+  "full_flush_us": 37176,
+  "data_update_us": 1939,
+  "nav_5tile_us": 374708,
+  "burst_10frame_us": 801653,
+  "avg_frame_us": 80165,
+  "loop_us": 331,
+  "heap": 7298759,
+  "psram": 7143315
+}

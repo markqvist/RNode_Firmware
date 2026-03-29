@@ -153,11 +153,11 @@ def cmd_navigate(s, screen):
     print(f"Navigate → {screen} ({col},{row})")
 
 
-def cmd_profile(s):
+def cmd_profile(s, save_path=None):
     """Run standardized performance profile test"""
     send_cmd(s, ord('P'))
     buf = b""
-    deadline = time.time() + 30  # profile test takes several seconds
+    deadline = time.time() + 30
     while time.time() < deadline:
         chunk = s.read(max(1, s.in_waiting or 1))
         if chunk:
@@ -178,6 +178,10 @@ def cmd_profile(s):
                 print(f"Main loop:      {data['loop_us']:>8} µs")
                 print(f"Heap free:      {data['heap']:>8} bytes")
                 print(f"PSRAM free:     {data['psram']:>8} bytes")
+                if save_path:
+                    with open(save_path, 'w') as f:
+                        json.dump(data, f, indent=2)
+                    print(f"Saved: {save_path}")
                 return
     print(f"Timeout ({len(buf)} bytes)")
 
@@ -246,8 +250,9 @@ def main():
 
     sub.add_parser("invalidate", aliases=["inv"])
 
-    sub.add_parser("profile", aliases=["p"],
+    p = sub.add_parser("profile", aliases=["p"],
                     help="Run standardized performance test")
+    p.add_argument("--save", metavar="FILE", help="Save raw JSON to file")
 
     sub.add_parser("log", aliases=["l"],
                     help="Toggle IMU logging to SD card")
@@ -275,7 +280,7 @@ def main():
         elif args.command in ("invalidate", "inv"):
             cmd_invalidate(s)
         elif args.command in ("profile", "p"):
-            cmd_profile(s)
+            cmd_profile(s, getattr(args, 'save', None))
         elif args.command in ("log", "l"):
             cmd_log(s)
         elif args.command in ("files", "f"):
