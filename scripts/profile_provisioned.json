@@ -1,0 +1,27 @@
+{
+  "test": "profile",
+  "build": "Mar 29 2026 11:10:40",
+  "date": "2026-03-29",
+  "device": "T-Watch Ultimate (provisioned 868MHz, hwcdc, radio online)",
+  "notes": "Provisioned via rnodeconf with T-Watch product code. Radio online, GPS active.",
+  "idle_us": 909,
+  "idle_flush_us": 0,
+  "full_us": 82548,
+  "full_flush_us": 37294,
+  "data_update_us": 2030,
+  "nav_5tile_us": 465761,
+  "burst_10frame_us": 799982,
+  "avg_frame_us": 79998,
+  "loop_us": 289,
+  "loop_breakdown": {
+    "radio_us": 6,
+    "serial_us": 7,
+    "display_us": 1,
+    "pmu_us": 2,
+    "gps_us": 10,
+    "bt_us": 2,
+    "imu_us": 217
+  },
+  "heap": 7270887,
+  "psram": 7116347
+}
