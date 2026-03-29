@@ -123,6 +123,26 @@ void setup() {
     EEPROM.begin(EEPROM_SIZE);
     Serial.setRxBufferSize(CONFIG_UART_BUFFER_SIZE);
 
+    // T-Watch Ultra: self-provision if EEPROM is blank (after flash erase)
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+    if (EEPROM.read(eeprom_addr(ADDR_PRODUCT)) == 0xFF) {
+      EEPROM.write(eeprom_addr(ADDR_PRODUCT), PRODUCT_TWATCH_ULT);
+      EEPROM.write(eeprom_addr(ADDR_MODEL), MODEL_DA);  // 868 MHz
+      EEPROM.write(eeprom_addr(ADDR_HW_REV), 0x01);
+      EEPROM.write(eeprom_addr(ADDR_SERIAL), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_SERIAL+1), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_SERIAL+2), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_SERIAL+3), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_MADE), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_MADE+1), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_MADE+2), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_MADE+3), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_INFO_LOCK), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+      EEPROM.commit();
+    }
+    #endif
+
     #if BOARD_MODEL == BOARD_TDECK
       pinMode(pin_poweron, OUTPUT);
       digitalWrite(pin_poweron, HIGH);
