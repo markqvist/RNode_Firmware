@@ -800,6 +800,7 @@ bool gui_init() {
 //   'L' (0x4C) — Log toggle: start/stop IMU logging to SD card
 //   'F' (0x46) — File list: lists files on SD card
 //   'P' (0x50) — Profile: runs standardized performance test, reports JSON results
+//   'C' (0x43) — Crypto test: runs IFAC test vectors, reports pass/fail
 
 #define GUI_CMD_PREFIX_LEN 3
 static const uint8_t gui_cmd_prefix[] = {0x52, 0x57, 0x53};  // "RWS"
@@ -1022,6 +1023,84 @@ static void gui_cmd_execute() {
                 (uint32_t)esp_get_free_heap_size(),
                 (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
             Serial.flush();
+            break;
+        }
+
+        case 'C': {  // Crypto test — IFAC test vectors
+            #if HAS_GPS == true
+            Serial.write(hdr, 4);
+
+            // Test vectors from scripts/test_ifac.py
+            const uint8_t tv_key[64] = {0x3a, 0xc2, 0xe0, 0x12, 0xa0, 0x86, 0x04, 0x3c, 0x67, 0xcc, 0xef, 0x40, 0x6a, 0x0b, 0xdb, 0x38, 0xc0, 0x66, 0xb2, 0xee, 0x0a, 0x7f, 0x18, 0x27, 0xfa, 0x1c, 0xb9, 0xdc, 0xcf, 0xbb, 0x8e, 0x9d, 0x53, 0x48, 0xc5, 0x56, 0xf0, 0x8e, 0xed, 0xf3, 0x0b, 0xce, 0x46, 0x2b, 0xb2, 0x09, 0x6b, 0x99, 0x26, 0x08, 0xf4, 0xfc, 0xfd, 0x12, 0x32, 0x4b, 0xb2, 0x45, 0x86, 0x2b, 0x59, 0xd6, 0x11, 0xc7};
+            const uint8_t tv_pk[32] = {0x1a, 0x54, 0x5d, 0x78, 0x34, 0xc3, 0xe1, 0x6c, 0x53, 0x9d, 0xd5, 0xf5, 0x3a, 0xd1, 0x5b, 0x67, 0xae, 0x57, 0x5e, 0x97, 0x06, 0x05, 0x38, 0x5b, 0xeb, 0x76, 0xe9, 0x85, 0x2e, 0xf9, 0xe1, 0xdf};
+            const uint8_t tv_msg[19] = {0x00, 0x00, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99};
+            const uint8_t tv_sig[64] = {0x99, 0x80, 0x27, 0x05, 0xaf, 0xde, 0xb0, 0xe6, 0xfe, 0xe5, 0x2b, 0xbc, 0x35, 0x4a, 0x87, 0x93, 0xd8, 0xc2, 0x9c, 0x77, 0x41, 0x6c, 0x5c, 0x54, 0x62, 0x7e, 0x66, 0xc6, 0x50, 0x05, 0xe5, 0x0a, 0x02, 0x48, 0x94, 0x4b, 0xb1, 0x02, 0x5b, 0x3a, 0xaa, 0xa2, 0x9b, 0x26, 0xc4, 0x7f, 0x49, 0x4b, 0xa2, 0x1a, 0xf0, 0xb5, 0xd0, 0x08, 0x8f, 0x9b, 0x49, 0x5b, 0xf2, 0xc7, 0xe1, 0x83, 0x99, 0x01};
+            const uint8_t tv_mask[27] = {0x3b, 0x8f, 0x16, 0xab, 0xe6, 0x0b, 0x8e, 0x35, 0xcb, 0x47, 0x5a, 0x3d, 0x13, 0x00, 0x05, 0xe6, 0x79, 0x79, 0x99, 0x23, 0x35, 0x24, 0x64, 0xd8, 0x4b, 0xf5, 0x3c};
+            const uint8_t tv_result[27] = {0xbb, 0x8f, 0x49, 0x5b, 0xf2, 0xc7, 0xe1, 0x83, 0x99, 0x01, 0x48, 0x09, 0x45, 0x78, 0x9f, 0x5a, 0xa7, 0x89, 0x88, 0x01, 0x06, 0x60, 0x31, 0xbe, 0x3c, 0x7d, 0xa5};
+
+            // Test 1: Keypair derivation
+            uint8_t pk[32], sk[64];
+            crypto_sign_ed25519_seed_keypair(pk, sk, tv_key + 32);
+            bool pk_match = (memcmp(pk, tv_pk, 32) == 0);
+
+            // Test 2: Signature
+            uint8_t sig[64];
+            unsigned long long sig_len;
+            crypto_sign_ed25519_detached(sig, &sig_len, tv_msg, 19, sk);
+            bool sig_match = (memcmp(sig, tv_sig, 64) == 0);
+
+            // Test 3: HKDF
+            uint8_t mask[27];
+            rns_hkdf_var(sig + 56, 8, tv_key, 64, mask, 27);
+            bool mask_match = (memcmp(mask, tv_mask, 27) == 0);
+
+            // Test 4: Full IFAC apply
+            uint8_t pkt[64];
+            memcpy(pkt, tv_msg, 19);
+            // Save original ifac state and substitute test key
+            uint8_t saved_key[64]; bool saved_configured;
+            memcpy(saved_key, ifac_key, 64);
+            saved_configured = ifac_configured;
+            memcpy(ifac_key, tv_key, 64);
+            ifac_derive_keypair();
+            ifac_configured = true;
+            uint16_t result_len = ifac_apply(pkt, 19);
+            bool result_match = (result_len == 27) && (memcmp(pkt, tv_result, 27) == 0);
+            // Restore
+            memcpy(ifac_key, saved_key, 64);
+            if (saved_configured) ifac_derive_keypair();
+            ifac_configured = saved_configured;
+
+            // Report
+            Serial.printf("{\"pk\":%s,\"sig\":%s,\"hkdf\":%s,\"ifac\":%s",
+                pk_match ? "true" : "false",
+                sig_match ? "true" : "false",
+                mask_match ? "true" : "false",
+                result_match ? "true" : "false");
+
+            // Dump actual values on failure for debugging
+            if (!sig_match) {
+                Serial.printf(",\"actual_sig\":\"");
+                for (int i = 0; i < 64; i++) Serial.printf("%02x", sig[i]);
+                Serial.printf("\"");
+            }
+            if (!mask_match) {
+                Serial.printf(",\"actual_mask\":\"");
+                for (int i = 0; i < 27; i++) Serial.printf("%02x", mask[i]);
+                Serial.printf("\"");
+            }
+            if (!result_match) {
+                Serial.printf(",\"actual_result\":\"");
+                for (int i = 0; i < (int)result_len; i++) Serial.printf("%02x", pkt[i]);
+                Serial.printf("\",\"result_len\":%d", result_len);
+            }
+            Serial.println("}");
+            Serial.flush();
+            #else
+            Serial.write(hdr, 4);
+            Serial.println("{\"error\":\"no_gps\"}");
+            Serial.flush();
+            #endif
             break;
         }
 

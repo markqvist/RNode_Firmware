@@ -186,6 +186,38 @@ def cmd_profile(s, save_path=None):
     print(f"Timeout ({len(buf)} bytes)")
 
 
+def cmd_crypto(s):
+    """Run IFAC crypto test vectors on firmware"""
+    send_cmd(s, ord('C'))
+    buf = b""
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        chunk = s.read(max(1, s.in_waiting or 1))
+        if chunk:
+            buf += chunk
+        magic = PREFIX + b"C"
+        idx = buf.find(magic)
+        if idx >= 0:
+            nl = buf.find(b"\n", idx + 4)
+            if nl >= 0:
+                import json
+                data = json.loads(buf[idx + 4:nl])
+                all_pass = True
+                for test, result in data.items():
+                    if test in ("pk", "sig", "hkdf", "ifac"):
+                        status = "PASS" if result else "FAIL"
+                        if not result:
+                            all_pass = False
+                        print(f"  {test:>6}: {status}")
+                if not all_pass:
+                    for k, v in data.items():
+                        if k.startswith("actual_"):
+                            print(f"  {k}: {v}")
+                print(f"\n  {'ALL PASS' if all_pass else 'FAILED'}")
+                return
+    print(f"Timeout ({len(buf)} bytes)")
+
+
 def cmd_invalidate(s):
     send_cmd(s, ord('I'))
     print("Invalidated — full redraw requested")
@@ -250,6 +282,9 @@ def main():
 
     sub.add_parser("invalidate", aliases=["inv"])
 
+    sub.add_parser("crypto", aliases=["c"],
+                    help="Run IFAC crypto test vectors on firmware")
+
     p = sub.add_parser("profile", aliases=["p"],
                     help="Run standardized performance test")
     p.add_argument("--save", metavar="FILE", help="Save raw JSON to file")
@@ -279,6 +314,8 @@ def main():
             cmd_navigate(s, args.screen)
         elif args.command in ("invalidate", "inv"):
             cmd_invalidate(s)
+        elif args.command in ("crypto", "c"):
+            cmd_crypto(s)
         elif args.command in ("profile", "p"):
             cmd_profile(s, getattr(args, 'save', None))
         elif args.command in ("log", "l"):
