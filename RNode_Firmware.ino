@@ -2073,10 +2073,12 @@ void loop() {
       #endif
 
       // Enter beacon sleep cycle when in standalone mode after beacon TX
+      // Don't sleep when on external power (USB) — keeps display and debug active
       #if BOARD_MODEL == BOARD_TWATCH_ULT
         if (beacon_mode_active && beacon_gate == 6 &&
+            battery_state != BATTERY_STATE_CHARGING &&
+            battery_state != BATTERY_STATE_CHARGED &&
             (last_host_activity == 0 || (millis() - last_host_activity >= BEACON_NO_HOST_TIMEOUT_MS))) {
-          // Beacon was just sent and no host is connected — sleep until next interval
           sleep_now();
         }
       #endif
