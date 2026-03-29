@@ -118,29 +118,29 @@ void co5300_push_pixels(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t
   digitalWrite(DISP_CS, HIGH);
 }
 
-// --- Async pixel push ---
-// Queues all DMA transactions and returns immediately.
-// co5300_push_done() returns true when all transactions complete.
-// co5300_push_finish() blocks until complete.
-#define CO5300_MAX_ASYNC_TXNS 14  // 410*502 / 16384 = ~13 chunks
+// --- Async pixel push (display SPI3 is independent from LoRa/SD SPI) ---
+// Queue all DMA transactions on SPI3 and return immediately.
+// co5300_push_wait() blocks until complete.
+// Safe to run LoRa/SD on the other SPI bus while this runs.
+#define CO5300_MAX_ASYNC_TXNS 14
 static spi_transaction_ext_t co5300_async_txns[CO5300_MAX_ASYNC_TXNS];
-static int co5300_async_queued = 0;
+static int co5300_async_pending = 0;
 
-void co5300_push_pixels_start(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *pixels) {
+void co5300_push_start(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t *pixels) {
   if (!co5300_ready) return;
 
-  // Must not have pending async work
+  // Window setup — blocking but fast (3 small SPI commands)
   co5300_set_window(x, y, x + w - 1, y + h - 1);
 
   uint32_t total = w * h;
   uint16_t *p = pixels;
   bool first = true;
-  co5300_async_queued = 0;
+  co5300_async_pending = 0;
 
   digitalWrite(DISP_CS, LOW);
-  while (total > 0 && co5300_async_queued < CO5300_MAX_ASYNC_TXNS) {
+  while (total > 0 && co5300_async_pending < CO5300_MAX_ASYNC_TXNS) {
     uint32_t chunk = (total > CO5300_SEND_BUF_SIZE) ? CO5300_SEND_BUF_SIZE : total;
-    int i = co5300_async_queued;
+    int i = co5300_async_pending;
     memset(&co5300_async_txns[i], 0, sizeof(spi_transaction_ext_t));
     if (first) {
       co5300_async_txns[i].base.flags = SPI_TRANS_MODE_QIO;
@@ -159,28 +159,28 @@ void co5300_push_pixels_start(uint16_t x, uint16_t y, uint16_t w, uint16_t h, ui
     spi_device_queue_trans(co5300_spi, (spi_transaction_t *)&co5300_async_txns[i], portMAX_DELAY);
     p += chunk;
     total -= chunk;
-    co5300_async_queued++;
+    co5300_async_pending++;
   }
+  // DMA now running in background on SPI3 — return immediately
 }
 
-void co5300_push_finish() {
+void co5300_push_wait() {
   spi_transaction_t *rtrans;
-  while (co5300_async_queued > 0) {
+  while (co5300_async_pending > 0) {
     spi_device_get_trans_result(co5300_spi, &rtrans, portMAX_DELAY);
-    co5300_async_queued--;
+    co5300_async_pending--;
   }
   digitalWrite(DISP_CS, HIGH);
 }
 
 bool co5300_push_done() {
-  if (co5300_async_queued == 0) return true;
+  if (co5300_async_pending == 0) return true;
   spi_transaction_t *rtrans;
-  // Non-blocking check
-  while (co5300_async_queued > 0) {
+  while (co5300_async_pending > 0) {
     if (spi_device_get_trans_result(co5300_spi, &rtrans, 0) == ESP_OK) {
-      co5300_async_queued--;
+      co5300_async_pending--;
     } else {
-      return false;  // Still in progress
+      return false;
     }
   }
   digitalWrite(DISP_CS, HIGH);

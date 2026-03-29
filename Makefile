@@ -124,7 +124,7 @@ deploy-tbeam_supreme: firmware-tbeam_supreme free-port
 # partition_twatch.csv must be copied to the Arduino ESP32 tools/partitions/ directory.
 # When changing partition scheme, flash ALL THREE binaries (bootloader + partition + app).
 firmware-twatch_ultra:
-	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:USBMode=default,CDCOnBoot=cdc,FlashSize=16M,PSRAM=enabled" -e --build-property "build.partitions=partition_twatch" --build-property "upload.maximum_size=8388608" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45"
+	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PSRAM=enabled" -e --build-property "build.partitions=partition_twatch" --build-property "upload.maximum_size=8388608" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45"
 
 upload-twatch_ultra: firmware-twatch_ultra
 	@echo "Flashing T-Watch Ultra via JTAG..."

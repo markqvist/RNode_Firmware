@@ -184,7 +184,8 @@ void setup() {
 
   Serial.begin(serial_baudrate);
 
-  // USB MSC init moved to after T-Watch hardware init (see below)
+  // USB MSC requires TinyUSB mode which adds ~900ms/loop overhead on ESP32-S3.
+  // SD card access uses serial file transfer instead (debug command 'F').
 
   #if HAS_NP
     led_init();
@@ -1941,6 +1942,9 @@ void tx_queue_handler() {
 void work_while_waiting() { loop(); }
 
 void loop() {
+  uint32_t _prof_t0, _prof_t1;
+
+  _prof_t0 = micros();
   if (radio_online) {
     // Process deferred RX interrupt from main context
     // (avoids SPI bus contention from ISR)
@@ -2007,9 +2011,11 @@ void loop() {
     } else {
 
       led_indicate_not_ready();
-      stopRadio();
+      if (radio_online) stopRadio();  // only stop once
     }
   }
+
+  _prof_t1 = micros(); prof_radio_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       buffer_serial();
@@ -2024,18 +2030,24 @@ void loop() {
     if (!fifo_isempty_locked(&channelFIFO[CHANNEL_USB])) serial_poll();
   #endif
 
+  _prof_t1 = micros(); prof_serial_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+
   #if HAS_DISPLAY
     if (disp_ready && !display_updating) update_display();
   #endif
+
+  _prof_t1 = micros(); prof_display_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
 
   #if HAS_PMU
     if (pmu_ready) update_pmu();
   #endif
 
+  _prof_t1 = micros(); prof_pmu_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+
   #if HAS_GPS == true
     if (gps_ready) {
       gps_update();
-      beacon_update();
+      if (hw_ready) beacon_update();  // beacon needs provisioned radio
       #if HAS_RTC == true
         if (gps_has_fix) rtc_sync_from_gps(gps_parser);
       #endif
@@ -2051,6 +2063,8 @@ void loop() {
     }
   #endif
 
+  _prof_t1 = micros(); prof_gps_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+
   #if HAS_RTC == true
     static uint32_t rtc_last_read = 0;
     if (rtc_ready && (millis() - rtc_last_read >= 1000)) {
@@ -2062,6 +2076,8 @@ void loop() {
   #if HAS_BLUETOOTH || HAS_BLE == true
     if (!console_active && bt_ready) update_bt();
   #endif
+
+  _prof_t1 = micros(); prof_bt_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
 
   #if HAS_WIFI
     if (wifi_initialized) update_wifi();
@@ -2110,14 +2126,7 @@ void loop() {
     #endif
   #endif
 
-  // Deferred USB MSC SD card init — needs SPI bus configured by LoRa first
-  #if BOARD_MODEL == BOARD_TWATCH_ULT && HAS_SD && !ARDUINO_USB_MODE
-    if (!usb_sd_ready && millis() > 3000) {
-      if (usb_sd_init()) {
-        Serial.println("[usb_sd] SD card mounted");
-      }
-    }
-  #endif
+  // USB MSC SD card mode is toggled on demand via debug command 'D'
 
   // Deferred BHI260AP init — runs once after boot is complete
   // Firmware upload takes ~10s and blocks, so we do it after radio is up
@@ -2172,6 +2181,8 @@ void loop() {
       #endif
     }
   #endif
+
+  _prof_t1 = micros(); prof_imu_us = _prof_t1 - _prof_t0;
 
   if (memory_low) {
     #if PLATFORM == PLATFORM_ESP32

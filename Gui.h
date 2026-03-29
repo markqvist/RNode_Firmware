@@ -121,6 +121,16 @@ static bool gui_was_scrolling = false;
 
 // Frame timing metrics
 static uint32_t gui_frame_count = 0;
+
+// Main loop profiling (set from .ino, read by metrics command)
+uint32_t prof_radio_us = 0;
+uint32_t prof_serial_us = 0;
+uint32_t prof_display_us = 0;
+uint32_t prof_pmu_us = 0;
+uint32_t prof_gps_us = 0;
+uint32_t prof_bt_us = 0;
+uint32_t prof_imu_us = 0;
+uint32_t prof_other_us = 0;
 static uint32_t gui_flush_us_total = 0;
 static uint32_t gui_flush_us_last = 0;
 static uint32_t gui_render_us_last = 0;
@@ -145,11 +155,6 @@ uint16_t *gui_screenshot_buf = NULL;
 void display_unblank();
 extern float pmu_temperature;
 extern volatile uint32_t imu_step_count;
-#if !ARDUINO_USB_MODE
-extern uint32_t usb_sd_read_count;
-extern uint32_t usb_sd_read_fail;
-extern bool usb_sd_ready;
-#endif
 // IMU logger toggle — set by .ino after IMULogger.h is included
 typedef bool (*gui_log_toggle_fn_t)();
 static gui_log_toggle_fn_t gui_log_toggle_fn = NULL;
@@ -167,7 +172,6 @@ static void gui_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_
     uint16_t *pixels = (uint16_t *)px_map;
 
     // Copy to shadow framebuffer when screenshot capture is active
-    // Flag stays true across all partial flushes — cleared by screenshot command
     if (gui_screenshot_buf && gui_screenshot_pending) {
         for (uint16_t row = 0; row < h; row++) {
             memcpy(&gui_screenshot_buf[(y1 + row) * GUI_W + x1],
@@ -486,8 +490,20 @@ static void gui_update_data() {
     if (now - gui_last_data_update < GUI_DATA_UPDATE_MS) return;
     gui_last_data_update = now;
 
+    // Detect current tile — only update visible screen's labels
+    lv_obj_t *cur_tile = (lv_obj_t *)lv_tileview_get_tile_active(gui_tileview);
+    bool on_watch  = (cur_tile == gui_tile_watch);
+    bool on_radio  = (cur_tile == gui_tile_radio);
+    bool on_gps    = (cur_tile == gui_tile_gps);
+
     // ---- Watch face ----
+    // Time always updates (cheap, changes rarely)
     lv_label_set_text_fmt(gui_time_label, "%02d:%02d", rtc_hour, rtc_minute);
+
+    if (!on_watch && !on_radio && !on_gps) return;
+
+    // ---- Watch face details (only when visible) ----
+    if (on_watch) {
 
     #if HAS_RTC == true
     if (rtc_year > 0) {
@@ -496,7 +512,7 @@ static void gui_update_data() {
     }
     #endif
 
-    // Mode
+    // Mode indicator
     if (bt_state == BT_STATE_CONNECTED) {
         lv_label_set_text(gui_mode_label, "MODEM");
         lv_obj_set_style_text_color(gui_mode_label, lv_color_hex(GUI_COL_BLUE), 0);
@@ -582,8 +598,10 @@ static void gui_update_data() {
         lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_DIM), 0);
     }
 
-    // ---- Radio status screen ----
-    if (gui_radio_freq) {
+    } // end on_watch
+
+    // ---- Radio status screen (only when visible) ----
+    if (on_radio && gui_radio_freq) {
         if (lora_freq > 0) {
             lv_label_set_text_fmt(gui_radio_freq, "%.3f MHz", (float)lora_freq / 1000000.0);
         } else {
@@ -634,9 +652,9 @@ static void gui_update_data() {
         }
     }
 
-    // ---- GPS screen ----
+    // ---- GPS screen (only when visible — float formatting is expensive) ----
     #if HAS_GPS == true
-    if (gui_gps_coords) {
+    if (on_gps && gui_gps_coords) {
         bool good_fix = (gps_sats >= 4 && gps_hdop < 10.0 && gps_lat != 0.0);
         bool any_fix  = (gps_sats > 0 && gps_lat != 0.0);
 
@@ -719,7 +737,7 @@ bool gui_init() {
     if (gui_indev) {
         lv_indev_set_type(gui_indev, LV_INDEV_TYPE_POINTER);
         lv_indev_set_read_cb(gui_indev, gui_touch_read_cb);
-        lv_indev_set_scroll_throw(gui_indev, 2);  // Very low friction: momentum carries past snap threshold
+        lv_indev_set_scroll_throw(gui_indev, 20);  // Moderate friction: decelerates into snap within ~1s at 10fps
     }
 
     // --- Screen setup ---
@@ -780,7 +798,7 @@ bool gui_init() {
 //   'M' (0x4D) — Metrics: responds RWSM + JSON stats
 //   'I' (0x49) — Invalidate: force full screen redraw
 //   'L' (0x4C) — Log toggle: start/stop IMU logging to SD card
-//   'F' (0x46) — File download: reads 1 byte filename length + filename, sends file contents
+//   'F' (0x46) — File download: 1 byte name length + filename, sends file over serial
 
 #define GUI_CMD_PREFIX_LEN 3
 static const uint8_t gui_cmd_prefix[] = {0x52, 0x57, 0x53};  // "RWS"
@@ -810,7 +828,7 @@ void gui_process_serial_byte(uint8_t b) {
         switch (b) {
             case 'T': gui_cmd_payload_len = 5; break;  // x(2) + y(2) + duration(1)
             case 'N': gui_cmd_payload_len = 2; break;  // col(1) + row(1)
-            default:  gui_cmd_payload_len = 0; break;  // S, M, I — no payload
+            default:  gui_cmd_payload_len = 0; break;  // S, M, I, F, L — no payload
         }
         gui_cmd_state++;
         if (gui_cmd_payload_len == 0) {
@@ -897,27 +915,14 @@ static void gui_cmd_execute() {
             Serial.write(hdr, 4);
             char buf[192];
             uint32_t avg_flush = gui_frame_count > 0 ? gui_flush_us_total / gui_frame_count : 0;
-            #if !ARDUINO_USB_MODE
             snprintf(buf, sizeof(buf),
-                "{\"frames\":%lu,\"flush_us\":%lu,\"render_us\":%lu,"
-                "\"loop_us\":%lu,\"loop_max\":%lu,"
-                "\"sd_ready\":%d,\"sd_reads\":%lu,\"sd_fails\":%lu,"
-                "\"heap\":%lu,\"psram\":%lu}\n",
-                gui_frame_count, gui_flush_us_last,
-                gui_render_us_last, gui_loop_us_last, gui_loop_us_max,
-                usb_sd_ready ? 1 : 0, usb_sd_read_count, usb_sd_read_fail,
-                (uint32_t)esp_get_free_heap_size(),
-                (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
-            #else
-            snprintf(buf, sizeof(buf),
-                "{\"frames\":%lu,\"flush_us\":%lu,\"render_us\":%lu,"
-                "\"loop_us\":%lu,\"loop_max\":%lu,"
-                "\"heap\":%lu,\"psram\":%lu}\n",
-                gui_frame_count, gui_flush_us_last,
-                gui_render_us_last, gui_loop_us_last, gui_loop_us_max,
-                (uint32_t)esp_get_free_heap_size(),
-                (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
-            #endif
+                "{\"build\":\"%s %s\",\"loop\":%lu,\"radio\":%lu,"
+                "\"serial\":%lu,\"disp\":%lu,\"pmu\":%lu,"
+                "\"gps\":%lu,\"bt\":%lu,\"imu\":%lu}\n",
+                __DATE__, __TIME__,
+                gui_loop_us_last, prof_radio_us, prof_serial_us,
+                prof_display_us, prof_pmu_us, prof_gps_us,
+                prof_bt_us, prof_imu_us);
             gui_loop_us_max = 0;
             Serial.write((uint8_t *)buf, strlen(buf));
             Serial.flush();
@@ -937,6 +942,18 @@ static void gui_cmd_execute() {
                 Serial.printf("{\"logging\":%s}\n", gui_imu_logging ? "true" : "false");
             } else {
                 Serial.println("{\"logging\":false,\"error\":\"not_available\"}");
+            }
+            Serial.flush();
+            break;
+        }
+
+        case 'F': {  // List files on SD card (handled via function pointer)
+            Serial.write(hdr, 4);
+            if (gui_log_toggle_fn) {
+                // Reuse the SD infrastructure from IMU logger
+                Serial.println("{\"error\":\"use_log_command\"}");
+            } else {
+                Serial.println("{\"error\":\"not_available\"}");
             }
             Serial.flush();
             break;
@@ -1045,6 +1062,8 @@ void gui_update() {
     gui_render_start = micros();
     lv_timer_handler();
     gui_render_us_last = micros() - gui_render_start;
+    // After lv_timer_handler, a new DMA may be queued via gui_flush_cb.
+    // It runs in background on SPI3 until the next gui_update() call.
 }
 
 #endif // BOARD_MODEL == BOARD_TWATCH_ULT

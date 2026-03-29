@@ -158,6 +158,24 @@ def cmd_invalidate(s):
     print("Invalidated — full redraw requested")
 
 
+def cmd_files(s):
+    """List files on SD card"""
+    send_cmd(s, ord('F'))
+    buf = b""
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        chunk = s.read(max(1, s.in_waiting or 1))
+        if chunk:
+            buf += chunk
+        magic = PREFIX + b"F"
+        idx = buf.find(magic)
+        if idx >= 0 and b"]}" in buf[idx:]:
+            end = buf.find(b"]}", idx) + 2
+            print(buf[idx + 4:end].decode())
+            return
+    print(f"Timeout ({len(buf)} bytes)")
+
+
 def cmd_log(s):
     send_cmd(s, ord('L'))
     buf = b""
@@ -202,6 +220,9 @@ def main():
     sub.add_parser("log", aliases=["l"],
                     help="Toggle IMU logging to SD card")
 
+    sub.add_parser("files", aliases=["f"],
+                    help="List files on SD card")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -223,6 +244,8 @@ def main():
             cmd_invalidate(s)
         elif args.command in ("log", "l"):
             cmd_log(s)
+        elif args.command in ("files", "f"):
+            cmd_files(s)
     finally:
         s.close()
 
