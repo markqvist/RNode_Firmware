@@ -20,6 +20,7 @@ ARDUINO_ESP_CORE_VER = 2.0.17
 # ARDUINO_ESP_CORE_VER = 3.2.0
 
 PORT ?= /dev/ttyACM4
+TWATCH_PORT ?= /dev/ttyACM4
 
 all: release
 
@@ -136,11 +137,23 @@ upload-twatch_ultra: firmware-twatch_ultra
 	rnodeconf /dev/ttyACM4 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
 
 # Full flash including bootloader and partition table (needed after partition changes)
+# Requires BOOT+RST first, then press RST after flash completes
 flash-twatch_ultra-full: firmware-twatch_ultra
-	esptool.py --chip esp32s3 --port /dev/ttyACM4 --baud 921600 write_flash \
+	esptool.py --chip esp32s3 --port $(TWATCH_PORT) --baud 921600 write_flash \
 		0x0000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bootloader.bin \
 		0x8000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.partitions.bin \
 		0x10000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin
+
+# Provision T-Watch EEPROM (run once after flash-twatch_ultra-full on a blank device)
+# Requires rnodeconf with T-Watch product code (0xEC) patched into RNS
+provision-twatch_ultra:
+	@echo "Provisioning T-Watch Ultra 868MHz..."
+	rnodeconf $(TWATCH_PORT) --rom --product ec --model da --hwrev 1
+	@echo "Press RST on watch, then press Enter..."
+	@read _
+	@sleep 3
+	rnodeconf $(TWATCH_PORT) --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+	@echo "Provisioning complete. Press RST on watch."
 
 firmware-lora32_v10: check_bt_buffers
 	arduino-cli compile --log --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x39\""
