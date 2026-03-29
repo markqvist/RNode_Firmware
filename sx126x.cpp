@@ -328,30 +328,14 @@ void sx126x::calibrate_image(long frequency) {
 
 int sx126x::begin(long frequency) {
   reset();
-  
+
   if (_busy != -1) { pinMode(_busy, INPUT); }
   if (!_preinit_done) { if (!preInit()) { return false; } }
   if (_rxen != -1) { pinMode(_rxen, OUTPUT); }
 
-  // Enable DC-DC regulator if the board has the required inductor.
-  // Default after reset is LDO-only. Heltec V4 (and most SX1262
-  // boards) have the DC-DC inductor on VREGSW and need this set
-  // before TCXO/calibration per datasheet Section 13.1.
-  #if BOARD_MODEL == BOARD_HELTEC32_V4 || BOARD_MODEL == BOARD_HELTEC32_V3 || BOARD_MODEL == BOARD_RAK4631 || BOARD_MODEL == BOARD_T3S3 || BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TDECK || BOARD_MODEL == BOARD_TWATCH_ULT
-    uint8_t reg_mode = 0x01; // DC-DC + LDO
-    executeOpcode(OP_REGULATOR_MODE_6X, &reg_mode, 1);
-  #endif
-
-  // SX1262 datasheet requires TCXO to be enabled BEFORE calibration.
-  // With TCXO off, calibrate() uses the inaccurate RC oscillator as
-  // reference, resulting in bad PLL/image calibration that can kill
-  // RX sensitivity while TX still works (enough power margin).
-  enableTCXO();
-  // Clear any latched errors from power-on before calibration
-  uint8_t clr_err[2] = {0x00, 0x00};
-  executeOpcode(OP_CLR_DEVICE_ERRORS_6X, clr_err, 2);
   calibrate();
   calibrate_image(frequency);
+  enableTCXO();
   loraMode();
   standby();
 
@@ -362,13 +346,6 @@ int sx126x::begin(long frequency) {
     // enable dio2 rf switch
     uint8_t byte = 0x01;
     executeOpcode(OP_DIO2_RF_CTRL_6X, &byte, 1);
-
-    // After TX the SX1262 falls back to STANDBY_RC by default.
-    // Set fallback to STDBY_XOSC (0x40) so the oscillator stays
-    // running and DIO2 toggles the GC1109 PA/LNA RF switch back
-    // to RX promptly when receive() is called after a transmit.
-    uint8_t fb = 0x40; // STDBY_XOSC
-    executeOpcode(OP_RX_TX_FALLBACK_MODE_6X, &fb, 1);
   #endif
 
   rxAntEnable();
@@ -377,9 +354,6 @@ int sx126x::begin(long frequency) {
   enableCrc();
   writeRegister(REG_LNA_6X, 0x96); // Set LNA boost
 
-  // Undocumented register 0x8B5: setting bit 0 improves RX sensitivity
-  // on boards with GC1109 PA/LNA (Heltec V4). Patch recommended by
-  // Heltec engineer, confirmed by MeshCore community testing.
   #if HAS_LORA_PA && LORA_PA_GC1109
     uint8_t reg8b5 = readRegister(0x08B5);
     writeRegister(0x08B5, reg8b5 | 0x01);
@@ -497,7 +471,10 @@ bool sx126x::dcd() {
     }
   }
 
-  if (false_preamble_detected) { false_preamble_detected = false; }
+  // After a false preamble, re-enter RX to reset the SX1262 demodulator.
+  // Just clearing IRQ flags is insufficient — the internal demod chain can
+  // get stuck, detecting RF energy but never completing packet decode.
+  if (false_preamble_detected) { sx126x_modem.receive(); false_preamble_detected = false; }
   return carrier_detected;
 }
 
@@ -634,20 +611,6 @@ void sx126x::onReceive(void(*callback)(int)){
 }
 
 void sx126x::receive(int size) {
-  // CPS stays HIGH permanently (set in begin())
-
-  // Ensure LoRa packet type is set before entering RX.
-  // On some SX1262 chips, the packet type reverts to GFSK (0x00)
-  // after calibration despite being set in begin(). This is a
-  // no-op if already in LoRa mode since SetPacketType only resets
-  // params when the type actually changes.
-  if (getPacketType() != MODE_LONG_RANGE_MODE_6X) {
-    loraMode();
-    // Re-apply modulation/packet params since SetPacketType
-    // resets all params to defaults when type changes.
-    setModulationParams(_sf, _bw, _cr, _ldro);
-  }
-
   if (size > 0) {
     implicitHeaderMode();
     _payloadLength = size;

@@ -965,6 +965,7 @@ void beacon_transmit(uint16_t size) {
       led_indicate_error(5);
     }
     add_airtime(size);
+    lora_receive();
   }
 }
 
