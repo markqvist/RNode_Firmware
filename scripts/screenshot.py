@@ -153,6 +153,35 @@ def cmd_navigate(s, screen):
     print(f"Navigate → {screen} ({col},{row})")
 
 
+def cmd_profile(s):
+    """Run standardized performance profile test"""
+    send_cmd(s, ord('P'))
+    buf = b""
+    deadline = time.time() + 30  # profile test takes several seconds
+    while time.time() < deadline:
+        chunk = s.read(max(1, s.in_waiting or 1))
+        if chunk:
+            buf += chunk
+        magic = PREFIX + b"P"
+        idx = buf.find(magic)
+        if idx >= 0:
+            nl = buf.find(b"\n", idx + 4)
+            if nl >= 0:
+                import json
+                data = json.loads(buf[idx + 4:nl])
+                print(f"Build:          {data.get('build', '?')}")
+                print(f"Idle frame:     {data['idle_us']:>8} µs (flush: {data['idle_flush_us']} µs)")
+                print(f"Full frame:     {data['full_us']:>8} µs (flush: {data['full_flush_us']} µs)")
+                print(f"Data update:    {data['data_update_us']:>8} µs")
+                print(f"Nav 5 tiles:    {data['nav_5tile_us']:>8} µs ({data['nav_5tile_us']//5} µs/tile)")
+                print(f"Burst 10 frame: {data['burst_10frame_us']:>8} µs ({data['avg_frame_us']} µs/frame)")
+                print(f"Main loop:      {data['loop_us']:>8} µs")
+                print(f"Heap free:      {data['heap']:>8} bytes")
+                print(f"PSRAM free:     {data['psram']:>8} bytes")
+                return
+    print(f"Timeout ({len(buf)} bytes)")
+
+
 def cmd_invalidate(s):
     send_cmd(s, ord('I'))
     print("Invalidated — full redraw requested")
@@ -217,6 +246,9 @@ def main():
 
     sub.add_parser("invalidate", aliases=["inv"])
 
+    sub.add_parser("profile", aliases=["p"],
+                    help="Run standardized performance test")
+
     sub.add_parser("log", aliases=["l"],
                     help="Toggle IMU logging to SD card")
 
@@ -242,6 +274,8 @@ def main():
             cmd_navigate(s, args.screen)
         elif args.command in ("invalidate", "inv"):
             cmd_invalidate(s)
+        elif args.command in ("profile", "p"):
+            cmd_profile(s)
         elif args.command in ("log", "l"):
             cmd_log(s)
         elif args.command in ("files", "f"):

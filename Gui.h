@@ -798,7 +798,8 @@ bool gui_init() {
 //   'M' (0x4D) — Metrics: responds RWSM + JSON stats
 //   'I' (0x49) — Invalidate: force full screen redraw
 //   'L' (0x4C) — Log toggle: start/stop IMU logging to SD card
-//   'F' (0x46) — File download: 1 byte name length + filename, sends file over serial
+//   'F' (0x46) — File list: lists files on SD card
+//   'P' (0x50) — Profile: runs standardized performance test, reports JSON results
 
 #define GUI_CMD_PREFIX_LEN 3
 static const uint8_t gui_cmd_prefix[] = {0x52, 0x57, 0x53};  // "RWS"
@@ -925,6 +926,99 @@ static void gui_cmd_execute() {
                 prof_bt_us, prof_imu_us);
             gui_loop_us_max = 0;
             Serial.write((uint8_t *)buf, strlen(buf));
+            Serial.flush();
+            break;
+        }
+
+        case 'P': {  // Standardized performance profile test
+            Serial.write(hdr, 4);
+            if (display_blanked) display_unblank();
+
+            uint32_t p_t0, p_t1;
+            uint32_t p_idle_render = 0, p_idle_flush = 0;
+            uint32_t p_full_render = 0, p_full_flush = 0;
+            uint32_t p_nav_total = 0;
+            uint32_t p_data_update = 0;
+            uint32_t p_frames = 0;
+            uint32_t p_multi_total = 0;
+
+            // Test 1: Idle frame (nothing dirty)
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();  // clear any pending
+            gui_flush_us_last = 0;
+            gui_frame_count = 0;
+            p_t0 = micros();
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            p_t1 = micros();
+            p_idle_render = p_t1 - p_t0;
+            p_idle_flush = gui_flush_us_last;
+
+            // Test 2: Full invalidation + render
+            lv_obj_invalidate(lv_screen_active());
+            gui_flush_us_last = 0;
+            p_t0 = micros();
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            p_t1 = micros();
+            p_full_render = p_t1 - p_t0;
+            p_full_flush = gui_flush_us_last;
+
+            // Test 3: Data update cycle
+            gui_last_data_update = 0;  // force update
+            p_t0 = micros();
+            gui_update_data();
+            p_t1 = micros();
+            p_data_update = p_t1 - p_t0;
+
+            // Test 4: Navigate to each tile and back (5 transitions)
+            p_t0 = micros();
+            lv_tileview_set_tile(gui_tileview, gui_tile_radio, LV_ANIM_OFF);
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            lv_tileview_set_tile(gui_tileview, gui_tile_gps, LV_ANIM_OFF);
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            lv_tileview_set_tile(gui_tileview, gui_tile_msg, LV_ANIM_OFF);
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            lv_tileview_set_tile(gui_tileview, gui_tile_set, LV_ANIM_OFF);
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            lv_tileview_set_tile(gui_tileview, gui_tile_watch, LV_ANIM_OFF);
+            lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+            lv_timer_handler();
+            p_t1 = micros();
+            p_nav_total = p_t1 - p_t0;
+
+            // Test 5: Rapid frame burst (10 full frames)
+            p_t0 = micros();
+            for (int i = 0; i < 10; i++) {
+                lv_obj_invalidate(lv_screen_active());
+                lv_tick_inc(LV_DEF_REFR_PERIOD + 1);
+                lv_timer_handler();
+            }
+            p_t1 = micros();
+            p_multi_total = p_t1 - p_t0;
+
+            Serial.printf("{\"test\":\"profile\",\"build\":\"%s %s\","
+                "\"idle_us\":%lu,\"idle_flush_us\":%lu,"
+                "\"full_us\":%lu,\"full_flush_us\":%lu,"
+                "\"data_update_us\":%lu,"
+                "\"nav_5tile_us\":%lu,"
+                "\"burst_10frame_us\":%lu,"
+                "\"avg_frame_us\":%lu,"
+                "\"loop_us\":%lu,"
+                "\"heap\":%lu,\"psram\":%lu}\n",
+                __DATE__, __TIME__,
+                p_idle_render, p_idle_flush,
+                p_full_render, p_full_flush,
+                p_data_update,
+                p_nav_total,
+                p_multi_total, p_multi_total / 10,
+                gui_loop_us_last,
+                (uint32_t)esp_get_free_heap_size(),
+                (uint32_t)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
             Serial.flush();
             break;
         }
