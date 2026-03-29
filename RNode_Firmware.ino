@@ -1962,9 +1962,10 @@ void tx_queue_handler() {
 void work_while_waiting() { loop(); }
 
 void loop() {
-  uint32_t _prof_t0, _prof_t1;
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
+    uint32_t _prof_t0 = micros(), _prof_t1;
+  #endif
 
-  _prof_t0 = micros();
   if (radio_online) {
     // Process deferred RX interrupt from main context
     // (avoids SPI bus contention from ISR)
@@ -2035,7 +2036,9 @@ void loop() {
     }
   }
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_radio_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+  #endif
 
   #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
       buffer_serial();
@@ -2050,19 +2053,25 @@ void loop() {
     if (!fifo_isempty_locked(&channelFIFO[CHANNEL_USB])) serial_poll();
   #endif
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_serial_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+  #endif
 
   #if HAS_DISPLAY
     if (disp_ready && !display_updating) update_display();
   #endif
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_display_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+  #endif
 
   #if HAS_PMU
     if (pmu_ready) update_pmu();
   #endif
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_pmu_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+  #endif
 
   #if HAS_GPS == true
     if (gps_ready) {
@@ -2085,7 +2094,9 @@ void loop() {
     }
   #endif
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_gps_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+  #endif
 
   #if HAS_RTC == true
     static uint32_t rtc_last_read = 0;
@@ -2099,7 +2110,9 @@ void loop() {
     if (!console_active && bt_ready) update_bt();
   #endif
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_bt_us = _prof_t1 - _prof_t0; _prof_t0 = _prof_t1;
+  #endif
 
   #if HAS_WIFI
     if (wifi_initialized) update_wifi();
@@ -2204,7 +2217,9 @@ void loop() {
     }
   #endif
 
+  #if BOARD_MODEL == BOARD_TWATCH_ULT
   _prof_t1 = micros(); prof_imu_us = _prof_t1 - _prof_t0;
+  #endif
 
   if (memory_low) {
     #if PLATFORM == PLATFORM_ESP32
