@@ -922,12 +922,15 @@ static void gui_cmd_execute() {
                 "{\"build\":\"%s %s\",\"loop\":%lu,\"radio\":%lu,"
                 "\"serial\":%lu,\"disp\":%lu,\"pmu\":%lu,"
                 "\"gps\":%lu,\"bt\":%lu,\"imu\":%lu,"
-                "\"bcn_gate\":%d,\"hw_ready\":%d}\n",
+                "\"bcn_gate\":%d,\"hw_ready\":%d,"
+                "\"lxmf_id\":%d,\"bcn_crypto\":%d}\n",
                 __DATE__, __TIME__,
                 gui_loop_us_last, prof_radio_us, prof_serial_us,
                 prof_display_us, prof_pmu_us, prof_gps_us,
                 prof_bt_us, prof_imu_us,
-                beacon_gate, hw_ready ? 1 : 0);
+                beacon_gate, hw_ready ? 1 : 0,
+                lxmf_identity_configured ? 1 : 0,
+                beacon_crypto_configured ? 1 : 0);
             gui_loop_us_max = 0;
             Serial.write((uint8_t *)buf, strlen(buf));
             Serial.flush();

@@ -124,7 +124,7 @@ void beacon_update() {
     beacon_gate = 6;
 
     // LXMF path: send proper LXMF message with FIELD_TELEMETRY directly to Sideband
-    if (lxmf_identity_configured && beacon_crypto_configured) {
+    if (lxmf_identity_configured) {
         // Periodic LXMF announce (every 10 minutes)
         lxmf_announce_if_needed("RNode GPS Tracker");
 
