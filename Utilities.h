@@ -1287,7 +1287,13 @@ int getTxPower() {
 }
 
 #if HAS_LORA_PA
-	const int tx_gain[PA_GAIN_POINTS] = {PA_GAIN_VALUES};
+  #if LORA_PA_AUTO_DETECT
+    static const int gc1109_tx_gain[PA_GAIN_POINTS]   = {PA_GC1109_GAIN_VALUES};
+    static const int kct8103l_tx_gain[PA_GAIN_POINTS] = {PA_KCT8103L_GAIN_VALUES};
+    const int* tx_gain = sx126x_modem.isKCT8103L() ? kct8103l_tx_gain : gc1109_tx_gain;
+  #else
+    const int tx_gain[PA_GAIN_POINTS] = {PA_GAIN_VALUES};
+  #endif
 #endif
 
 int map_target_power_to_modem_output(int target_tx_power) {
