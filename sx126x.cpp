@@ -335,7 +335,9 @@ int sx126x::begin(long frequency) {
   setFrequency(frequency);
   setTxPower(2);
   enableCrc();
-  writeRegister(REG_LNA_6X, 0x96); // Set LNA boost
+  writeRegister(REG_LNA_6X, 0x96); // Set LNA boosted gain mode
+  // Undocumented SX1262 register patch recommended by Heltec/Semtech for improved RX sensitivity.
+  writeRegister(0x08B5, readRegister(0x08B5) | 0x01);
   uint8_t basebuf[2] = {0}; // Set base addresses
   executeOpcode(OP_BUFFER_BASE_ADDR_6X, basebuf, 2);
 
