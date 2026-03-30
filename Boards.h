@@ -422,14 +422,14 @@
 
       #define LORA_LNA_GAIN  17
       #define LORA_LNA_GVT   12
-      #define LORA_PA_GC1109 true
+      #define LORA_PA_KCT8103L true
       #define LORA_PA_PWR_EN  7
       #define LORA_PA_CSD     2
-      #define LORA_PA_CPS    46
+      #define LORA_PA_CTX     5
 
       #define PA_MAX_OUTPUT  28
       #define PA_GAIN_POINTS 22
-      #define PA_GAIN_VALUES 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 10, 10, 9, 9, 8, 7
+      #define PA_GAIN_VALUES 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 12, 12, 11, 11, 10, 9, 8, 7
 
       const int pin_cs = 8;
       const int pin_busy = 13;

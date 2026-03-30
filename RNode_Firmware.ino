@@ -1767,7 +1767,11 @@ void sleep_now() {
         #endif
       #endif
       #if BOARD_MODEL == BOARD_HELTEC32_V4
-          digitalWrite(LORA_PA_CPS, LOW);
+          #if LORA_PA_KCT8103L
+            digitalWrite(LORA_PA_CTX, LOW);
+          #elif LORA_PA_GC1109
+            digitalWrite(LORA_PA_CPS, LOW);
+          #endif
           digitalWrite(LORA_PA_CSD, LOW);
           digitalWrite(LORA_PA_PWR_EN, LOW);
           digitalWrite(Vext, HIGH);
