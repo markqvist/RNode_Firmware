@@ -97,6 +97,8 @@ public:
 
   void dumpRegisters(Stream& out);
 
+  bool isKCT8103L() { return _kct8103l; }
+
 private:
   void explicitHeaderMode();
   void implicitHeaderMode();
@@ -137,6 +139,7 @@ private:
   int _fifo_rx_addr_ptr;
   uint8_t _packet[255];
   bool _preinit_done;
+  bool _kct8103l;
   void (*_onReceive)(int);
 };
 

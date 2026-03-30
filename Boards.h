@@ -422,10 +422,11 @@
 
       #define LORA_LNA_GAIN  17
       #define LORA_LNA_GVT   12
-      #define LORA_PA_KCT8103L true
+      #define LORA_PA_AUTO_DETECT true
       #define LORA_PA_PWR_EN  7
-      #define LORA_PA_CSD     2
-      #define LORA_PA_CTX     5
+      #define LORA_PA_CSD     2  // GC1109: PA_EN | KCT8103L: CSD (same pin, different pull resistor)
+      #define LORA_PA_CTX     5  // KCT8103L: TX/LNA select (CTX=LOW=LNA, CTX=HIGH=PA)
+      #define LORA_PA_CPS    46  // GC1109: TX_EN
 
       #define PA_MAX_OUTPUT  28
       #define PA_GAIN_POINTS 22
