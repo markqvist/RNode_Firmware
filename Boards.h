@@ -399,7 +399,7 @@
       #define HAS_LORA_LNA true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
-      #define OCP_TUNED 0x18
+      #define OCP_TUNED 0x38
       #define Vext GPIO_NUM_36
 
       const int pin_btn_usr1 = 0;
