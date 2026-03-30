@@ -428,9 +428,11 @@
       #define LORA_PA_CTX     5  // KCT8103L: TX/LNA select (CTX=LOW=LNA, CTX=HIGH=PA)
       #define LORA_PA_CPS    46  // GC1109: TX_EN
 
-      #define PA_MAX_OUTPUT  28
-      #define PA_GAIN_POINTS 22
-      #define PA_GAIN_VALUES 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 12, 12, 11, 11, 10, 9, 8, 7
+      #define PA_MAX_OUTPUT          28
+      #define PA_GAIN_POINTS         22
+      #define PA_GC1109_GAIN_VALUES   11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 10, 10, 9, 9, 8, 7
+      #define PA_KCT8103L_GAIN_VALUES 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 12, 12, 11, 11, 10, 9, 8, 7
+      #define PA_GAIN_VALUES PA_KCT8103L_GAIN_VALUES // compile-time fallback; runtime detection selects correct table
 
       const int pin_cs = 8;
       const int pin_busy = 13;
