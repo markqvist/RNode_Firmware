@@ -137,8 +137,16 @@ void setup() {
       EEPROM.write(eeprom_addr(ADDR_MADE+1), 0x00);
       EEPROM.write(eeprom_addr(ADDR_MADE+2), 0x00);
       EEPROM.write(eeprom_addr(ADDR_MADE+3), 0x00);
-      EEPROM.write(eeprom_addr(ADDR_INFO_LOCK), 0x00);
+      EEPROM.write(eeprom_addr(ADDR_INFO_LOCK), INFO_LOCK_BYTE);
       EEPROM.write(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+      // Compute and write EEPROM checksum (MD5 of first CHECKSUMMED_SIZE bytes)
+      char chk_data[CHECKSUMMED_SIZE];
+      for (uint8_t i = 0; i < CHECKSUMMED_SIZE; i++)
+        chk_data[i] = EEPROM.read(eeprom_addr(i));
+      unsigned char *chk_hash = MD5::make_hash(chk_data, CHECKSUMMED_SIZE);
+      for (uint8_t i = 0; i < 16; i++)
+        EEPROM.write(eeprom_addr(ADDR_CHKSUM + i), chk_hash[i]);
+      free(chk_hash);
       EEPROM.commit();
     }
     #endif
