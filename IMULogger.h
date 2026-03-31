@@ -1,8 +1,9 @@
-// IMU Data Logger — streams BHI260AP sensor data to SD card as CSV
-// Start/stop via remote debug command 'L' or long-press button
+// Sensor Data Logger — streams all sensor data to SD card as CSV
+// Start/stop via remote debug command 'L' or Settings screen toggle
 //
-// CSV format: timestamp_ms,ax,ay,az,gx,gy,gz,mx,my,mz
-// Accelerometer/gyro/magnetometer in raw int16 units
+// CSV format: timestamp_ms,type,d0,d1,d2,d3,d4,d5,d6,d7,d8
+// Type: A=accel, G=gyro, M=mag, S=step, W=wrist_tilt, P=GPS, T=touch
+// IMU values in raw int16 units, GPS in scaled integers
 // Timestamp is millis() at time of callback
 
 #ifndef IMULOGGER_H
@@ -14,65 +15,85 @@
 #include "SharedSPI.h"
 
 // Ring buffer for sensor samples (stored in PSRAM)
-struct imu_sample_t {
+// Tagged samples: type char + up to 9 int32 fields
+struct sensor_sample_t {
     uint32_t timestamp;
-    int16_t ax, ay, az;     // accelerometer
-    int16_t gx, gy, gz;     // gyroscope
-    int16_t mx, my, mz;     // magnetometer
+    char type;              // A=accel, G=gyro, M=mag, S=step, W=wrist, P=gps, T=touch
+    int32_t d[9];           // data fields (meaning depends on type)
 };
 
 #define IMU_LOG_BUF_SIZE 512  // samples before flush (~10s at 50Hz)
-static imu_sample_t *imu_log_buf = NULL;
+static sensor_sample_t *imu_log_buf = NULL;
 static volatile uint32_t imu_log_head = 0;   // write position
 static volatile uint32_t imu_log_tail = 0;   // read position
-static bool imu_logging = false;
+bool imu_logging = false;
 static File imu_log_file;
-static uint32_t imu_log_samples = 0;
-static uint32_t imu_log_start_ms = 0;
+uint32_t imu_log_samples = 0;
+uint32_t imu_log_start_ms = 0;
 
-// Latest raw values (written by callbacks, read by flush)
-static volatile int16_t imu_raw_ax = 0, imu_raw_ay = 0, imu_raw_az = 0;
-static volatile int16_t imu_raw_gx = 0, imu_raw_gy = 0, imu_raw_gz = 0;
-static volatile int16_t imu_raw_mx = 0, imu_raw_my = 0, imu_raw_mz = 0;
-static volatile bool imu_accel_new = false;
+// Push a tagged sample to the ring buffer (safe from callbacks)
+static void sensor_log_push(char type, int32_t d0=0, int32_t d1=0, int32_t d2=0,
+                             int32_t d3=0, int32_t d4=0, int32_t d5=0,
+                             int32_t d6=0, int32_t d7=0, int32_t d8=0) {
+    if (!imu_logging || !imu_log_buf) return;
+    uint32_t next = (imu_log_head + 1) % IMU_LOG_BUF_SIZE;
+    if (next == imu_log_tail) return;  // full
+    sensor_sample_t &s = imu_log_buf[imu_log_head];
+    s.timestamp = millis();
+    s.type = type;
+    s.d[0]=d0; s.d[1]=d1; s.d[2]=d2; s.d[3]=d3; s.d[4]=d4;
+    s.d[5]=d5; s.d[6]=d6; s.d[7]=d7; s.d[8]=d8;
+    imu_log_head = next;
+}
 
-// Sensor callbacks — store latest values
+// Sensor callbacks — push individual tagged samples
 void imu_log_accel_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     if (size >= 6) {
-        imu_raw_ax = (int16_t)(data[0] | (data[1] << 8));
-        imu_raw_ay = (int16_t)(data[2] | (data[3] << 8));
-        imu_raw_az = (int16_t)(data[4] | (data[5] << 8));
-        imu_accel_new = true;
-
-        // Push combined sample to ring buffer when accel fires (it's the "clock")
-        if (imu_logging && imu_log_buf) {
-            uint32_t next = (imu_log_head + 1) % IMU_LOG_BUF_SIZE;
-            if (next != imu_log_tail) {  // not full
-                imu_sample_t &s = imu_log_buf[imu_log_head];
-                s.timestamp = millis();
-                s.ax = imu_raw_ax; s.ay = imu_raw_ay; s.az = imu_raw_az;
-                s.gx = imu_raw_gx; s.gy = imu_raw_gy; s.gz = imu_raw_gz;
-                s.mx = imu_raw_mx; s.my = imu_raw_my; s.mz = imu_raw_mz;
-                imu_log_head = next;
-            }
-        }
+        int16_t ax = (int16_t)(data[0] | (data[1] << 8));
+        int16_t ay = (int16_t)(data[2] | (data[3] << 8));
+        int16_t az = (int16_t)(data[4] | (data[5] << 8));
+        sensor_log_push('A', ax, ay, az);
     }
 }
 
 void imu_log_gyro_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     if (size >= 6) {
-        imu_raw_gx = (int16_t)(data[0] | (data[1] << 8));
-        imu_raw_gy = (int16_t)(data[2] | (data[3] << 8));
-        imu_raw_gz = (int16_t)(data[4] | (data[5] << 8));
+        int16_t gx = (int16_t)(data[0] | (data[1] << 8));
+        int16_t gy = (int16_t)(data[2] | (data[3] << 8));
+        int16_t gz = (int16_t)(data[4] | (data[5] << 8));
+        sensor_log_push('G', gx, gy, gz);
     }
 }
 
 void imu_log_mag_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     if (size >= 6) {
-        imu_raw_mx = (int16_t)(data[0] | (data[1] << 8));
-        imu_raw_my = (int16_t)(data[2] | (data[3] << 8));
-        imu_raw_mz = (int16_t)(data[4] | (data[5] << 8));
+        int16_t mx = (int16_t)(data[0] | (data[1] << 8));
+        int16_t my = (int16_t)(data[2] | (data[3] << 8));
+        int16_t mz = (int16_t)(data[4] | (data[5] << 8));
+        sensor_log_push('M', mx, my, mz);
     }
+}
+
+// Log step counter event
+void sensor_log_step(uint32_t count) {
+    sensor_log_push('S', (int32_t)count);
+}
+
+// Log wrist tilt event
+void sensor_log_wrist_tilt() {
+    sensor_log_push('W');
+}
+
+// Log GPS fix (call at 1Hz from main loop when logging)
+void sensor_log_gps(double lat, double lon, double alt, double speed, double hdop, uint8_t sats) {
+    sensor_log_push('P',
+        (int32_t)(lat * 1e6), (int32_t)(lon * 1e6), (int32_t)(alt * 10),
+        (int32_t)(speed * 100), (int32_t)(hdop * 100), sats);
+}
+
+// Log touch event
+void sensor_log_touch(int16_t x, int16_t y, bool pressed) {
+    sensor_log_push('T', x, y, pressed ? 1 : 0);
 }
 
 // Forward declaration
@@ -83,8 +104,8 @@ bool imu_log_start(SensorBHI260AP *bhi) {
 
     // Allocate ring buffer in PSRAM
     if (!imu_log_buf) {
-        imu_log_buf = (imu_sample_t *)heap_caps_malloc(
-            IMU_LOG_BUF_SIZE * sizeof(imu_sample_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        imu_log_buf = (sensor_sample_t *)heap_caps_malloc(
+            IMU_LOG_BUF_SIZE * sizeof(sensor_sample_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
         if (!imu_log_buf) return false;
     }
     imu_log_head = 0;
@@ -111,7 +132,7 @@ bool imu_log_start(SensorBHI260AP *bhi) {
     }
 
     // Write CSV header
-    imu_log_file.println("ms,ax,ay,az,gx,gy,gz,mx,my,mz");
+    imu_log_file.println("ms,type,d0,d1,d2,d3,d4,d5,d6,d7,d8");
 
     // Configure sensors at 50Hz
     bhi->configure(SensorBHI260AP::ACCEL_PASSTHROUGH, 50.0, 0);
@@ -159,13 +180,14 @@ void imu_log_flush() {
     if (!imu_logging || !imu_log_buf) return;
     if (shared_spi_mutex && xSemaphoreTake(shared_spi_mutex, pdMS_TO_TICKS(50)) != pdTRUE) return;
 
-    char line[80];
+    char line[128];
     uint32_t flushed = 0;
     while (imu_log_tail != imu_log_head) {
-        imu_sample_t &s = imu_log_buf[imu_log_tail];
-        int len = snprintf(line, sizeof(line), "%lu,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-                           s.timestamp, s.ax, s.ay, s.az,
-                           s.gx, s.gy, s.gz, s.mx, s.my, s.mz);
+        sensor_sample_t &s = imu_log_buf[imu_log_tail];
+        int len = snprintf(line, sizeof(line), "%lu,%c,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld,%ld\n",
+                           s.timestamp, s.type,
+                           s.d[0], s.d[1], s.d[2], s.d[3], s.d[4],
+                           s.d[5], s.d[6], s.d[7], s.d[8]);
         imu_log_file.write((uint8_t *)line, len);
         imu_log_tail = (imu_log_tail + 1) % IMU_LOG_BUF_SIZE;
         imu_log_samples++;

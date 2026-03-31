@@ -32,23 +32,25 @@
   volatile uint32_t imu_step_count = 0;
   volatile bool imu_wrist_tilt = false;
 
+  // MAX98357A I2S speaker + SPM1423 PDM microphone
+  #include "Speaker.h"
+  #include "Microphone.h"
+
+  // Sensor data logger to SD card (must be before callbacks that call sensor_log_*)
+  #include "IMULogger.h"
+
   // IMU sensor callbacks
   void imu_step_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     if (size >= 4) {
       imu_step_count = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
+      sensor_log_step(imu_step_count);
     }
   }
 
   void imu_wrist_tilt_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     imu_wrist_tilt = true;
+    sensor_log_wrist_tilt();
   }
-
-  // MAX98357A I2S speaker + SPM1423 PDM microphone
-  #include "Speaker.h"
-  #include "Microphone.h"
-
-  // IMU data logger to SD card
-  #include "IMULogger.h"
 
   // Shared SPI bus mutex (LoRa + SD + NFC)
   #include "SharedSPI.h"
@@ -2256,7 +2258,15 @@ void loop() {
         #endif
       }
       #if HAS_SD
-        if (imu_logging) imu_log_flush();
+        if (imu_logging) {
+          imu_log_flush();
+          // Log GPS at 1Hz when logging
+          static uint32_t last_gps_log = 0;
+          if (gps_has_fix && millis() - last_gps_log >= 1000) {
+            sensor_log_gps(gps_lat, gps_lon, gps_alt, gps_speed, gps_hdop, gps_sats);
+            last_gps_log = millis();
+          }
+        }
       #endif
     }
   #endif

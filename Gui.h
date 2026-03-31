@@ -155,10 +155,16 @@ uint16_t *gui_screenshot_buf = NULL;
 void display_unblank();
 extern float pmu_temperature;
 extern volatile uint32_t imu_step_count;
-// IMU logger toggle — set by .ino after IMULogger.h is included
+// Sensor logger toggle — set by .ino after IMULogger.h is included
 typedef bool (*gui_log_toggle_fn_t)();
 static gui_log_toggle_fn_t gui_log_toggle_fn = NULL;
 static bool gui_imu_logging = false;
+// Forward declarations for IMULogger.h variables (defined later in compilation)
+extern bool imu_logging;
+extern uint32_t imu_log_samples;
+extern uint32_t imu_log_start_ms;
+// Forward declaration for touch logging (defined in IMULogger.h)
+void sensor_log_touch(int16_t x, int16_t y, bool pressed);
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -208,6 +214,9 @@ static void gui_touch_read_cb(lv_indev_t *indev, lv_indev_data_t *data) {
         data->point.y = ty;
         data->state = LV_INDEV_STATE_PRESSED;
         last_unblank_event = millis();
+        #if HAS_SD
+          sensor_log_touch(tx, ty, true);
+        #endif
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }
@@ -439,6 +448,8 @@ static lv_obj_t *gui_set_disp_val = NULL;
 static lv_obj_t *gui_set_bcn_roller = NULL;
 static lv_obj_t *gui_set_gps_roller = NULL;
 static lv_obj_t *gui_set_bcn_sw = NULL;
+static lv_obj_t *gui_set_log_sw = NULL;
+static lv_obj_t *gui_set_log_status = NULL;
 
 static void gui_set_disp_cb(lv_event_t *e) {
     lv_obj_t *slider = (lv_obj_t *)lv_event_get_target(e);
@@ -474,6 +485,15 @@ static void gui_set_gps_model_cb(lv_event_t *e) {
         gps_set_dynamic_model(idx);
         EEPROM.write(config_addr(ADDR_CONF_GPS_MODEL), (uint8_t)idx);
         EEPROM.commit();
+    }
+}
+
+static void gui_set_log_cb(lv_event_t *e) {
+    bool on = lv_obj_has_state(gui_set_log_sw, LV_STATE_CHECKED);
+    if (on) {
+        if (gui_log_toggle_fn) gui_log_toggle_fn();
+    } else {
+        if (gui_log_toggle_fn && imu_logging) gui_log_toggle_fn();
     }
 }
 
@@ -555,6 +575,17 @@ static void gui_create_settings_screen(lv_obj_t *parent) {
     lv_obj_set_style_text_color(gui_set_gps_roller, lv_color_hex(GUI_COL_BLACK), LV_PART_SELECTED);
     lv_roller_set_selected(gui_set_gps_roller, gps_dynamic_model, LV_ANIM_OFF);
     lv_obj_add_event_cb(gui_set_gps_roller, gui_set_gps_model_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    // --- Sensor logger ---
+    gui_create_rule(cont, 320);
+    gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_MID, "Data logger", GUI_PAD, 335);
+    gui_set_log_sw = lv_switch_create(cont);
+    lv_obj_set_pos(gui_set_log_sw, GUI_W - GUI_PAD - 50, 330);
+    lv_obj_set_size(gui_set_log_sw, 50, 26);
+    lv_obj_set_style_bg_color(gui_set_log_sw, lv_color_hex(GUI_COL_DIM), 0);
+    lv_obj_set_style_bg_color(gui_set_log_sw, lv_color_hex(GUI_COL_GREEN), LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_add_event_cb(gui_set_log_sw, gui_set_log_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    gui_set_log_status = gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_DIM, "", GUI_PAD, 365);
 }
 
 // ---------------------------------------------------------------------------
@@ -611,12 +642,13 @@ static void gui_update_data() {
     bool on_watch  = (cur_tile == gui_tile_watch);
     bool on_radio  = (cur_tile == gui_tile_radio);
     bool on_gps    = (cur_tile == gui_tile_gps);
+    bool on_settings = (cur_tile == gui_tile_set);
 
     // ---- Watch face ----
     // Time always updates (cheap, changes rarely)
     lv_label_set_text_fmt(gui_time_label, "%02d:%02d", rtc_hour, rtc_minute);
 
-    if (!on_watch && !on_radio && !on_gps) return;
+    if (!on_watch && !on_radio && !on_gps && !on_settings) return;
 
     // ---- Watch face details (only when visible) ----
     if (on_watch) {
@@ -812,6 +844,26 @@ static void gui_update_data() {
         }
     }
     #endif
+
+    // ---- Settings screen (logger status) ----
+    if (on_settings && gui_set_log_status) {
+        #if HAS_SD
+        if (imu_logging) {
+            uint32_t dur = (millis() - imu_log_start_ms) / 1000;
+            lv_label_set_text_fmt(gui_set_log_status, "%lu samples  %lus", imu_log_samples, dur);
+            lv_obj_set_style_text_color(gui_set_log_status, lv_color_hex(GUI_COL_GREEN), 0);
+            if (!lv_obj_has_state(gui_set_log_sw, LV_STATE_CHECKED))
+                lv_obj_add_state(gui_set_log_sw, LV_STATE_CHECKED);
+        } else {
+            lv_label_set_text(gui_set_log_status, "SD card ready");
+            lv_obj_set_style_text_color(gui_set_log_status, lv_color_hex(GUI_COL_DIM), 0);
+            if (lv_obj_has_state(gui_set_log_sw, LV_STATE_CHECKED))
+                lv_obj_clear_state(gui_set_log_sw, LV_STATE_CHECKED);
+        }
+        #else
+        lv_label_set_text(gui_set_log_status, "No SD card");
+        #endif
+    }
 }
 
 // ---------------------------------------------------------------------------
