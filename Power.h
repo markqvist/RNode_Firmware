@@ -19,12 +19,12 @@
 bool pmu_temp_sensor_ready = false;
 float pmu_temperature = PMU_TEMP_MIN-1;
 
-#if BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
+#if BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TBEAM_S_LR_V1
   #include <XPowersLib.h>
   XPowersLibInterface* PMU = NULL;
 
   #ifndef PMU_WIRE_PORT
-    #if BOARD_MODEL == BOARD_TBEAM_S_V1
+    #if BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TBEAM_S_LR_V1
       #define PMU_WIRE_PORT   Wire1
     #else
       #define PMU_WIRE_PORT   Wire
@@ -308,7 +308,7 @@ void measure_battery() {
       // }
     }
 
-  #elif BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1
+  #elif BOARD_MODEL == BOARD_TBEAM || BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TBEAM_S_LR_V1
     if (PMU) {
       float discharge_current = 0;
       float charge_current    = 0;
@@ -564,7 +564,7 @@ bool init_pmu() {
     PMU->setPowerKeyPressOffTime(XPOWERS_POWEROFF_4S);
 
     return true; 
-  #elif BOARD_MODEL == BOARD_TBEAM_S_V1
+  #elif BOARD_MODEL == BOARD_TBEAM_S_V1 || BOARD_MODEL == BOARD_TBEAM_S_LR_V1
     Wire1.begin(I2C_SDA, I2C_SCL);
 
     if (!PMU) {
