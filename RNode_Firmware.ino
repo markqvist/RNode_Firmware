@@ -2236,6 +2236,28 @@ void loop() {
             return false;
           }
         };
+        gui_list_files_fn = []() {
+          if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
+          SPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+          if (SD.begin(SD_CS, SPI, 4000000, "/sd", 5)) {
+            Serial.print("{\"files\":[");
+            File root = SD.open("/");
+            bool first = true;
+            File f;
+            while ((f = root.openNextFile())) {
+              if (!first) Serial.print(",");
+              Serial.printf("{\"name\":\"%s\",\"size\":%lu}", f.name(), (unsigned long)f.size());
+              first = false;
+              f.close();
+            }
+            root.close();
+            SD.end();
+            Serial.println("]}");
+          } else {
+            Serial.println("{\"error\":\"sd_init_failed\"}");
+          }
+          if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
+        };
         #endif
 
         // Enable step counter (low power, always-on)

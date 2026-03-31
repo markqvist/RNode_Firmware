@@ -158,6 +158,9 @@ extern volatile uint32_t imu_step_count;
 // Sensor logger toggle — set by .ino after IMULogger.h is included
 typedef bool (*gui_log_toggle_fn_t)();
 static gui_log_toggle_fn_t gui_log_toggle_fn = NULL;
+// SD file listing — set by .ino after SD is available
+typedef void (*gui_list_files_fn_t)();
+static gui_list_files_fn_t gui_list_files_fn = NULL;
 static bool gui_imu_logging = false;
 // Forward declarations for IMULogger.h variables (defined later in compilation)
 extern bool imu_logging;
@@ -1322,13 +1325,12 @@ static void gui_cmd_execute() {
             break;
         }
 
-        case 'F': {  // List files on SD card (handled via function pointer)
+        case 'F': {  // List files on SD card
             Serial.write(hdr, 4);
-            if (gui_log_toggle_fn) {
-                // Reuse the SD infrastructure from IMU logger
-                Serial.println("{\"error\":\"use_log_command\"}");
+            if (gui_list_files_fn) {
+                gui_list_files_fn();
             } else {
-                Serial.println("{\"error\":\"not_available\"}");
+                Serial.println("{\"error\":\"no_sd\"}");
             }
             Serial.flush();
             break;
