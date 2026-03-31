@@ -8,6 +8,7 @@
 #if BOARD_MODEL == BOARD_TWATCH_ULT
 
 #include <lvgl.h>
+#include "soc/rtc_cntl_reg.h"
 
 // Custom fonts: generated with lv_font_conv --no-compress from Montserrat Bold
 // IMPORTANT: must use --no-compress or set LV_USE_FONT_COMPRESSED=1 in lv_conf.h
@@ -1333,6 +1334,25 @@ static void gui_cmd_execute() {
                 Serial.println("{\"error\":\"no_sd\"}");
             }
             Serial.flush();
+            break;
+        }
+        case 'X': {  // Hard reset
+            Serial.write(hdr, 4);
+            Serial.println("{\"reset\":true}");
+            Serial.flush();
+            delay(100);
+            ESP.restart();
+            break;
+        }
+        case 'Z': {  // Reboot into download mode (no BOOT+RST needed)
+            Serial.write(hdr, 4);
+            Serial.println("{\"bootloader\":true}");
+            Serial.flush();
+            delay(100);
+            #if MCU_VARIANT == MCU_ESP32
+              REG_WRITE(RTC_CNTL_OPTION1_REG, RTC_CNTL_FORCE_DOWNLOAD_BOOT);
+              ESP.restart();
+            #endif
             break;
         }
     }

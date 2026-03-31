@@ -241,6 +241,20 @@ def cmd_files(s):
     print(f"Timeout ({len(buf)} bytes)")
 
 
+def cmd_simple(s, cmd_char, label):
+    """Send a command, print response, don't wait long"""
+    send_cmd(s, ord(cmd_char))
+    time.sleep(0.5)
+    data = s.read(s.in_waiting or 1)
+    if data:
+        magic = PREFIX + cmd_char.encode()
+        idx = data.find(magic)
+        if idx >= 0:
+            print(data[idx + 4:].decode('ascii', errors='replace').strip())
+            return
+    print(label)
+
+
 def cmd_log(s):
     send_cmd(s, ord('L'))
     buf = b""
@@ -295,6 +309,12 @@ def main():
     sub.add_parser("files", aliases=["f"],
                     help="List files on SD card")
 
+    sub.add_parser("reset", aliases=["x"],
+                    help="Hard reset the device")
+
+    sub.add_parser("bootloader", aliases=["z"],
+                    help="Reboot into download mode (no BOOT+RST needed)")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -322,6 +342,10 @@ def main():
             cmd_log(s)
         elif args.command in ("files", "f"):
             cmd_files(s)
+        elif args.command in ("reset", "x"):
+            cmd_simple(s, 'X', "Reset sent")
+        elif args.command in ("bootloader", "z"):
+            cmd_simple(s, 'Z', "Rebooting into download mode...")
     finally:
         s.close()
 
