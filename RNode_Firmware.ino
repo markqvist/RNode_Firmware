@@ -18,6 +18,7 @@
 #include "Utilities.h"
 
 #if BOARD_MODEL == BOARD_TWATCH_ULT
+  #include "esp_task_wdt.h"
   #include "XL9555.h"
   #include "CO5300.h"
   #include "DRV2605.h"
@@ -116,6 +117,13 @@ char sbuf[128];
 void setup() {
   #if MCU_VARIANT == MCU_ESP32
     boot_seq();
+
+    // Hardware watchdog — auto-resets on lockup (30s timeout covers
+    // BHI260AP firmware upload which takes ~10s at boot)
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+      esp_task_wdt_init(30, true);  // 30s timeout, panic on expire
+      esp_task_wdt_add(NULL);       // subscribe current task (loopTask)
+    #endif
 
     // Init shared SPI bus mutex before any SPI users
     #if BOARD_MODEL == BOARD_TWATCH_ULT
@@ -2008,6 +2016,7 @@ void work_while_waiting() { loop(); }
 
 void loop() {
   #if BOARD_MODEL == BOARD_TWATCH_ULT
+    esp_task_wdt_reset();  // Feed watchdog
     uint32_t _prof_t0 = micros(), _prof_t1;
   #endif
 
@@ -2253,6 +2262,38 @@ void loop() {
             root.close();
             SD.end();
             Serial.println("]}");
+          } else {
+            Serial.println("{\"error\":\"sd_init_failed\"}");
+          }
+          if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
+        };
+        gui_download_file_fn = [](uint8_t index) {
+          if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
+          SPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
+          if (SD.begin(SD_CS, SPI, 4000000, "/sd", 5)) {
+            File root = SD.open("/");
+            File f;
+            uint8_t i = 0;
+            while ((f = root.openNextFile())) {
+              if (i == index) {
+                Serial.printf("{\"name\":\"%s\",\"size\":%lu}\n", f.name(), (unsigned long)f.size());
+                uint8_t buf[512];
+                while (f.available()) {
+                  int n = f.read(buf, sizeof(buf));
+                  Serial.write(buf, n);
+                }
+                f.close();
+                root.close();
+                SD.end();
+                if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
+                return;
+              }
+              f.close();
+              i++;
+            }
+            root.close();
+            SD.end();
+            Serial.printf("{\"error\":\"index %d not found\"}\n", index);
           } else {
             Serial.println("{\"error\":\"sd_init_failed\"}");
           }

@@ -241,6 +241,46 @@ def cmd_files(s):
     print(f"Timeout ({len(buf)} bytes)")
 
 
+def cmd_download(s, index, output):
+    """Download file from SD card by index"""
+    s.write(PREFIX + b'D' + bytes([index]))
+    s.flush()
+    buf = b""
+    # Wait for header line with filename and size
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        chunk = s.read(max(1, s.in_waiting or 1))
+        if chunk:
+            buf += chunk
+        magic = PREFIX + b"D"
+        idx = buf.find(magic)
+        if idx >= 0:
+            # Find the JSON header line
+            hdr_start = idx + 4
+            nl = buf.find(b"\n", hdr_start)
+            if nl < 0:
+                continue
+            import json
+            info = json.loads(buf[hdr_start:nl])
+            if "error" in info:
+                print(f"Error: {info['error']}")
+                return
+            fname = info["name"]
+            fsize = info["size"]
+            # Read the file data
+            data = buf[nl + 1:]
+            while len(data) < fsize and time.time() < deadline + 30:
+                chunk = s.read(min(4096, fsize - len(data)))
+                if chunk:
+                    data += chunk
+            outname = output or fname.lstrip("/")
+            with open(outname, "wb") as f:
+                f.write(data[:fsize])
+            print(f"Downloaded {fname} ({fsize} bytes) → {outname}")
+            return
+    print(f"Timeout ({len(buf)} bytes)")
+
+
 def cmd_simple(s, cmd_char, label):
     """Send a command, print response, don't wait long"""
     send_cmd(s, ord(cmd_char))
@@ -309,6 +349,11 @@ def main():
     sub.add_parser("files", aliases=["f"],
                     help="List files on SD card")
 
+    dl = sub.add_parser("download", aliases=["dl"],
+                    help="Download file from SD card by index")
+    dl.add_argument("index", type=int, help="File index from 'files' listing")
+    dl.add_argument("-o", "--output", help="Output filename (default: use SD name)")
+
     sub.add_parser("reset", aliases=["x"],
                     help="Hard reset the device")
 
@@ -342,6 +387,8 @@ def main():
             cmd_log(s)
         elif args.command in ("files", "f"):
             cmd_files(s)
+        elif args.command in ("download", "dl"):
+            cmd_download(s, args.index, args.output)
         elif args.command in ("reset", "x"):
             cmd_simple(s, 'X', "Reset sent")
         elif args.command in ("bootloader", "z"):

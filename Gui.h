@@ -159,9 +159,11 @@ extern volatile uint32_t imu_step_count;
 // Sensor logger toggle — set by .ino after IMULogger.h is included
 typedef bool (*gui_log_toggle_fn_t)();
 static gui_log_toggle_fn_t gui_log_toggle_fn = NULL;
-// SD file listing — set by .ino after SD is available
+// SD file listing and download — set by .ino after SD is available
 typedef void (*gui_list_files_fn_t)();
 static gui_list_files_fn_t gui_list_files_fn = NULL;
+typedef void (*gui_download_file_fn_t)(uint8_t index);
+static gui_download_file_fn_t gui_download_file_fn = NULL;
 static bool gui_imu_logging = false;
 // Forward declarations for IMULogger.h variables (defined later in compilation)
 extern bool imu_logging;
@@ -1003,7 +1005,8 @@ void gui_process_serial_byte(uint8_t b) {
         switch (b) {
             case 'T': gui_cmd_payload_len = 5; break;  // x(2) + y(2) + duration(1)
             case 'N': gui_cmd_payload_len = 2; break;  // col(1) + row(1)
-            default:  gui_cmd_payload_len = 0; break;  // S, M, I, F, L — no payload
+            case 'D': gui_cmd_payload_len = 1; break;  // file index(1)
+            default:  gui_cmd_payload_len = 0; break;  // S, M, I, F, L, X, Z — no payload
         }
         gui_cmd_state++;
         if (gui_cmd_payload_len == 0) {
@@ -1330,6 +1333,16 @@ static void gui_cmd_execute() {
             Serial.write(hdr, 4);
             if (gui_list_files_fn) {
                 gui_list_files_fn();
+            } else {
+                Serial.println("{\"error\":\"no_sd\"}");
+            }
+            Serial.flush();
+            break;
+        }
+        case 'D': {  // Download file by index
+            Serial.write(hdr, 4);
+            if (gui_download_file_fn) {
+                gui_download_file_fn(gui_cmd_payload[0]);
             } else {
                 Serial.println("{\"error\":\"no_sd\"}");
             }
