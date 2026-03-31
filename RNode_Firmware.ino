@@ -423,6 +423,19 @@ void setup() {
       lxmf_init_identity();
       // Initialize IFAC authentication (load from NVS if provisioned)
       ifac_init();
+      // Load user settings from config EEPROM
+      uint8_t s_disp = EEPROM.read(config_addr(ADDR_CONF_DISP_TIMEOUT));
+      if (s_disp != 0xFF && s_disp >= 5 && s_disp <= 60)
+          display_blanking_timeout = (uint32_t)s_disp * 1000;
+      uint8_t s_bcn_int = EEPROM.read(config_addr(ADDR_CONF_BCN_INT));
+      if (s_bcn_int != 0xFF && s_bcn_int < BEACON_INTERVAL_OPTIONS_COUNT)
+          beacon_interval_ms = beacon_interval_options[s_bcn_int];
+      uint8_t s_gps_model = EEPROM.read(config_addr(ADDR_CONF_GPS_MODEL));
+      if (s_gps_model != 0xFF && s_gps_model < GPS_MODEL_OPTIONS_COUNT)
+          gps_set_dynamic_model(s_gps_model);
+      uint8_t s_bcn_en = EEPROM.read(config_addr(ADDR_CONF_BCN_EN));
+      if (s_bcn_en != 0xFF)
+          beacon_enabled = (s_bcn_en != 0);
     #endif
 
     if (console_active) {
@@ -2309,7 +2322,7 @@ void twatch_enter_deep_sleep(bool beacon_timer) {
   // 6. Configure wakeup sources
   esp_sleep_enable_ext1_wakeup(1ULL << PMU_IRQ, ESP_EXT1_WAKEUP_ANY_LOW);
   if (beacon_timer) {
-    esp_sleep_enable_timer_wakeup((uint64_t)BEACON_INTERVAL_MS * 1000ULL);
+    esp_sleep_enable_timer_wakeup((uint64_t)beacon_interval_ms * 1000ULL);
   }
 
   // 7. Enter deep sleep (does not return)

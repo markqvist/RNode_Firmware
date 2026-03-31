@@ -66,6 +66,12 @@
   #define ADDR_BCN_KEY   0x51  // Collector X25519 public key — 32 bytes (0x51-0x70)
   #define ADDR_BCN_IHASH 0x71  // Collector identity hash — 16 bytes (0x71-0x80)
   #define ADDR_BCN_DHASH 0x81  // Collector dest hash — 16 bytes (0x81-0x90)
+
+  // User settings — stored in config region via config_addr()
+  #define ADDR_CONF_DISP_TIMEOUT 0x91  // Display blank timeout in seconds — 1 byte
+  #define ADDR_CONF_BCN_INT      0x92  // Beacon interval index — 1 byte
+  #define ADDR_CONF_GPS_MODEL    0x93  // GPS dynamic model index — 1 byte
+  #define ADDR_CONF_BCN_EN       0x94  // Beacon enable (0=off, 1=on) — 1 byte
   //////////////////////////////////
 
 #endif

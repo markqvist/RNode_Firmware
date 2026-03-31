@@ -111,6 +111,38 @@ void gps_setup() {
   gps_ready = true;
 }
 
+// GPS dynamic model options — indexed by roller selection
+const uint8_t gps_model_ubx[] = { 0, 2, 3, 4 };  // Portable, Stationary, Pedestrian, Automotive
+#define GPS_MODEL_OPTIONS_COUNT 4
+uint8_t gps_dynamic_model = 0;  // Current model index (default: Portable)
+
+#if BOARD_MODEL == BOARD_TWATCH_ULT
+void gps_set_dynamic_model(uint8_t model_index) {
+  if (model_index >= GPS_MODEL_OPTIONS_COUNT) return;
+  uint8_t dyn = gps_model_ubx[model_index];
+  gps_dynamic_model = model_index;
+  uint8_t msg[] = {
+    0xB5, 0x62, 0x06, 0x8A, 0x09, 0x00,
+    0x00, 0x01, 0x00, 0x00,
+    0x21, 0x00, 0x11, 0x20,
+    dyn, 0x00, 0x00
+  };
+  uint8_t ck_a = 0, ck_b = 0;
+  for (int i = 2; i < (int)sizeof(msg) - 2; i++) { ck_a += msg[i]; ck_b += ck_a; }
+  msg[sizeof(msg) - 2] = ck_a;
+  msg[sizeof(msg) - 1] = ck_b;
+  gps_serial.write(msg, sizeof(msg));
+}
+#else
+void gps_set_dynamic_model(uint8_t model_index) {
+  if (model_index >= GPS_MODEL_OPTIONS_COUNT) return;
+  gps_dynamic_model = model_index;
+  const char *cmds[] = { "$PCAS11,0*1D\r\n", "$PCAS11,1*1C\r\n",
+                         "$PCAS11,2*1F\r\n", "$PCAS11,3*1E\r\n" };
+  gps_serial.print(cmds[model_index]);
+}
+#endif
+
 void gps_update() {
   if (!gps_ready) return;
 

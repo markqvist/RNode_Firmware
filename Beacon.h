@@ -19,9 +19,14 @@
 #if HAS_GPS == true
 
 // Beacon interval and timing
-#define BEACON_INTERVAL_MS       30000  // 30 seconds between beacons
+uint32_t beacon_interval_ms = 30000;    // Default 30s, configurable via Settings
 #define BEACON_STARTUP_DELAY_MS  10000  // Wait 10s after boot before first beacon
 // BEACON_NO_HOST_TIMEOUT_MS and last_host_activity defined in GPS.h
+bool beacon_enabled = true;             // Configurable via Settings
+
+// Beacon interval options (ms) — indexed by roller selection
+const uint32_t beacon_interval_options[] = { 10000, 30000, 60000, 300000, 600000 };
+#define BEACON_INTERVAL_OPTIONS_COUNT 5
 
 // Beacon radio parameters — must match the router's LoRa interface
 #define BEACON_FREQ  868000000
@@ -69,6 +74,7 @@ void beacon_check_host_activity() {
 }
 
 void beacon_update() {
+    if (!beacon_enabled) { beacon_gate = 0; return; }
     // Don't beacon if host has been active recently
     if (last_host_activity > 0 &&
         (millis() - last_host_activity < BEACON_NO_HOST_TIMEOUT_MS)) {
@@ -115,7 +121,7 @@ void beacon_update() {
 
     // Respect beacon interval
     if (last_beacon_tx > 0 &&
-        (millis() - last_beacon_tx < BEACON_INTERVAL_MS)) {
+        (millis() - last_beacon_tx < beacon_interval_ms)) {
         beacon_gate = 5;
         return;
     }

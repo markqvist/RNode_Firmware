@@ -434,11 +434,127 @@ static void gui_create_msg_screen(lv_obj_t *parent) {
 // ---------------------------------------------------------------------------
 // Screen: Settings (bottom tile — swipe up from watch face)
 // ---------------------------------------------------------------------------
+static lv_obj_t *gui_set_disp_slider = NULL;
+static lv_obj_t *gui_set_disp_val = NULL;
+static lv_obj_t *gui_set_bcn_roller = NULL;
+static lv_obj_t *gui_set_gps_roller = NULL;
+static lv_obj_t *gui_set_bcn_sw = NULL;
+
+static void gui_set_disp_cb(lv_event_t *e) {
+    lv_obj_t *slider = (lv_obj_t *)lv_event_get_target(e);
+    int32_t val = lv_slider_get_value(slider);
+    display_blanking_timeout = (uint32_t)val * 1000;
+    char buf[8]; snprintf(buf, sizeof(buf), "%lds", (long)val);
+    lv_label_set_text(gui_set_disp_val, buf);
+    EEPROM.write(config_addr(ADDR_CONF_DISP_TIMEOUT), (uint8_t)val);
+    EEPROM.commit();
+}
+
+static void gui_set_bcn_en_cb(lv_event_t *e) {
+    lv_obj_t *sw = (lv_obj_t *)lv_event_get_target(e);
+    beacon_enabled = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    EEPROM.write(config_addr(ADDR_CONF_BCN_EN), beacon_enabled ? 1 : 0);
+    EEPROM.commit();
+}
+
+static void gui_set_bcn_int_cb(lv_event_t *e) {
+    lv_obj_t *roller = (lv_obj_t *)lv_event_get_target(e);
+    uint16_t idx = lv_roller_get_selected(roller);
+    if (idx < BEACON_INTERVAL_OPTIONS_COUNT) {
+        beacon_interval_ms = beacon_interval_options[idx];
+        EEPROM.write(config_addr(ADDR_CONF_BCN_INT), (uint8_t)idx);
+        EEPROM.commit();
+    }
+}
+
+static void gui_set_gps_model_cb(lv_event_t *e) {
+    lv_obj_t *roller = (lv_obj_t *)lv_event_get_target(e);
+    uint16_t idx = lv_roller_get_selected(roller);
+    if (idx < GPS_MODEL_OPTIONS_COUNT) {
+        gps_set_dynamic_model(idx);
+        EEPROM.write(config_addr(ADDR_CONF_GPS_MODEL), (uint8_t)idx);
+        EEPROM.commit();
+    }
+}
+
 static void gui_create_settings_screen(lv_obj_t *parent) {
     gui_style_black_container(parent);
-    gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "SETTINGS", GUI_PAD, 12);
-    lv_obj_t *lbl = gui_label(parent, &font_mid, GUI_COL_MID, "Coming soon");
-    lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+
+    // Child container for settings content — do NOT set flex on the tile itself
+    lv_obj_t *cont = lv_obj_create(parent);
+    lv_obj_remove_style_all(cont);
+    lv_obj_set_size(cont, GUI_W, GUI_H);
+    lv_obj_set_style_bg_color(cont, lv_color_hex(GUI_COL_BLACK), 0);
+    lv_obj_set_style_bg_opa(cont, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Title
+    gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_DIM, "SETTINGS", GUI_PAD, 12);
+
+    // --- Row 1: Display timeout (y=50) ---
+    gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_MID, "Display timeout", GUI_PAD, 55);
+    gui_set_disp_slider = lv_slider_create(cont);
+    lv_obj_set_size(gui_set_disp_slider, 180, 12);
+    lv_obj_set_pos(gui_set_disp_slider, GUI_PAD, 80);
+    lv_slider_set_range(gui_set_disp_slider, 5, 60);
+    lv_slider_set_value(gui_set_disp_slider, (int32_t)(display_blanking_timeout / 1000), LV_ANIM_OFF);
+    lv_obj_set_style_bg_color(gui_set_disp_slider, lv_color_hex(GUI_COL_DIM), 0);
+    lv_obj_set_style_bg_color(gui_set_disp_slider, lv_color_hex(GUI_COL_AMBER), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(gui_set_disp_slider, lv_color_hex(GUI_COL_WHITE), LV_PART_KNOB);
+    lv_obj_set_style_pad_all(gui_set_disp_slider, 4, LV_PART_KNOB);
+    lv_obj_add_event_cb(gui_set_disp_slider, gui_set_disp_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    char disp_buf[8]; snprintf(disp_buf, sizeof(disp_buf), "%lds", (long)(display_blanking_timeout / 1000));
+    gui_set_disp_val = gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_WHITE, disp_buf, GUI_PAD + 200, 75);
+
+    gui_create_rule(cont, 110);
+
+    // --- Row 2: Beacon enable (y=120) ---
+    gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_MID, "Beacon", GUI_PAD, 125);
+    gui_set_bcn_sw = lv_switch_create(cont);
+    lv_obj_set_pos(gui_set_bcn_sw, GUI_W - GUI_PAD - 50, 120);
+    lv_obj_set_size(gui_set_bcn_sw, 50, 26);
+    if (beacon_enabled) lv_obj_add_state(gui_set_bcn_sw, LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(gui_set_bcn_sw, lv_color_hex(GUI_COL_DIM), 0);
+    lv_obj_set_style_bg_color(gui_set_bcn_sw, lv_color_hex(GUI_COL_AMBER), LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_add_event_cb(gui_set_bcn_sw, gui_set_bcn_en_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    gui_create_rule(cont, 160);
+
+    // --- Row 3: Beacon interval (y=170) ---
+    gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_MID, "Beacon interval", GUI_PAD, 175);
+    gui_set_bcn_roller = lv_roller_create(cont);
+    lv_roller_set_options(gui_set_bcn_roller, "10s\n30s\n1min\n5min\n10min", LV_ROLLER_MODE_NORMAL);
+    lv_obj_set_pos(gui_set_bcn_roller, GUI_W - GUI_PAD - 100, 170);
+    lv_obj_set_size(gui_set_bcn_roller, 100, 60);
+    lv_obj_set_style_bg_color(gui_set_bcn_roller, lv_color_hex(GUI_COL_BLACK), 0);
+    lv_obj_set_style_text_color(gui_set_bcn_roller, lv_color_hex(GUI_COL_WHITE), 0);
+    lv_obj_set_style_text_font(gui_set_bcn_roller, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_bg_color(gui_set_bcn_roller, lv_color_hex(GUI_COL_AMBER), LV_PART_SELECTED);
+    lv_obj_set_style_text_color(gui_set_bcn_roller, lv_color_hex(GUI_COL_BLACK), LV_PART_SELECTED);
+    // Set initial selection from current beacon_interval_ms
+    for (uint8_t i = 0; i < BEACON_INTERVAL_OPTIONS_COUNT; i++) {
+        if (beacon_interval_options[i] == beacon_interval_ms) {
+            lv_roller_set_selected(gui_set_bcn_roller, i, LV_ANIM_OFF);
+            break;
+        }
+    }
+    lv_obj_add_event_cb(gui_set_bcn_roller, gui_set_bcn_int_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    gui_create_rule(cont, 245);
+
+    // --- Row 4: GPS dynamic model (y=255) ---
+    gui_label_at(cont, &lv_font_montserrat_14, GUI_COL_MID, "GPS model", GUI_PAD, 260);
+    gui_set_gps_roller = lv_roller_create(cont);
+    lv_roller_set_options(gui_set_gps_roller, "Portable\nStationary\nPedestrian\nAutomotive", LV_ROLLER_MODE_NORMAL);
+    lv_obj_set_pos(gui_set_gps_roller, GUI_W - GUI_PAD - 140, 255);
+    lv_obj_set_size(gui_set_gps_roller, 140, 60);
+    lv_obj_set_style_bg_color(gui_set_gps_roller, lv_color_hex(GUI_COL_BLACK), 0);
+    lv_obj_set_style_text_color(gui_set_gps_roller, lv_color_hex(GUI_COL_WHITE), 0);
+    lv_obj_set_style_text_font(gui_set_gps_roller, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_bg_color(gui_set_gps_roller, lv_color_hex(GUI_COL_AMBER), LV_PART_SELECTED);
+    lv_obj_set_style_text_color(gui_set_gps_roller, lv_color_hex(GUI_COL_BLACK), LV_PART_SELECTED);
+    lv_roller_set_selected(gui_set_gps_roller, gps_dynamic_model, LV_ANIM_OFF);
+    lv_obj_add_event_cb(gui_set_gps_roller, gui_set_gps_model_cb, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
 // ---------------------------------------------------------------------------
