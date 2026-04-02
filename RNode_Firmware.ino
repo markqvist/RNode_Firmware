@@ -460,8 +460,11 @@ void setup() {
       }
       // Initialize LXMF identity (load from NVS or generate new)
       lxmf_init_identity();
-      // Initialize IFAC authentication (load from NVS if provisioned)
+      // Initialize IFAC authentication (load from NVS, or self-provision)
       ifac_init();
+      if (!ifac_configured) {
+          ifac_self_provision(BEACON_NETWORK_NAME, BEACON_PASSPHRASE);
+      }
       // Load user settings from config EEPROM
       uint8_t s_disp = EEPROM.read(config_addr(ADDR_CONF_DISP_TIMEOUT));
       if (s_disp != 0xFF && s_disp >= 5 && s_disp <= 60)

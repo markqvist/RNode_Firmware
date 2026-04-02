@@ -35,6 +35,10 @@ const uint32_t beacon_interval_options[] = { 10000, 30000, 60000, 300000, 600000
 #define BEACON_CR    5
 #define BEACON_TXP   17
 
+// Beacon IFAC network — must match rnsd's RNodeInterface config
+#define BEACON_NETWORK_NAME  "helv4net"
+#define BEACON_PASSPHRASE    "R3ticulum-priv8-m3sh"
+
 // Pre-computed RNS destination hash for PLAIN destination "rnlog.beacon"
 // Computed as: SHA256(SHA256("rnlog.beacon")[:10])[:16]
 const uint8_t RNS_DEST_HASH[16] = {

@@ -21,6 +21,7 @@
 #include "sodium/crypto_sign_ed25519.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "mbedtls/sha256.h"
 
 // NVS namespace for IFAC key storage
 #define IFAC_NVS_NAMESPACE "ifac"
@@ -112,14 +113,49 @@ static int rns_hkdf_var(const uint8_t *ikm, size_t ikm_len,
     return 0;
 }
 
+// ---- Reticulum IFAC_SALT (from Reticulum.py IFAC_SALT constant) ----
+static const uint8_t RNS_IFAC_SALT[32] = {
+    0xad, 0xf5, 0x4d, 0x88, 0x2c, 0x9a, 0x9b, 0x80, 0x77, 0x1e, 0xb4, 0x99, 0x5d, 0x70, 0x2d, 0x4a,
+    0x3e, 0x73, 0x33, 0x91, 0xb2, 0xa0, 0xf5, 0x3f, 0x41, 0x6d, 0x9f, 0x90, 0x7e, 0x55, 0xcf, 0xf8,
+};
+
+// ---- Self-provision IFAC key from network_name + passphrase ----
+// Replicates Reticulum.py:821-826 IFAC key derivation:
+//   ifac_origin = SHA256(network_name) || SHA256(passphrase)
+//   ifac_origin_hash = SHA256(ifac_origin)
+//   ifac_key = HKDF(ikm=ifac_origin_hash, salt=IFAC_SALT, length=64)
+static bool ifac_self_provision(const char *network_name, const char *passphrase) {
+    uint8_t name_hash[32], key_hash[32];
+    mbedtls_sha256((const uint8_t *)network_name, strlen(network_name), name_hash, 0);
+    mbedtls_sha256((const uint8_t *)passphrase, strlen(passphrase), key_hash, 0);
+
+    uint8_t ifac_origin[64];
+    memcpy(ifac_origin, name_hash, 32);
+    memcpy(ifac_origin + 32, key_hash, 32);
+
+    uint8_t origin_hash[32];
+    mbedtls_sha256(ifac_origin, 64, origin_hash, 0);
+
+    int ret = rns_hkdf_var(origin_hash, 32, RNS_IFAC_SALT, 32, ifac_key, 64);
+    if (ret != 0) return false;
+
+    ifac_nvs_save();
+    ifac_derive_keypair();
+    ifac_configured = true;
+    return true;
+}
+
 // ---- IFAC Initialization ----
 // Call from setup() after lxmf_init_identity().
+// Loads from NVS if available, otherwise self-provisions from beacon config.
 
 static void ifac_init() {
     if (ifac_nvs_load()) {
         ifac_derive_keypair();
         ifac_configured = true;
     }
+    // If no key loaded, caller should call ifac_self_provision()
+    // with network_name/passphrase from beacon config.
 }
 
 // ---- Apply IFAC to Outgoing Packet ----
