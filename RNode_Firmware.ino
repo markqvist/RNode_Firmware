@@ -33,17 +33,24 @@
   volatile uint32_t imu_step_count = 0;
   volatile bool imu_wrist_tilt = false;
 
-  // Filtered accelerometer for bubble level (EMA, α=0.15)
+  // Filtered accelerometer for bubble level with adaptive noise tracking
   volatile float imu_ax_f = 0, imu_ay_f = 0, imu_az_f = 4096;
-  #define IMU_EMA_ALPHA 0.15f
+  volatile float imu_noise = 0;  // running estimate of accel noise (0=still, 1+=noisy)
   void imu_accel_live_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     if (size >= 6) {
       float ax = (int16_t)(data[0] | (data[1] << 8));
       float ay = (int16_t)(data[2] | (data[3] << 8));
       float az = (int16_t)(data[4] | (data[5] << 8));
-      imu_ax_f += IMU_EMA_ALPHA * (ax - imu_ax_f);
-      imu_ay_f += IMU_EMA_ALPHA * (ay - imu_ay_f);
-      imu_az_f += IMU_EMA_ALPHA * (az - imu_az_f);
+      // Noise: EMA of squared deviation from filtered value
+      float dx = ax - imu_ax_f, dy = ay - imu_ay_f, dz = az - imu_az_f;
+      float dev = (dx*dx + dy*dy + dz*dz) / (4096.0f * 4096.0f);
+      imu_noise += 0.1f * (dev - imu_noise);
+      // Adaptive EMA: responsive when quiet, smooth when noisy
+      float alpha = (imu_noise < 0.001f) ? 0.4f :
+                    (imu_noise < 0.01f)  ? 0.2f : 0.08f;
+      imu_ax_f += alpha * (ax - imu_ax_f);
+      imu_ay_f += alpha * (ay - imu_ay_f);
+      imu_az_f += alpha * (az - imu_az_f);
     }
   }
 

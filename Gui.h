@@ -181,8 +181,9 @@ extern uint32_t imu_log_samples;
 extern uint32_t imu_log_start_ms;
 // Forward declaration for touch logging (defined in IMULogger.h)
 void sensor_log_touch(int16_t x, int16_t y, bool pressed);
-// Forward declarations for filtered accel (defined in .ino)
+// Forward declarations for filtered accel and noise (defined in .ino)
 extern volatile float imu_ax_f, imu_ay_f, imu_az_f;
+extern volatile float imu_noise;
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -817,10 +818,14 @@ static void gui_update_data() {
         float target_x = tilt_dir_x * mapped_r;
         float target_y = -tilt_dir_y * mapped_r;
 
-        // Spring-damper: overdamped for viscous fluid feel
-        // Sub-step at 20ms to keep integration stable at any frame rate
-        const float spring = 40.0f;
-        const float damping = 12.0f;
+        // Adaptive spring-damper: snappy when still, viscous when noisy
+        // noise < 0.001 (desk): spring=80 damp=16 → settles in ~0.15s
+        // noise > 0.01 (hand):  spring=30 damp=14 → settles in ~0.4s
+        float noise_t = imu_noise < 0.001f ? 0.0f :
+                        imu_noise > 0.01f  ? 1.0f :
+                        (imu_noise - 0.001f) / 0.009f;
+        float spring  = 80.0f - 50.0f * noise_t;
+        float damping = 16.0f -  2.0f * noise_t;
         const float max_sub = 0.02f;
         int steps = (int)(dt / max_sub) + 1;
         float sdt = dt / steps;
