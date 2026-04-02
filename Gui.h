@@ -197,6 +197,7 @@ extern volatile float imu_noise;
 // Forward declarations for radio/GPS toggle (defined in .ino / GPS.h)
 bool startRadio();
 void stopRadio();
+void update_radio_lock();
 void gps_power_on();
 void gps_power_off();
 void gps_setup();
@@ -366,11 +367,11 @@ static void gui_create_watchface(lv_obj_t *parent) {
         lv_obj_set_size(cell, cw, GUI_COMP_H);
         lv_obj_set_pos(cell, GUI_PAD, 0);
         lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(cell, (lv_obj_flag_t)(LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SCROLLABLE));
         lv_obj_add_event_cb(cell, [](lv_event_t *e) {
             if (radio_online) { stopRadio(); }
             else {
-                // Set beacon defaults if no config loaded
-                if (lora_freq == 0) {
+                if (lora_freq == 0 || lora_freq == 0xFFFFFFFF) {
                     lora_freq = 868000000; lora_bw = 125000;
                     lora_sf = 7; lora_cr = 5; lora_txp = 17;
                 }
@@ -394,6 +395,7 @@ static void gui_create_watchface(lv_obj_t *parent) {
         lv_obj_set_size(cell, cw, GUI_COMP_H);
         lv_obj_set_pos(cell, GUI_PAD + cw, 0);
         lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(cell, (lv_obj_flag_t)(LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SCROLLABLE));
         lv_obj_add_event_cb(cell, [](lv_event_t *e) {
             if (gps_ready) { gps_power_off(); gps_ready = false; }
             else { gps_power_on(); gps_setup(); }
@@ -416,6 +418,7 @@ static void gui_create_watchface(lv_obj_t *parent) {
         lv_obj_set_size(gui_batt_cell, cw, GUI_COMP_H);
         lv_obj_set_pos(gui_batt_cell, bx, 0);
         lv_obj_add_flag(gui_batt_cell, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(gui_batt_cell, (lv_obj_flag_t)(LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SCROLLABLE));
         lv_obj_add_event_cb(gui_batt_cell, [](lv_event_t *e) {
             gui_batt_mode = (gui_batt_mode + 1) % GUI_BATT_MODES;
         }, LV_EVENT_CLICKED, NULL);
