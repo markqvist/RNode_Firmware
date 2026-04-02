@@ -816,13 +816,18 @@ static void gui_update_data() {
         float target_y = -tilt_dir_y * mapped_r;
 
         // Spring-damper: overdamped for viscous fluid feel
-        // spring=40 damping=12 → settles in ~0.3s, no oscillation
+        // Sub-step at 20ms to keep integration stable at any frame rate
         const float spring = 40.0f;
         const float damping = 12.0f;
-        vel_x += (spring * (target_x - bub_x) - damping * vel_x) * dt;
-        vel_y += (spring * (target_y - bub_y) - damping * vel_y) * dt;
-        bub_x += vel_x * dt;
-        bub_y += vel_y * dt;
+        const float max_sub = 0.02f;
+        int steps = (int)(dt / max_sub) + 1;
+        float sdt = dt / steps;
+        for (int si = 0; si < steps; si++) {
+            vel_x += (spring * (target_x - bub_x) - damping * vel_x) * sdt;
+            vel_y += (spring * (target_y - bub_y) - damping * vel_y) * sdt;
+            bub_x += vel_x * sdt;
+            bub_y += vel_y * sdt;
+        }
 
         // Clamp to ring boundary (bubble can't escape the fluid)
         float dist = sqrtf(bub_x * bub_x + bub_y * bub_y);
