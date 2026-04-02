@@ -368,7 +368,14 @@ static void gui_create_watchface(lv_obj_t *parent) {
         lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(cell, [](lv_event_t *e) {
             if (radio_online) { stopRadio(); }
-            else { startRadio(); }
+            else {
+                // Set beacon defaults if no config loaded
+                if (lora_freq == 0) {
+                    lora_freq = 868000000; lora_bw = 125000;
+                    lora_sf = 7; lora_cr = 5; lora_txp = 17;
+                }
+                startRadio();
+            }
         }, LV_EVENT_CLICKED, NULL);
         gui_lora_value = gui_label(cell, &font_mid, GUI_COL_AMBER, "--");
         lv_obj_set_width(gui_lora_value, cw);
