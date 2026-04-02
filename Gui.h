@@ -86,7 +86,17 @@ static lv_obj_t *gui_gps_value   = NULL;
 static lv_obj_t *gui_gps_label   = NULL;
 static lv_obj_t *gui_batt_value  = NULL;  // battery detail in complications
 static lv_obj_t *gui_batt_detail = NULL;
+static lv_obj_t *gui_batt_icon   = NULL;  // battery bar icon
+static lv_obj_t *gui_batt_fill   = NULL;  // fill bar inside icon
+static lv_obj_t *gui_batt_cell   = NULL;  // complication cell (for click event)
+static uint8_t gui_batt_mode = 0;         // 0=voltage, 1=percent, 2=time, 3=icon
+#define GUI_BATT_MODES 4
 static lv_obj_t *gui_step_label  = NULL;  // step count below complications
+
+// Battery time estimation
+static float batt_pct_history[4] = {-1,-1,-1,-1};  // last 4 readings (every 60s)
+static uint32_t batt_hist_last = 0;
+static float batt_rate_pct_hr = 0;  // %/hour (positive=charging, negative=discharging)
 
 // Radio status widgets
 static lv_obj_t *gui_radio_freq  = NULL;
@@ -344,7 +354,49 @@ static void gui_create_watchface(lv_obj_t *parent) {
     int cw = (GUI_W - GUI_PAD * 2) / 3;
     gui_create_complication(comp, GUI_PAD,          cw, GUI_COL_AMBER, "LoRa",  &gui_lora_value,  &gui_lora_label);
     gui_create_complication(comp, GUI_PAD + cw,     cw, GUI_COL_TEAL,  "GPS",   &gui_gps_value,   &gui_gps_label);
-    gui_create_complication(comp, GUI_PAD + cw * 2, cw, GUI_COL_WHITE, "Batt", &gui_batt_value, &gui_batt_detail);
+
+    // Battery complication — custom with click-to-cycle and icon bar
+    {
+        int bx = GUI_PAD + cw * 2;
+        gui_batt_cell = lv_obj_create(comp);
+        lv_obj_remove_style_all(gui_batt_cell);
+        lv_obj_set_size(gui_batt_cell, cw, GUI_COMP_H);
+        lv_obj_set_pos(gui_batt_cell, bx, 0);
+        lv_obj_add_flag(gui_batt_cell, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(gui_batt_cell, [](lv_event_t *e) {
+            gui_batt_mode = (gui_batt_mode + 1) % GUI_BATT_MODES;
+        }, LV_EVENT_CLICKED, NULL);
+
+        gui_batt_value = gui_label(gui_batt_cell, &font_mid, GUI_COL_WHITE, "--");
+        lv_obj_set_width(gui_batt_value, cw);
+        lv_obj_set_style_text_align(gui_batt_value, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(gui_batt_value, LV_ALIGN_TOP_MID, 0, 4);
+
+        gui_batt_detail = gui_label(gui_batt_cell, &lv_font_montserrat_14, GUI_COL_DIM, "Batt");
+        lv_obj_set_width(gui_batt_detail, cw);
+        lv_obj_set_style_text_align(gui_batt_detail, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(gui_batt_detail, LV_ALIGN_TOP_MID, 0, 46);
+
+        // Battery icon bar (hidden until mode 3)
+        int bar_w = cw - 20, bar_h = 24;
+        gui_batt_icon = lv_obj_create(gui_batt_cell);
+        lv_obj_remove_style_all(gui_batt_icon);
+        lv_obj_set_size(gui_batt_icon, bar_w, bar_h);
+        lv_obj_align(gui_batt_icon, LV_ALIGN_TOP_MID, 0, 10);
+        lv_obj_set_style_radius(gui_batt_icon, 4, 0);
+        lv_obj_set_style_border_color(gui_batt_icon, lv_color_hex(GUI_COL_MID), 0);
+        lv_obj_set_style_border_width(gui_batt_icon, 2, 0);
+        lv_obj_set_style_bg_opa(gui_batt_icon, LV_OPA_TRANSP, 0);
+        lv_obj_add_flag(gui_batt_icon, LV_OBJ_FLAG_HIDDEN);
+
+        gui_batt_fill = lv_obj_create(gui_batt_icon);
+        lv_obj_remove_style_all(gui_batt_fill);
+        lv_obj_set_size(gui_batt_fill, bar_w - 6, bar_h - 6);
+        lv_obj_set_pos(gui_batt_fill, 2, 2);
+        lv_obj_set_style_radius(gui_batt_fill, 2, 0);
+        lv_obj_set_style_bg_color(gui_batt_fill, lv_color_hex(GUI_COL_GREEN), 0);
+        lv_obj_set_style_bg_opa(gui_batt_fill, LV_OPA_COVER, 0);
+    }
 
     // Rule 2
     gui_create_rule(parent, GUI_RULE2_Y);
@@ -866,27 +918,95 @@ static void gui_update_data() {
         lv_obj_set_style_text_color(gui_level_angle, lv_color_hex(dot_col), 0);
     }
 
-    // Battery complication — voltage and state
-    if (battery_state == BATTERY_STATE_CHARGING) {
-        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
-        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_GREEN), 0);
-        lv_label_set_text(gui_batt_detail, "Charging");
-        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_GREEN), 0);
-    } else if (battery_state == BATTERY_STATE_CHARGED) {
-        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
-        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_GREEN), 0);
-        lv_label_set_text(gui_batt_detail, "Full");
-        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_GREEN), 0);
-    } else if (battery_percent < 15) {
-        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
-        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_RED), 0);
-        lv_label_set_text(gui_batt_detail, "Low");
-        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_RED), 0);
-    } else {
-        lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
-        lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_WHITE), 0);
-        lv_label_set_text(gui_batt_detail, "Batt");
-        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(GUI_COL_DIM), 0);
+    // Battery time estimation — sample every 60s
+    {
+        uint32_t bnow = millis();
+        if (battery_percent > 0 && (bnow - batt_hist_last > 60000 || batt_hist_last == 0)) {
+            batt_hist_last = bnow;
+            // Shift history
+            for (int i = 3; i > 0; i--) batt_pct_history[i] = batt_pct_history[i-1];
+            batt_pct_history[0] = battery_percent;
+            // Compute rate from oldest valid to newest (up to 4 min window)
+            int oldest = -1;
+            for (int i = 3; i >= 1; i--) { if (batt_pct_history[i] >= 0) { oldest = i; break; } }
+            if (oldest > 0) {
+                float delta_pct = batt_pct_history[0] - batt_pct_history[oldest];
+                float delta_hr = (oldest * 60.0f) / 3600.0f;
+                batt_rate_pct_hr = delta_pct / delta_hr;
+            }
+        }
+    }
+
+    // Battery complication — tap cycles through modes
+    {
+        bool charging = (battery_state == BATTERY_STATE_CHARGING);
+        bool charged  = (battery_state == BATTERY_STATE_CHARGED);
+        uint32_t col = charged || charging ? GUI_COL_GREEN :
+                       battery_percent < 15 ? GUI_COL_RED : GUI_COL_WHITE;
+        bool show_icon = (gui_batt_mode == 3);
+
+        // Show/hide text vs icon
+        if (show_icon) {
+            lv_obj_add_flag(gui_batt_value, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_batt_icon, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(gui_batt_value, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(gui_batt_icon, LV_OBJ_FLAG_HIDDEN);
+        }
+
+        if (gui_batt_mode == 0) {
+            // Voltage
+            lv_label_set_text_fmt(gui_batt_value, "%.2fV", battery_voltage);
+            lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(col), 0);
+            lv_label_set_text(gui_batt_detail, charging ? "Charging" : charged ? "Full" : "Batt");
+        } else if (gui_batt_mode == 1) {
+            // Percentage
+            lv_label_set_text_fmt(gui_batt_value, "%d%%", (int)battery_percent);
+            lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(col), 0);
+            lv_label_set_text(gui_batt_detail, charging ? "Charging" : "Battery");
+        } else if (gui_batt_mode == 2) {
+            // Time remaining
+            if (charged) {
+                lv_label_set_text(gui_batt_value, "Full");
+                lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_GREEN), 0);
+            } else if (batt_rate_pct_hr < -0.5f) {
+                // Discharging: time to 0%
+                float hrs = -battery_percent / batt_rate_pct_hr;
+                if (hrs > 99) lv_label_set_text(gui_batt_value, "99h+");
+                else if (hrs >= 1) lv_label_set_text_fmt(gui_batt_value, "%.0fh%02d", floorf(hrs), (int)((hrs - floorf(hrs))*60));
+                else lv_label_set_text_fmt(gui_batt_value, "%dm", (int)(hrs * 60));
+                lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(col), 0);
+            } else if (batt_rate_pct_hr > 0.5f && charging) {
+                // Charging: time to 100%
+                float hrs = (100.0f - battery_percent) / batt_rate_pct_hr;
+                if (hrs >= 1) lv_label_set_text_fmt(gui_batt_value, "%.0fh%02d", floorf(hrs), (int)((hrs - floorf(hrs))*60));
+                else lv_label_set_text_fmt(gui_batt_value, "%dm", (int)(hrs * 60));
+                lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_GREEN), 0);
+            } else {
+                lv_label_set_text(gui_batt_value, "---");
+                lv_obj_set_style_text_color(gui_batt_value, lv_color_hex(GUI_COL_DIM), 0);
+            }
+            lv_label_set_text(gui_batt_detail, charging ? "to full" : "remain");
+        } else {
+            // Icon mode — animated bar
+            int bar_inner_w = lv_obj_get_width(gui_batt_icon) - 6;
+            int fill_w = (int)(bar_inner_w * battery_percent / 100.0f);
+            if (fill_w < 2) fill_w = 2;
+
+            // Charging animation: pulse fill width
+            if (charging) {
+                static uint32_t anim_t = 0;
+                float phase = (float)((millis() - anim_t) % 2000) / 2000.0f;
+                float pulse = (sinf(phase * 6.2832f) + 1.0f) / 2.0f;
+                fill_w = (int)(fill_w + (bar_inner_w - fill_w) * pulse * 0.3f);
+            }
+
+            lv_obj_set_width(gui_batt_fill, fill_w);
+            lv_obj_set_style_bg_color(gui_batt_fill, lv_color_hex(col), 0);
+            lv_obj_set_style_border_color(gui_batt_icon, lv_color_hex(col), 0);
+            lv_label_set_text_fmt(gui_batt_detail, "%d%%", (int)battery_percent);
+        }
+        lv_obj_set_style_text_color(gui_batt_detail, lv_color_hex(charging || charged ? GUI_COL_GREEN : GUI_COL_DIM), 0);
     }
 
     } // end on_watch
