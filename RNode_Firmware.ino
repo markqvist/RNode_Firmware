@@ -2221,9 +2221,13 @@ void loop() {
   // Deferred BHI260AP init — runs once after boot is complete
   // Firmware upload takes ~10s and blocks, so we do it after radio is up
   #if BOARD_MODEL == BOARD_TWATCH_ULT
-    if (!bhi260_ready && bhi260 == NULL && millis() > 5000) {
+    static uint32_t bhi260_next_try = 5000;
+    if (!bhi260_ready && millis() > bhi260_next_try) {
+      bhi260_next_try = millis() + 10000;  // retry every 10s
+      if (bhi260 == NULL) {
+        bhi260 = new SensorBHI260AP();
+      }
       Wire.setClock(1000000UL);
-      bhi260 = new SensorBHI260AP();
       bhi260->setPins(-1);
       bhi260->setFirmware(bosch_firmware_image, bosch_firmware_size, false);
       bhi260->setBootFromFlash(false);
