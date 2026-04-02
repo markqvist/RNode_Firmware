@@ -33,6 +33,20 @@
   volatile uint32_t imu_step_count = 0;
   volatile bool imu_wrist_tilt = false;
 
+  // Filtered accelerometer for bubble level (EMA, α=0.15)
+  volatile float imu_ax_f = 0, imu_ay_f = 0, imu_az_f = 4096;
+  #define IMU_EMA_ALPHA 0.15f
+  void imu_accel_live_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
+    if (size >= 6) {
+      float ax = (int16_t)(data[0] | (data[1] << 8));
+      float ay = (int16_t)(data[2] | (data[3] << 8));
+      float az = (int16_t)(data[4] | (data[5] << 8));
+      imu_ax_f += IMU_EMA_ALPHA * (ax - imu_ax_f);
+      imu_ay_f += IMU_EMA_ALPHA * (ay - imu_ay_f);
+      imu_az_f += IMU_EMA_ALPHA * (az - imu_az_f);
+    }
+  }
+
   // MAX98357A I2S speaker + SPM1423 PDM microphone
   #include "Speaker.h"
   #include "Microphone.h"
@@ -2238,6 +2252,10 @@ void loop() {
         // Enable wrist tilt gesture for display wake
         bhi260->configure(SensorBHI260AP::WRIST_TILT_GESTURE, 1.0, 0);
         bhi260->onResultEvent(SensorBHI260AP::WRIST_TILT_GESTURE, imu_wrist_tilt_cb);
+
+        // Always-on accelerometer at 10Hz for bubble level
+        bhi260->configure(SensorBHI260AP::ACCEL_PASSTHROUGH, 10.0, 0);
+        bhi260->onResultEvent(SensorBHI260AP::ACCEL_PASSTHROUGH, imu_accel_live_cb);
 
         // Register IMU log toggle for remote debug
         #if HAS_SD && HAS_DISPLAY

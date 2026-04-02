@@ -107,6 +107,16 @@ static lv_obj_t *gui_gps_fix     = NULL;
 static lv_obj_t *gui_gps_alt     = NULL;
 static lv_obj_t *gui_gps_beacon  = NULL;
 
+// Bubble level widgets
+static lv_obj_t *gui_level_ring  = NULL;   // outer circle
+static lv_obj_t *gui_level_dot   = NULL;   // moving bubble
+static lv_obj_t *gui_level_cross_h = NULL; // crosshair horizontal
+static lv_obj_t *gui_level_cross_v = NULL; // crosshair vertical
+static lv_obj_t *gui_level_angle = NULL;   // tilt angle text
+#define GUI_LEVEL_SIZE  140                 // ring diameter
+#define GUI_LEVEL_DOT   16                  // bubble diameter
+#define GUI_LEVEL_Y     340                 // vertical position on watch face
+
 // Touch input via function pointer (set by .ino after touch init)
 typedef bool (*gui_touch_fn_t)(int16_t *x, int16_t *y);
 static gui_touch_fn_t gui_touch_fn = NULL;
@@ -171,6 +181,8 @@ extern uint32_t imu_log_samples;
 extern uint32_t imu_log_start_ms;
 // Forward declaration for touch logging (defined in IMULogger.h)
 void sensor_log_touch(int16_t x, int16_t y, bool pressed);
+// Forward declarations for filtered accel (defined in .ino)
+extern volatile float imu_ax_f, imu_ay_f, imu_az_f;
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -341,6 +353,50 @@ static void gui_create_watchface(lv_obj_t *parent) {
     lv_obj_set_width(gui_step_label, GUI_W);
     lv_obj_set_style_text_align(gui_step_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_pos(gui_step_label, 0, GUI_RULE2_Y + 15);
+
+    // Bubble level
+    int lx = (GUI_W - GUI_LEVEL_SIZE) / 2;
+
+    // Outer ring
+    gui_level_ring = lv_obj_create(parent);
+    lv_obj_remove_style_all(gui_level_ring);
+    lv_obj_set_size(gui_level_ring, GUI_LEVEL_SIZE, GUI_LEVEL_SIZE);
+    lv_obj_set_pos(gui_level_ring, lx, GUI_LEVEL_Y);
+    lv_obj_set_style_radius(gui_level_ring, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_border_color(gui_level_ring, lv_color_hex(GUI_COL_DIM), 0);
+    lv_obj_set_style_border_width(gui_level_ring, 1, 0);
+    lv_obj_set_style_bg_opa(gui_level_ring, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(gui_level_ring, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Crosshairs
+    static lv_point_precise_t ch_pts[] = {{0,0},{GUI_LEVEL_SIZE,0}};
+    gui_level_cross_h = lv_line_create(gui_level_ring);
+    lv_line_set_points(gui_level_cross_h, ch_pts, 2);
+    lv_obj_set_style_line_color(gui_level_cross_h, lv_color_hex(0x202020), 0);
+    lv_obj_set_style_line_width(gui_level_cross_h, 1, 0);
+    lv_obj_center(gui_level_cross_h);
+
+    static lv_point_precise_t cv_pts[] = {{0,0},{0,GUI_LEVEL_SIZE}};
+    gui_level_cross_v = lv_line_create(gui_level_ring);
+    lv_line_set_points(gui_level_cross_v, cv_pts, 2);
+    lv_obj_set_style_line_color(gui_level_cross_v, lv_color_hex(0x202020), 0);
+    lv_obj_set_style_line_width(gui_level_cross_v, 1, 0);
+    lv_obj_center(gui_level_cross_v);
+
+    // Bubble dot
+    gui_level_dot = lv_obj_create(gui_level_ring);
+    lv_obj_remove_style_all(gui_level_dot);
+    lv_obj_set_size(gui_level_dot, GUI_LEVEL_DOT, GUI_LEVEL_DOT);
+    lv_obj_set_style_radius(gui_level_dot, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(gui_level_dot, lv_color_hex(GUI_COL_GREEN), 0);
+    lv_obj_set_style_bg_opa(gui_level_dot, LV_OPA_COVER, 0);
+    lv_obj_center(gui_level_dot);
+
+    // Angle text below ring
+    gui_level_angle = gui_label(parent, &lv_font_montserrat_14, GUI_COL_DIM, "");
+    lv_obj_set_width(gui_level_angle, GUI_W);
+    lv_obj_set_style_text_align(gui_level_angle, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_pos(gui_level_angle, 0, GUI_LEVEL_Y + GUI_LEVEL_SIZE + 5);
 }
 
 // ---------------------------------------------------------------------------
@@ -727,6 +783,38 @@ static void gui_update_data() {
         } else {
             lv_label_set_text(gui_step_label, "");
         }
+    }
+
+    // Bubble level — map filtered accel to dot position
+    if (gui_level_dot && imu_az_f != 0) {
+        // Tilt as fraction of 1g (4096 LSB = 1g)
+        float tx = imu_ax_f / 4096.0f;  // roll
+        float ty = imu_ay_f / 4096.0f;  // pitch
+
+        // Map to pixel offset (half ring size = full tilt)
+        float max_r = (GUI_LEVEL_SIZE - GUI_LEVEL_DOT) / 2.0f;
+        float px = -tx * max_r;  // invert for natural bubble feel
+        float py = -ty * max_r;
+
+        // Clamp to ring boundary
+        float dist = sqrtf(px * px + py * py);
+        if (dist > max_r) {
+            px = px * max_r / dist;
+            py = py * max_r / dist;
+        }
+
+        lv_obj_set_pos(gui_level_dot,
+            (int)(GUI_LEVEL_SIZE / 2 - GUI_LEVEL_DOT / 2 + px),
+            (int)(GUI_LEVEL_SIZE / 2 - GUI_LEVEL_DOT / 2 + py));
+
+        // Color: green when near level, amber when tilted, red when extreme
+        float tilt_deg = atan2f(sqrtf(tx*tx + ty*ty), fabsf(imu_az_f / 4096.0f)) * 57.2958f;
+        uint32_t dot_col = (tilt_deg < 3.0f) ? GUI_COL_GREEN :
+                           (tilt_deg < 15.0f) ? GUI_COL_AMBER : GUI_COL_RED;
+        lv_obj_set_style_bg_color(gui_level_dot, lv_color_hex(dot_col), 0);
+
+        lv_label_set_text_fmt(gui_level_angle, "%.1f\xC2\xB0", tilt_deg);
+        lv_obj_set_style_text_color(gui_level_angle, lv_color_hex(dot_col), 0);
     }
 
     // Battery complication — voltage and state
