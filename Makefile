@@ -20,7 +20,8 @@ ARDUINO_ESP_CORE_VER = 2.0.17
 # ARDUINO_ESP_CORE_VER = 3.2.0
 
 PORT ?= /dev/ttyACM4
-TWATCH_PORT ?= /dev/ttyACM4
+TWATCH_PORT ?= /dev/ttyACM0
+TBEAM_PORT ?= /dev/ttyACM5
 
 all: release
 
@@ -111,49 +112,53 @@ firmware-t3s3_sx1280_pa:
 firmware-tdeck:
 	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x3B\""
 
+# T-Beam Supreme: separate build dir to avoid cross-contamination with T-Watch
+TBEAM_BUILD = build/tbeam
 firmware-tbeam_supreme:
-	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x3D"
+	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc" -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x3D" --build-path $(TBEAM_BUILD)
 
-deploy-tbeam_supreme: firmware-tbeam_supreme free-port
-	./flash_parts.sh $(PORT)
-	@sleep 3
-	rnodeconf $(PORT) --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
+deploy-tbeam_supreme: firmware-tbeam_supreme
+	esptool.py --chip esp32-s3 --port $(TBEAM_PORT) --baud 921600 --before default_reset --after hard_reset \
+		write_flash -z --flash_mode dio --flash_freq 80m --flash_size 4MB 0x10000 $(TBEAM_BUILD)/RNode_Firmware.ino.bin
+	@sleep 5
+	rnodeconf $(TBEAM_PORT) --firmware-hash $$(./partition_hashes $(TBEAM_BUILD)/RNode_Firmware.ino.bin)
 
-# T-Watch Ultra: 16MB flash, 8MB app partition, LVGL GUI
+# T-Watch Ultra: separate build dir, 16MB flash, 8MB app partition, LVGL GUI
 # FlashSize=16M is critical — the bootloader embeds flash size and defaults to 4MB.
-# Without it, flash mapping fails silently beyond 0x400000 (black screen, no crash).
 # partition_twatch.csv must be copied to the Arduino ESP32 tools/partitions/ directory.
-# When changing partition scheme, flash ALL THREE binaries (bootloader + partition + app).
+TWATCH_BUILD = build/twatch
 firmware-twatch_ultra:
-	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PSRAM=enabled" -e --build-property "build.partitions=partition_twatch" --build-property "upload.maximum_size=8388608" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45"
+	arduino-cli compile --log --fqbn "esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PSRAM=enabled" -e --build-property "build.partitions=partition_twatch" --build-property "upload.maximum_size=8388608" --build-property "compiler.cpp.extra_flags=-DBOARD_MODEL=0x45" --build-path $(TWATCH_BUILD)
 
+# Quick deploy: bootloader-mode flash (no BOOT+RST needed)
+deploy-twatch_ultra: firmware-twatch_ultra
+	python3 scripts/screenshot.py -p $(TWATCH_PORT) z || true
+	@sleep 2
+	esptool.py --chip esp32-s3 --port $(TWATCH_PORT) --baud 921600 --before no_reset --after hard_reset \
+		write_flash -z --flash_mode dio --flash_freq 80m --flash_size 16MB 0x10000 $(TWATCH_BUILD)/RNode_Firmware.ino.bin
+	@echo "Press RST on watch"
+
+# Full flash including bootloader and partition table (needed after erase or partition changes)
+deploy-twatch_ultra-full: firmware-twatch_ultra
+	@echo "Hold BOOT, press RST, release BOOT, then press Enter..."
+	@read _
+	esptool.py --chip esp32-s3 --port $(TWATCH_PORT) --baud 921600 --before no_reset --after hard_reset \
+		erase_flash
+	@echo "Hold BOOT, press RST, release BOOT, then press Enter..."
+	@read _
+	esptool.py --chip esp32-s3 --port $(TWATCH_PORT) --baud 921600 --before no_reset --after hard_reset \
+		write_flash -z --flash_mode dio --flash_freq 80m --flash_size 16MB \
+		0x0000 $(TWATCH_BUILD)/RNode_Firmware.ino.bootloader.bin \
+		0x8000 $(TWATCH_BUILD)/RNode_Firmware.ino.partitions.bin \
+		0x10000 $(TWATCH_BUILD)/RNode_Firmware.ino.bin
+	@echo "Press RST. Self-provisioning runs automatically on first boot."
+
+# Legacy JTAG upload (keep for backward compat)
 upload-twatch_ultra: firmware-twatch_ultra
-	@echo "Flashing T-Watch Ultra via JTAG..."
 	$(HOME)/.arduino15/packages/esp32/tools/openocd-esp32/v0.12.0-esp32-20230921/bin/openocd \
 		-s $(HOME)/.arduino15/packages/esp32/tools/openocd-esp32/v0.12.0-esp32-20230921/share/openocd/scripts \
 		-f board/esp32s3-builtin.cfg \
-		-c "program_esp build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin 0x10000 verify reset exit"
-	@sleep 5
-	rnodeconf /dev/ttyACM4 --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
-
-# Full flash including bootloader and partition table (needed after partition changes)
-# Requires BOOT+RST first, then press RST after flash completes
-flash-twatch_ultra-full: firmware-twatch_ultra
-	esptool.py --chip esp32s3 --port $(TWATCH_PORT) --baud 921600 write_flash \
-		0x0000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bootloader.bin \
-		0x8000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.partitions.bin \
-		0x10000 build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin
-
-# Provision T-Watch EEPROM (run once after flash-twatch_ultra-full on a blank device)
-# Requires rnodeconf with T-Watch product code (0xEC) patched into RNS
-provision-twatch_ultra:
-	@echo "Provisioning T-Watch Ultra 868MHz..."
-	rnodeconf $(TWATCH_PORT) --rom --product ec --model da --hwrev 1
-	@echo "Press RST on watch, then press Enter..."
-	@read _
-	@sleep 3
-	rnodeconf $(TWATCH_PORT) --firmware-hash $$(./partition_hashes ./build/esp32.esp32.esp32s3/RNode_Firmware.ino.bin)
-	@echo "Provisioning complete. Press RST on watch."
+		-c "program_esp $(TWATCH_BUILD)/RNode_Firmware.ino.bin 0x10000 verify reset exit"
 
 firmware-lora32_v10: check_bt_buffers
 	arduino-cli compile --log --fqbn esp32:esp32:ttgo-lora32 -e --build-property "build.partitions=no_ota" --build-property "upload.maximum_size=2097152" --build-property "compiler.cpp.extra_flags=\"-DBOARD_MODEL=0x39\""
