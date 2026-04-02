@@ -695,6 +695,10 @@ static bool gui_is_scrolling() {
 static void gui_update_data() {
     if (!gui_time_label) return;
 
+    // Skip all GUI updates when display is blanked — no point rendering
+    // to a sleeping display. Saves CPU, SPI writes, and display power.
+    if (display_blanked) return;
+
     // Skip data updates during scroll animation — frees CPU for rendering
     if (gui_is_scrolling()) return;
 
@@ -1602,9 +1606,12 @@ void gui_update() {
 
     gui_update_data();
 
-    gui_render_start = micros();
-    lv_timer_handler();
-    gui_render_us_last = micros() - gui_render_start;
+    // Skip LVGL rendering when display is blanked — no SPI traffic to sleeping display
+    if (!display_blanked) {
+        gui_render_start = micros();
+        lv_timer_handler();
+        gui_render_us_last = micros() - gui_render_start;
+    }
     // After lv_timer_handler, a new DMA may be queued via gui_flush_cb.
     // It runs in background on SPI3 until the next gui_update() call.
 }
