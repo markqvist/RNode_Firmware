@@ -194,6 +194,12 @@ void sensor_log_touch(int16_t x, int16_t y, bool pressed);
 // Forward declarations for filtered accel and noise (defined in .ino)
 extern volatile float imu_ax_f, imu_ay_f, imu_az_f;
 extern volatile float imu_noise;
+// Forward declarations for radio/GPS toggle (defined in .ino / GPS.h)
+bool startRadio();
+void stopRadio();
+void gps_power_on();
+void gps_power_off();
+void gps_setup();
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -352,8 +358,48 @@ static void gui_create_watchface(lv_obj_t *parent) {
     lv_obj_clear_flag(comp, LV_OBJ_FLAG_SCROLLABLE);
 
     int cw = (GUI_W - GUI_PAD * 2) / 3;
-    gui_create_complication(comp, GUI_PAD,          cw, GUI_COL_AMBER, "LoRa",  &gui_lora_value,  &gui_lora_label);
-    gui_create_complication(comp, GUI_PAD + cw,     cw, GUI_COL_TEAL,  "GPS",   &gui_gps_value,   &gui_gps_label);
+
+    // LoRa complication — tap to toggle radio
+    {
+        lv_obj_t *cell = lv_obj_create(comp);
+        lv_obj_remove_style_all(cell);
+        lv_obj_set_size(cell, cw, GUI_COMP_H);
+        lv_obj_set_pos(cell, GUI_PAD, 0);
+        lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(cell, [](lv_event_t *e) {
+            if (radio_online) { stopRadio(); }
+            else { startRadio(); }
+        }, LV_EVENT_CLICKED, NULL);
+        gui_lora_value = gui_label(cell, &font_mid, GUI_COL_AMBER, "--");
+        lv_obj_set_width(gui_lora_value, cw);
+        lv_obj_set_style_text_align(gui_lora_value, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(gui_lora_value, LV_ALIGN_TOP_MID, 0, 4);
+        gui_lora_label = gui_label(cell, &lv_font_montserrat_14, GUI_COL_DIM, "LoRa");
+        lv_obj_set_width(gui_lora_label, cw);
+        lv_obj_set_style_text_align(gui_lora_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(gui_lora_label, LV_ALIGN_TOP_MID, 0, 46);
+    }
+
+    // GPS complication — tap to toggle GPS
+    {
+        lv_obj_t *cell = lv_obj_create(comp);
+        lv_obj_remove_style_all(cell);
+        lv_obj_set_size(cell, cw, GUI_COMP_H);
+        lv_obj_set_pos(cell, GUI_PAD + cw, 0);
+        lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(cell, [](lv_event_t *e) {
+            if (gps_ready) { gps_power_off(); gps_ready = false; }
+            else { gps_power_on(); gps_setup(); }
+        }, LV_EVENT_CLICKED, NULL);
+        gui_gps_value = gui_label(cell, &font_mid, GUI_COL_TEAL, "--");
+        lv_obj_set_width(gui_gps_value, cw);
+        lv_obj_set_style_text_align(gui_gps_value, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(gui_gps_value, LV_ALIGN_TOP_MID, 0, 4);
+        gui_gps_label = gui_label(cell, &lv_font_montserrat_14, GUI_COL_DIM, "GPS");
+        lv_obj_set_width(gui_gps_label, cw);
+        lv_obj_set_style_text_align(gui_gps_label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(gui_gps_label, LV_ALIGN_TOP_MID, 0, 46);
+    }
 
     // Battery complication — custom with click-to-cycle and icon bar
     {
@@ -808,7 +854,7 @@ static void gui_update_data() {
     }
     lv_obj_align(gui_batt_label, LV_ALIGN_TOP_RIGHT, -GUI_PAD, GUI_STATUS_Y);
 
-    // LoRa complication
+    // LoRa complication — dim when disabled
     if (radio_online) {
         if (last_rssi > -292) {
             lv_label_set_text_fmt(gui_lora_value, "%d", last_rssi);
@@ -816,21 +862,29 @@ static void gui_update_data() {
             lv_label_set_text(gui_lora_value, "---");
         }
         lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_AMBER), 0);
+        lv_obj_set_style_text_color(gui_lora_label, lv_color_hex(GUI_COL_DIM), 0);
     } else {
         lv_label_set_text(gui_lora_value, "OFF");
-        lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_DIM), 0);
+        lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(0x302000), 0);
+        lv_obj_set_style_text_color(gui_lora_label, lv_color_hex(0x302000), 0);
     }
 
-    // GPS complication — color by fix quality
+    // GPS complication — dim when disabled, color by fix quality
     #if HAS_GPS == true
-    if (gps_sats > 0) {
+    if (!gps_ready) {
+        lv_label_set_text(gui_gps_value, "OFF");
+        lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(0x003020), 0);
+        lv_obj_set_style_text_color(gui_gps_label, lv_color_hex(0x003020), 0);
+    } else if (gps_sats > 0) {
         lv_label_set_text_fmt(gui_gps_value, "%d sats", gps_sats);
         uint32_t gps_col = (gps_hdop < 5.0) ? GUI_COL_TEAL :
                            (gps_hdop < 15.0) ? GUI_COL_AMBER : GUI_COL_MID;
         lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(gps_col), 0);
+        lv_obj_set_style_text_color(gui_gps_label, lv_color_hex(GUI_COL_DIM), 0);
     } else {
         lv_label_set_text(gui_gps_value, "no fix");
         lv_obj_set_style_text_color(gui_gps_value, lv_color_hex(GUI_COL_DIM), 0);
+        lv_obj_set_style_text_color(gui_gps_label, lv_color_hex(GUI_COL_DIM), 0);
     }
     #endif
 
