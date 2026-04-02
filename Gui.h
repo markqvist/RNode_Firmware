@@ -383,14 +383,16 @@ static void gui_create_watchface(lv_obj_t *parent) {
     lv_obj_set_style_line_width(gui_level_cross_v, 1, 0);
     lv_obj_center(gui_level_cross_v);
 
-    // Bubble dot
+    // Bubble dot — positioned via lv_obj_set_pos() in update loop,
+    // do NOT use lv_obj_center() as it changes the alignment base
     gui_level_dot = lv_obj_create(gui_level_ring);
     lv_obj_remove_style_all(gui_level_dot);
     lv_obj_set_size(gui_level_dot, GUI_LEVEL_DOT, GUI_LEVEL_DOT);
     lv_obj_set_style_radius(gui_level_dot, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(gui_level_dot, lv_color_hex(GUI_COL_GREEN), 0);
     lv_obj_set_style_bg_opa(gui_level_dot, LV_OPA_COVER, 0);
-    lv_obj_center(gui_level_dot);
+    lv_obj_set_pos(gui_level_dot, GUI_LEVEL_SIZE/2 - GUI_LEVEL_DOT/2,
+                                   GUI_LEVEL_SIZE/2 - GUI_LEVEL_DOT/2);
 
     // Angle text below ring
     gui_level_angle = gui_label(parent, &lv_font_montserrat_14, GUI_COL_DIM, "");
@@ -811,8 +813,8 @@ static void gui_update_data() {
         // amplifies small ones. k=3 → full ring at ~20° tilt
         float mapped_r = tanhf(tilt_r * 3.0f) * max_r;
 
-        // Project back to cartesian (invert for natural bubble feel)
-        float target_x = -tilt_dir_x * mapped_r;
+        // Project back to cartesian (invert y for natural bubble feel, x matches)
+        float target_x = tilt_dir_x * mapped_r;
         float target_y = -tilt_dir_y * mapped_r;
 
         // Spring-damper: overdamped for viscous fluid feel
