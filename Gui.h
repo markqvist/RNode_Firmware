@@ -194,13 +194,14 @@ void sensor_log_touch(int16_t x, int16_t y, bool pressed);
 // Forward declarations for filtered accel and noise (defined in .ino)
 extern volatile float imu_ax_f, imu_ay_f, imu_az_f;
 extern volatile float imu_noise;
-// Forward declarations for radio/GPS toggle (defined in .ino / GPS.h)
+// Forward declarations for radio/GPS toggle (defined in .ino / GPS.h / IfacAuth.h)
 bool startRadio();
 void stopRadio();
 void update_radio_lock();
 void gps_power_on();
 void gps_power_off();
 void gps_setup();
+extern bool ifac_configured;
 #ifndef PMU_TEMP_MIN
 #define PMU_TEMP_MIN -30
 #endif
@@ -864,7 +865,7 @@ static void gui_update_data() {
     }
     lv_obj_align(gui_batt_label, LV_ALIGN_TOP_RIGHT, -GUI_PAD, GUI_STATUS_Y);
 
-    // LoRa complication — dim when disabled
+    // LoRa complication — dim when disabled, warn when no IFAC
     if (radio_online) {
         if (last_rssi > -292) {
             lv_label_set_text_fmt(gui_lora_value, "%d", last_rssi);
@@ -872,11 +873,15 @@ static void gui_update_data() {
             lv_label_set_text(gui_lora_value, "---");
         }
         lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_AMBER), 0);
-        lv_obj_set_style_text_color(gui_lora_label, lv_color_hex(GUI_COL_DIM), 0);
+        lv_label_set_text(gui_lora_label, ifac_configured ? "LoRa" : "NO KEY");
+        lv_obj_set_style_text_color(gui_lora_label,
+            lv_color_hex(ifac_configured ? GUI_COL_DIM : GUI_COL_RED), 0);
     } else {
         lv_label_set_text(gui_lora_value, "OFF");
         lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(0x302000), 0);
-        lv_obj_set_style_text_color(gui_lora_label, lv_color_hex(0x302000), 0);
+        lv_label_set_text(gui_lora_label, ifac_configured ? "LoRa" : "NO KEY");
+        lv_obj_set_style_text_color(gui_lora_label,
+            lv_color_hex(ifac_configured ? 0x302000 : GUI_COL_RED), 0);
     }
 
     // GPS complication — dim when disabled, color by fix quality
