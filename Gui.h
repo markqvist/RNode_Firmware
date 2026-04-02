@@ -785,32 +785,65 @@ static void gui_update_data() {
         }
     }
 
-    // Bubble level — map filtered accel to dot position
+    // Bubble level — spring-damper physics with non-linear sensitivity
     if (gui_level_dot && imu_az_f != 0) {
-        // Tilt as fraction of 1g (4096 LSB = 1g)
-        float tx = imu_ax_f / 4096.0f;  // roll
-        float ty = imu_ay_f / 4096.0f;  // pitch
+        static float bub_x = 0, bub_y = 0;   // current bubble position (pixels)
+        static float vel_x = 0, vel_y = 0;   // bubble velocity
+        static uint32_t bub_t = 0;            // last update time
 
-        // Map to pixel offset (half ring size = full tilt)
+        uint32_t now_ms = millis();
+        float dt = (bub_t > 0) ? (now_ms - bub_t) / 1000.0f : 0.016f;
+        if (dt > 0.1f) dt = 0.1f;  // clamp for first frame / pauses
+        bub_t = now_ms;
+
         float max_r = (GUI_LEVEL_SIZE - GUI_LEVEL_DOT) / 2.0f;
-        float px = -tx * max_r;  // invert for natural bubble feel
-        float py = -ty * max_r;
 
-        // Clamp to ring boundary
-        float dist = sqrtf(px * px + py * py);
+        // Tilt vector from accelerometer (radians)
+        float tilt_x = atan2f(imu_ax_f, imu_az_f);
+        float tilt_y = atan2f(imu_ay_f, imu_az_f);
+
+        // Work in polar: magnitude + direction
+        float tilt_r = sqrtf(tilt_x * tilt_x + tilt_y * tilt_y);
+        float tilt_dir_x = (tilt_r > 0.001f) ? tilt_x / tilt_r : 0;
+        float tilt_dir_y = (tilt_r > 0.001f) ? tilt_y / tilt_r : 0;
+
+        // Non-linear radial mapping: tanh compresses large tilts,
+        // amplifies small ones. k=3 → full ring at ~20° tilt
+        float mapped_r = tanhf(tilt_r * 3.0f) * max_r;
+
+        // Project back to cartesian (invert for natural bubble feel)
+        float target_x = -tilt_dir_x * mapped_r;
+        float target_y = -tilt_dir_y * mapped_r;
+
+        // Spring-damper: overdamped for viscous fluid feel
+        // spring=40 damping=12 → settles in ~0.3s, no oscillation
+        const float spring = 40.0f;
+        const float damping = 12.0f;
+        vel_x += (spring * (target_x - bub_x) - damping * vel_x) * dt;
+        vel_y += (spring * (target_y - bub_y) - damping * vel_y) * dt;
+        bub_x += vel_x * dt;
+        bub_y += vel_y * dt;
+
+        // Clamp to ring boundary (bubble can't escape the fluid)
+        float dist = sqrtf(bub_x * bub_x + bub_y * bub_y);
         if (dist > max_r) {
-            px = px * max_r / dist;
-            py = py * max_r / dist;
+            bub_x = bub_x * max_r / dist;
+            bub_y = bub_y * max_r / dist;
+            // Kill velocity component along the wall
+            float nx = bub_x / dist, ny = bub_y / dist;
+            float vdot = vel_x * nx + vel_y * ny;
+            if (vdot > 0) { vel_x -= vdot * nx; vel_y -= vdot * ny; }
         }
 
         lv_obj_set_pos(gui_level_dot,
-            (int)(GUI_LEVEL_SIZE / 2 - GUI_LEVEL_DOT / 2 + px),
-            (int)(GUI_LEVEL_SIZE / 2 - GUI_LEVEL_DOT / 2 + py));
+            (int)(GUI_LEVEL_SIZE / 2 - GUI_LEVEL_DOT / 2 + bub_x),
+            (int)(GUI_LEVEL_SIZE / 2 - GUI_LEVEL_DOT / 2 + bub_y));
 
-        // Color: green when near level, amber when tilted, red when extreme
+        // Tilt angle for display and colour
+        float tx = imu_ax_f / 4096.0f, ty = imu_ay_f / 4096.0f;
         float tilt_deg = atan2f(sqrtf(tx*tx + ty*ty), fabsf(imu_az_f / 4096.0f)) * 57.2958f;
-        uint32_t dot_col = (tilt_deg < 3.0f) ? GUI_COL_GREEN :
-                           (tilt_deg < 15.0f) ? GUI_COL_AMBER : GUI_COL_RED;
+        uint32_t dot_col = (tilt_deg < 2.0f) ? GUI_COL_GREEN :
+                           (tilt_deg < 10.0f) ? GUI_COL_AMBER : GUI_COL_RED;
         lv_obj_set_style_bg_color(gui_level_dot, lv_color_hex(dot_col), 0);
 
         lv_label_set_text_fmt(gui_level_angle, "%.1f\xC2\xB0", tilt_deg);
