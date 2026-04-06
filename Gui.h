@@ -127,6 +127,27 @@ static lv_obj_t *gui_level_angle = NULL;   // tilt angle text
 #define GUI_LEVEL_DOT   16                  // bubble diameter
 #define GUI_LEVEL_Y     340                 // vertical position on watch face
 
+// Signal strength view (toggles with bubble level)
+static lv_obj_t *gui_signal_cont  = NULL;  // container for signal view
+static lv_obj_t *gui_signal_line  = NULL;  // sparkline graph
+static lv_obj_t *gui_signal_rssi  = NULL;  // current RSSI text
+static lv_obj_t *gui_signal_dir   = NULL;  // direction arrow/text
+static bool gui_show_signal = false;       // false=bubble level, true=signal
+
+// RSSI history for sparkline
+#define RSSI_HISTORY_LEN 60
+static int16_t rssi_history[RSSI_HISTORY_LEN];
+static uint8_t rssi_history_idx = 0;
+static uint8_t rssi_history_count = 0;
+static lv_point_precise_t rssi_graph_pts[RSSI_HISTORY_LEN];
+
+// GPS+RSSI history for direction finding
+#define DIR_HISTORY_LEN 8
+struct dir_sample_t { double lat, lon; int rssi; };
+static dir_sample_t dir_history[DIR_HISTORY_LEN];
+static uint8_t dir_history_idx = 0;
+static uint8_t dir_history_count = 0;
+
 // Touch input via function pointer (set by .ino after touch init)
 typedef bool (*gui_touch_fn_t)(int16_t *x, int16_t *y);
 static gui_touch_fn_t gui_touch_fn = NULL;
@@ -509,6 +530,65 @@ static void gui_create_watchface(lv_obj_t *parent) {
     lv_obj_set_width(gui_level_angle, GUI_W);
     lv_obj_set_style_text_align(gui_level_angle, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_pos(gui_level_angle, 0, GUI_LEVEL_Y + GUI_LEVEL_SIZE + 5);
+
+    // Make bubble level area clickable to toggle signal view
+    lv_obj_add_flag(gui_level_ring, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(gui_level_ring, (lv_obj_flag_t)(LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SCROLLABLE));
+    lv_obj_add_event_cb(gui_level_ring, [](lv_event_t *e) {
+        gui_show_signal = !gui_show_signal;
+        if (gui_show_signal) {
+            lv_obj_add_flag(gui_level_ring, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(gui_level_angle, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_signal_cont, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_clear_flag(gui_level_ring, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_clear_flag(gui_level_angle, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(gui_signal_cont, LV_OBJ_FLAG_HIDDEN);
+        }
+    }, LV_EVENT_CLICKED, NULL);
+
+    // Signal strength view (hidden by default)
+    gui_signal_cont = lv_obj_create(parent);
+    lv_obj_remove_style_all(gui_signal_cont);
+    lv_obj_set_size(gui_signal_cont, GUI_W - 2 * GUI_PAD, GUI_LEVEL_SIZE + 20);
+    lv_obj_set_pos(gui_signal_cont, GUI_PAD, GUI_LEVEL_Y);
+    lv_obj_clear_flag(gui_signal_cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(gui_signal_cont, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(gui_signal_cont, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(gui_signal_cont, (lv_obj_flag_t)(LV_OBJ_FLAG_GESTURE_BUBBLE));
+    lv_obj_add_event_cb(gui_signal_cont, [](lv_event_t *e) {
+        gui_show_signal = false;
+        lv_obj_clear_flag(gui_level_ring, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(gui_level_angle, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(gui_signal_cont, LV_OBJ_FLAG_HIDDEN);
+    }, LV_EVENT_CLICKED, NULL);
+
+    // RSSI sparkline
+    int graph_w = GUI_W - 2 * GUI_PAD;
+    gui_signal_line = lv_line_create(gui_signal_cont);
+    lv_obj_set_style_line_color(gui_signal_line, lv_color_hex(GUI_COL_AMBER), 0);
+    lv_obj_set_style_line_width(gui_signal_line, 2, 0);
+    lv_obj_set_size(gui_signal_line, graph_w, GUI_LEVEL_SIZE - 30);
+    lv_obj_set_pos(gui_signal_line, 0, 0);
+
+    // Graph border
+    lv_obj_t *graph_border = lv_obj_create(gui_signal_cont);
+    lv_obj_remove_style_all(graph_border);
+    lv_obj_set_size(graph_border, graph_w, GUI_LEVEL_SIZE - 30);
+    lv_obj_set_pos(graph_border, 0, 0);
+    lv_obj_set_style_border_color(graph_border, lv_color_hex(GUI_COL_DIM), 0);
+    lv_obj_set_style_border_width(graph_border, 1, 0);
+    lv_obj_set_style_bg_opa(graph_border, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(graph_border, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Current RSSI and direction text
+    gui_signal_rssi = gui_label(gui_signal_cont, &font_mid, GUI_COL_AMBER, "---");
+    lv_obj_set_pos(gui_signal_rssi, 0, GUI_LEVEL_SIZE - 25);
+    gui_signal_dir = gui_label(gui_signal_cont, &lv_font_montserrat_14, GUI_COL_TEAL, "");
+    lv_obj_set_pos(gui_signal_dir, graph_w / 2, GUI_LEVEL_SIZE - 20);
+
+    // Init RSSI history
+    memset(rssi_history, 0, sizeof(rssi_history));
 }
 
 // ---------------------------------------------------------------------------
@@ -985,6 +1065,89 @@ static void gui_update_data() {
 
         lv_label_set_text_fmt(gui_level_angle, "%.1f\xC2\xB0", tilt_deg);
         lv_obj_set_style_text_color(gui_level_angle, lv_color_hex(dot_col), 0);
+    }
+
+    // Signal strength view — record RSSI and update graph
+    if (gui_signal_cont) {
+        // Record RSSI when a new packet is received
+        static int16_t prev_rssi = -292;
+        static uint32_t last_rssi_record = 0;
+        if (last_rssi != prev_rssi || (radio_online && millis() - last_rssi_record > 5000)) {
+            if (last_rssi > -292 && radio_online) {
+                rssi_history[rssi_history_idx] = last_rssi;
+                rssi_history_idx = (rssi_history_idx + 1) % RSSI_HISTORY_LEN;
+                if (rssi_history_count < RSSI_HISTORY_LEN) rssi_history_count++;
+
+                // Record GPS+RSSI for direction finding
+                #if HAS_GPS == true
+                if (gps_has_fix) {
+                    dir_history[dir_history_idx] = { gps_lat, gps_lon, last_rssi };
+                    dir_history_idx = (dir_history_idx + 1) % DIR_HISTORY_LEN;
+                    if (dir_history_count < DIR_HISTORY_LEN) dir_history_count++;
+                }
+                #endif
+            }
+            prev_rssi = last_rssi;
+            last_rssi_record = millis();
+        }
+
+        // Update signal view when visible
+        if (gui_show_signal && rssi_history_count > 0) {
+            // Current RSSI display
+            if (last_rssi > -292 && radio_online) {
+                lv_label_set_text_fmt(gui_signal_rssi, "%d dBm", last_rssi);
+                uint32_t rssi_col = (last_rssi > -80) ? GUI_COL_GREEN :
+                                    (last_rssi > -100) ? GUI_COL_AMBER : GUI_COL_RED;
+                lv_obj_set_style_text_color(gui_signal_rssi, lv_color_hex(rssi_col), 0);
+            } else {
+                lv_label_set_text(gui_signal_rssi, "no signal");
+                lv_obj_set_style_text_color(gui_signal_rssi, lv_color_hex(GUI_COL_DIM), 0);
+            }
+
+            // Build sparkline points
+            int graph_w = GUI_W - 2 * GUI_PAD;
+            int graph_h = GUI_LEVEL_SIZE - 30;
+            // RSSI range: -130 to -30 dBm mapped to graph height
+            int n = rssi_history_count;
+            for (int i = 0; i < n; i++) {
+                int idx = (rssi_history_idx - n + i + RSSI_HISTORY_LEN) % RSSI_HISTORY_LEN;
+                float x = (float)i / (RSSI_HISTORY_LEN - 1) * graph_w;
+                float norm = (float)(rssi_history[idx] + 130) / 100.0f; // -130→0, -30→1
+                if (norm < 0) norm = 0; if (norm > 1) norm = 1;
+                float y = graph_h * (1.0f - norm);
+                rssi_graph_pts[i] = { (lv_value_precise_t)x, (lv_value_precise_t)y };
+            }
+            lv_line_set_points(gui_signal_line, rssi_graph_pts, n);
+
+            // Direction estimation from GPS+RSSI gradient
+            #if HAS_GPS == true
+            if (dir_history_count >= 3 && gps_has_fix) {
+                // Weighted centroid: stronger signal → weight toward that position
+                // Direction = from current position toward weighted centroid
+                double wlat = 0, wlon = 0, wsum = 0;
+                for (int i = 0; i < dir_history_count; i++) {
+                    // Weight: convert RSSI to linear power (higher = closer to source)
+                    double w = pow(10.0, (double)dir_history[i].rssi / 20.0);
+                    wlat += dir_history[i].lat * w;
+                    wlon += dir_history[i].lon * w;
+                    wsum += w;
+                }
+                if (wsum > 0) {
+                    wlat /= wsum; wlon /= wsum;
+                    double dlat = wlat - gps_lat;
+                    double dlon = (wlon - gps_lon) * cos(gps_lat * 0.01745329);
+                    double bearing = atan2(dlon, dlat) * 57.2958;
+                    if (bearing < 0) bearing += 360;
+                    const char *dirs[] = {"N","NE","E","SE","S","SW","W","NW"};
+                    int di = ((int)(bearing + 22.5) / 45) % 8;
+                    lv_label_set_text_fmt(gui_signal_dir, "%s %.0f\xC2\xB0", dirs[di], bearing);
+                    lv_obj_set_style_text_color(gui_signal_dir, lv_color_hex(GUI_COL_TEAL), 0);
+                }
+            } else {
+                lv_label_set_text(gui_signal_dir, "");
+            }
+            #endif
+        }
     }
 
     // Battery time estimation — sample every 60s
