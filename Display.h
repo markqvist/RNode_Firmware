@@ -62,6 +62,10 @@
 
     if (display_blanking_enabled && !display_blanked) {
       if (millis() - last_unblank_event > display_blanking_timeout) {
+        // Return to watch face before blanking so it's ready on wake
+        if (gui_tileview && gui_tile_watch) {
+          lv_tileview_set_tile(gui_tileview, gui_tile_watch, LV_ANIM_OFF);
+        }
         co5300_set_brightness(0);
         co5300_sleep();
         xl9555_set(EXPANDS_DISP_EN, false);
