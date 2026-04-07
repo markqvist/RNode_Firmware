@@ -685,13 +685,94 @@ static void gui_create_gps_screen(lv_obj_t *parent) {
 }
 
 // ---------------------------------------------------------------------------
-// Screen: Messages (left tile — swipe left from watch face)
+// Screen: Messages (right tile — swipe left from watch face)
 // ---------------------------------------------------------------------------
+static lv_obj_t *gui_msg_title    = NULL;
+static lv_obj_t *gui_msg_empty    = NULL;
+static lv_obj_t *gui_msg_cont     = NULL;
+#define GUI_MSG_ROWS 8  // max visible message rows
+static lv_obj_t *gui_msg_name[GUI_MSG_ROWS];
+static lv_obj_t *gui_msg_rssi[GUI_MSG_ROWS];
+static lv_obj_t *gui_msg_time[GUI_MSG_ROWS];
+static lv_obj_t *gui_msg_row[GUI_MSG_ROWS];
+static uint32_t gui_msg_last_rebuild = 0;
+
+// Message log types and forward declarations (defined in MessageLog.h)
+#ifndef MSG_LOG_SIZE
+#define MSG_LOG_SIZE  16
+#define MSG_NAME_LEN  24
+#endif
+struct msg_entry_t {
+    uint32_t timestamp;
+    int16_t  rssi;
+    int8_t   snr;
+    uint8_t  pkt_type;
+    uint8_t  sender_hash[16];
+    char     display_name[MSG_NAME_LEN];
+    uint16_t pkt_len;
+    bool     is_announce;
+};
+extern msg_entry_t msg_log[];
+extern uint8_t msg_log_head;
+extern uint8_t msg_log_count;
+extern uint32_t msg_log_last_change;
+
 static void gui_create_msg_screen(lv_obj_t *parent) {
     gui_style_black_container(parent);
-    gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "MESSAGES", GUI_PAD, 12);
-    lv_obj_t *lbl = gui_label(parent, &font_mid, GUI_COL_DIM, "No messages");
-    lv_obj_align(lbl, LV_ALIGN_CENTER, 0, 0);
+    gui_msg_title = gui_label_at(parent, &lv_font_montserrat_14, GUI_COL_DIM, "MESSAGES", GUI_PAD, 12);
+
+    gui_msg_empty = gui_label(parent, &lv_font_montserrat_14, GUI_COL_DIM, "Listening...");
+    lv_obj_align(gui_msg_empty, LV_ALIGN_CENTER, 0, 0);
+
+    // Scrollable message list container
+    gui_msg_cont = lv_obj_create(parent);
+    lv_obj_remove_style_all(gui_msg_cont);
+    lv_obj_set_size(gui_msg_cont, GUI_W, GUI_H - 40);
+    lv_obj_set_pos(gui_msg_cont, 0, 35);
+    lv_obj_set_style_bg_opa(gui_msg_cont, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(gui_msg_cont, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Pre-create row widgets
+    for (int i = 0; i < GUI_MSG_ROWS; i++) {
+        int y = i * 55;
+        gui_msg_row[i] = lv_obj_create(gui_msg_cont);
+        lv_obj_remove_style_all(gui_msg_row[i]);
+        lv_obj_set_size(gui_msg_row[i], GUI_W - 2 * GUI_PAD, 50);
+        lv_obj_set_pos(gui_msg_row[i], GUI_PAD, y);
+        lv_obj_add_flag(gui_msg_row[i], LV_OBJ_FLAG_HIDDEN);
+
+        // Display name (left)
+        gui_msg_name[i] = lv_label_create(gui_msg_row[i]);
+        lv_obj_set_style_text_font(gui_msg_name[i], &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_color(gui_msg_name[i], lv_color_hex(GUI_COL_WHITE), 0);
+        lv_obj_set_pos(gui_msg_name[i], 0, 0);
+        lv_obj_set_width(gui_msg_name[i], GUI_W - 2 * GUI_PAD - 70);
+        lv_label_set_long_mode(gui_msg_name[i], LV_LABEL_LONG_CLIP);
+
+        // RSSI (right)
+        gui_msg_rssi[i] = lv_label_create(gui_msg_row[i]);
+        lv_obj_set_style_text_font(gui_msg_rssi[i], &lv_font_montserrat_14, 0);
+        lv_obj_set_style_text_color(gui_msg_rssi[i], lv_color_hex(GUI_COL_AMBER), 0);
+        lv_obj_set_pos(gui_msg_rssi[i], GUI_W - 2 * GUI_PAD - 65, 0);
+        lv_obj_set_width(gui_msg_rssi[i], 65);
+        lv_obj_set_style_text_align(gui_msg_rssi[i], LV_TEXT_ALIGN_RIGHT, 0);
+
+        // Time ago (below name)
+        gui_msg_time[i] = lv_label_create(gui_msg_row[i]);
+        lv_obj_set_style_text_font(gui_msg_time[i], &lv_font_montserrat_10, 0);
+        lv_obj_set_style_text_color(gui_msg_time[i], lv_color_hex(GUI_COL_DIM), 0);
+        lv_obj_set_pos(gui_msg_time[i], 0, 20);
+
+        // Divider line at bottom of row
+        if (i > 0) {
+            lv_obj_t *div = lv_obj_create(gui_msg_row[i]);
+            lv_obj_remove_style_all(div);
+            lv_obj_set_size(div, GUI_W - 2 * GUI_PAD, 1);
+            lv_obj_set_pos(div, 0, -3);
+            lv_obj_set_style_bg_color(div, lv_color_hex(0x1A1A1A), 0);
+            lv_obj_set_style_bg_opa(div, LV_OPA_COVER, 0);
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -901,12 +982,13 @@ static void gui_update_data() {
     bool on_radio  = (cur_tile == gui_tile_radio);
     bool on_gps    = (cur_tile == gui_tile_gps);
     bool on_settings = (cur_tile == gui_tile_set);
+    bool on_msg = (cur_tile == gui_tile_msg);
 
     // ---- Watch face ----
     // Time always updates (cheap, changes rarely)
     lv_label_set_text_fmt(gui_time_label, "%02d:%02d", rtc_hour, rtc_minute);
 
-    if (!on_watch && !on_radio && !on_gps && !on_settings) return;
+    if (!on_watch && !on_radio && !on_gps && !on_settings && !on_msg) return;
 
     // ---- Watch face details (only when visible) ----
     if (on_watch) {
@@ -1370,6 +1452,50 @@ static void gui_update_data() {
         #else
         lv_label_set_text(gui_set_log_status, "No SD card");
         #endif
+    }
+
+    // ---- Messages screen ----
+    if (on_msg && gui_msg_cont) {
+        if (msg_log_count == 0) {
+            lv_obj_clear_flag(gui_msg_empty, LV_OBJ_FLAG_HIDDEN);
+            for (int i = 0; i < GUI_MSG_ROWS; i++)
+                lv_obj_add_flag(gui_msg_row[i], LV_OBJ_FLAG_HIDDEN);
+            lv_label_set_text_fmt(gui_msg_title, "MESSAGES");
+        } else {
+            lv_obj_add_flag(gui_msg_empty, LV_OBJ_FLAG_HIDDEN);
+            lv_label_set_text_fmt(gui_msg_title, "MESSAGES (%d)", msg_log_count);
+
+            // Display messages newest-first
+            int shown = 0;
+            for (int i = 0; i < msg_log_count && shown < GUI_MSG_ROWS; i++) {
+                int idx = (msg_log_head - 1 - i + MSG_LOG_SIZE) % MSG_LOG_SIZE;
+                msg_entry_t &m = msg_log[idx];
+
+                lv_obj_clear_flag(gui_msg_row[shown], LV_OBJ_FLAG_HIDDEN);
+
+                // Name — amber for announces, white for data
+                lv_label_set_text(gui_msg_name[shown], m.display_name);
+                lv_obj_set_style_text_color(gui_msg_name[shown],
+                    lv_color_hex(m.is_announce ? GUI_COL_AMBER : GUI_COL_WHITE), 0);
+
+                // RSSI with colour coding
+                lv_label_set_text_fmt(gui_msg_rssi[shown], "%d dBm", m.rssi);
+                uint32_t rssi_col = (m.rssi > -80) ? GUI_COL_GREEN :
+                                    (m.rssi > -100) ? GUI_COL_AMBER : GUI_COL_RED;
+                lv_obj_set_style_text_color(gui_msg_rssi[shown], lv_color_hex(rssi_col), 0);
+
+                // Time ago
+                uint32_t ago = (millis() - m.timestamp) / 1000;
+                if (ago < 60) lv_label_set_text_fmt(gui_msg_time[shown], "%lus ago  %dB", ago, m.pkt_len);
+                else if (ago < 3600) lv_label_set_text_fmt(gui_msg_time[shown], "%lum ago  %dB", ago / 60, m.pkt_len);
+                else lv_label_set_text_fmt(gui_msg_time[shown], "%luh ago  %dB", ago / 3600, m.pkt_len);
+
+                shown++;
+            }
+            // Hide unused rows
+            for (int i = shown; i < GUI_MSG_ROWS; i++)
+                lv_obj_add_flag(gui_msg_row[i], LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 

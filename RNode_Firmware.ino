@@ -61,6 +61,9 @@
   // Sensor data logger to SD card (must be before callbacks that call sensor_log_*)
   #include "IMULogger.h"
 
+  // Message log for received packet viewer
+  #include "MessageLog.h"
+
   // IMU sensor callbacks
   void imu_step_cb(uint8_t sensor_id, uint8_t *data, uint32_t size, uint64_t *timestamp, void *user_data) {
     if (size >= 4) {
@@ -2061,6 +2064,12 @@ void loop() {
         memcpy(&pbuf, modem_packet->data, modem_packet->len);
         free(modem_packet);
         modem_packet = NULL;
+
+        // Log received packet for message viewer
+        #if BOARD_MODEL == BOARD_TWATCH_ULT
+          msg_log_parse_packet(pbuf, host_write_len, last_rssi,
+                               (int8_t)(last_snr_raw > 127 ? last_snr_raw - 256 : last_snr_raw));
+        #endif
 
         response_channel = data_channel;
         kiss_indicate_stat_rssi();
