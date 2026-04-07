@@ -172,7 +172,9 @@ void setup() {
       EEPROM.write(eeprom_addr(ADDR_MADE+2), 0x00);
       EEPROM.write(eeprom_addr(ADDR_MADE+3), 0x00);
       EEPROM.write(eeprom_addr(ADDR_INFO_LOCK), INFO_LOCK_BYTE);
-      EEPROM.write(eeprom_addr(ADDR_CONF_OK), CONF_OK_BYTE);
+      // Do NOT write CONF_OK_BYTE — radio config (freq/bw/sf) is not set.
+      // If CONF_OK is set, eeprom_conf_load() loads 0xFFFFFFFF into lora_freq
+      // and startRadio() calls begin(0xFFFFFFFF) which corrupts SX1262 calibration.
       // Compute and write EEPROM checksum (MD5 of first CHECKSUMMED_SIZE bytes)
       char chk_data[CHECKSUMMED_SIZE];
       for (uint8_t i = 0; i < CHECKSUMMED_SIZE; i++)
