@@ -945,14 +945,24 @@ static void gui_update_data() {
     }
     lv_obj_align(gui_batt_label, LV_ALIGN_TOP_RIGHT, -GUI_PAD, GUI_STATUS_Y);
 
-    // LoRa complication — dim when disabled, warn when no IFAC
+    // LoRa complication — show RSSI if receiving, TX count if beaconing, noise floor otherwise
     if (radio_online) {
         if (last_rssi > -292) {
+            // Received a packet — show RSSI
             lv_label_set_text_fmt(gui_lora_value, "%d", last_rssi);
+            lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_AMBER), 0);
+        } else if (stat_tx > 0) {
+            // Beacon mode — show TX count
+            lv_label_set_text_fmt(gui_lora_value, "TX:%lu", stat_tx);
+            lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_AMBER), 0);
+        } else if (noise_floor > -292) {
+            // Radio listening — show noise floor
+            lv_label_set_text_fmt(gui_lora_value, "%d", noise_floor);
+            lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_DIM), 0);
         } else {
             lv_label_set_text(gui_lora_value, "---");
+            lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_DIM), 0);
         }
-        lv_obj_set_style_text_color(gui_lora_value, lv_color_hex(GUI_COL_AMBER), 0);
         lv_label_set_text(gui_lora_label, ifac_configured ? "LoRa" : "NO KEY");
         lv_obj_set_style_text_color(gui_lora_label,
             lv_color_hex(ifac_configured ? GUI_COL_DIM : GUI_COL_RED), 0);
@@ -1069,36 +1079,38 @@ static void gui_update_data() {
 
     // Signal strength view — record RSSI and update graph
     if (gui_signal_cont) {
-        // Record RSSI when a new packet is received
+        // Record signal level periodically (RSSI if available, noise floor otherwise)
         static int16_t prev_rssi = -292;
         static uint32_t last_rssi_record = 0;
-        if (last_rssi != prev_rssi || (radio_online && millis() - last_rssi_record > 5000)) {
-            if (last_rssi > -292 && radio_online) {
-                rssi_history[rssi_history_idx] = last_rssi;
-                rssi_history_idx = (rssi_history_idx + 1) % RSSI_HISTORY_LEN;
-                if (rssi_history_count < RSSI_HISTORY_LEN) rssi_history_count++;
+        int16_t current_signal = (last_rssi > -292) ? last_rssi : noise_floor;
+        if (radio_online && millis() - last_rssi_record > 5000 && current_signal > -292) {
+            rssi_history[rssi_history_idx] = current_signal;
+            rssi_history_idx = (rssi_history_idx + 1) % RSSI_HISTORY_LEN;
+            if (rssi_history_count < RSSI_HISTORY_LEN) rssi_history_count++;
 
-                // Record GPS+RSSI for direction finding
-                #if HAS_GPS == true
-                if (gps_has_fix) {
-                    dir_history[dir_history_idx] = { gps_lat, gps_lon, last_rssi };
-                    dir_history_idx = (dir_history_idx + 1) % DIR_HISTORY_LEN;
-                    if (dir_history_count < DIR_HISTORY_LEN) dir_history_count++;
-                }
-                #endif
+            // Record GPS+RSSI for direction finding (only with real RSSI, not noise floor)
+            #if HAS_GPS == true
+            if (gps_has_fix && last_rssi > -292) {
+                dir_history[dir_history_idx] = { gps_lat, gps_lon, last_rssi };
+                dir_history_idx = (dir_history_idx + 1) % DIR_HISTORY_LEN;
+                if (dir_history_count < DIR_HISTORY_LEN) dir_history_count++;
             }
-            prev_rssi = last_rssi;
+            #endif
+
             last_rssi_record = millis();
         }
 
         // Update signal view when visible
         if (gui_show_signal && rssi_history_count > 0) {
-            // Current RSSI display
+            // Current signal display
             if (last_rssi > -292 && radio_online) {
                 lv_label_set_text_fmt(gui_signal_rssi, "%d dBm", last_rssi);
                 uint32_t rssi_col = (last_rssi > -80) ? GUI_COL_GREEN :
                                     (last_rssi > -100) ? GUI_COL_AMBER : GUI_COL_RED;
                 lv_obj_set_style_text_color(gui_signal_rssi, lv_color_hex(rssi_col), 0);
+            } else if (noise_floor > -292 && radio_online) {
+                lv_label_set_text_fmt(gui_signal_rssi, "floor %d", noise_floor);
+                lv_obj_set_style_text_color(gui_signal_rssi, lv_color_hex(GUI_COL_DIM), 0);
             } else {
                 lv_label_set_text(gui_signal_rssi, "no signal");
                 lv_obj_set_style_text_color(gui_signal_rssi, lv_color_hex(GUI_COL_DIM), 0);
