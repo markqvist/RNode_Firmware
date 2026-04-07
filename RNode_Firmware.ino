@@ -1019,6 +1019,7 @@ void beacon_transmit(uint16_t size) {
     if (!LoRa->endPacket()) {
       led_indicate_error(5);
     }
+    stat_tx++;
     add_airtime(size);
     lora_receive();
   }
