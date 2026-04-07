@@ -220,7 +220,12 @@ bool device_firmware_ok() {
 
 #if MCU_VARIANT == MCU_ESP32 || MCU_VARIANT == MCU_NRF52
 bool device_init() {
+  #if BOARD_MODEL == BOARD_TWATCH_ULT || BOARD_MODEL == BOARD_TBEAM_S_V1
+    // Dev boards: proceed even if BLE not ready (warm reset race)
+    if (true) {
+  #else
   if (bt_ready) {
+  #endif
     #if MCU_VARIANT == MCU_ESP32
     for (uint8_t i=0; i<EEPROM_SIG_LEN; i++){dev_eeprom_signature[i]=EEPROM.read(eeprom_addr(ADDR_SIGNATURE+i));}
     mbedtls_md_context_t ctx;

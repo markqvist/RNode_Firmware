@@ -376,15 +376,20 @@ static int lxmf_build_message(uint8_t *out, size_t out_cap,
                                 double lat, double lon, double alt,
                                 double speed, double hdop,
                                 uint32_t timestamp, int bat_percent) {
+    // Static buffers to avoid stack overflow (~1KB saved)
+    // Safe because beacon functions are never called concurrently
+    static uint8_t telemetry[128];
+    static uint8_t payload[256];
+    static uint8_t hashed_part[256 + 32];
+    static uint8_t signed_part[256 + 32 + 32];
+
     // 1. Pack telemetry bytes
-    uint8_t telemetry[128];
     size_t telem_len = lxmf_pack_telemetry(telemetry, sizeof(telemetry),
                                             lat, lon, alt, speed, hdop,
                                             timestamp, bat_percent);
     if (telem_len == 0) return -1;
 
     // 2. Build msgpack payload: [timestamp, nil, nil, {0x02: telemetry}]
-    uint8_t payload[256];
     MsgpackWriter pw = { payload, 0, sizeof(payload) };
 
     pw.pack_fixarray(4);
@@ -407,7 +412,6 @@ static int lxmf_build_message(uint8_t *out, size_t out_cap,
 
     // 3. Compute signature
     //    hashed_part = dest_hash(16) + source_hash(16) + payload
-    uint8_t hashed_part[256 + 32];
     size_t hp_len = 16 + 16 + payload_len;
     if (hp_len > sizeof(hashed_part)) return -1;
     memcpy(hashed_part, dest_hash16, 16);
@@ -419,7 +423,6 @@ static int lxmf_build_message(uint8_t *out, size_t out_cap,
     sha256_once(hashed_part, hp_len, message_hash);
 
     //    signed_part = hashed_part + message_hash
-    uint8_t signed_part[256 + 32 + 32];
     size_t sp_len = hp_len + 32;
     if (sp_len > sizeof(signed_part)) return -1;
     memcpy(signed_part, hashed_part, hp_len);
@@ -537,7 +540,7 @@ static int lxmf_build_announce(uint8_t *out, size_t out_cap, const char *display
 
     // signature: Ed25519Sign(dest_hash + public_key + name_hash + random_hash + app_data)
     // signed_data = dest_hash(16) + public_key(64) + name_hash(10) + random_hash(10) + app_data
-    uint8_t signed_data[256];
+    static uint8_t signed_data[256];
     size_t sd_len = 0;
     memcpy(&signed_data[sd_len], lxmf_source_hash, 16); sd_len += 16;
     memcpy(&signed_data[sd_len], lxmf_x25519_pk, 32);   sd_len += 32;

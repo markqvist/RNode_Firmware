@@ -1017,12 +1017,19 @@ void beacon_transmit(uint16_t size) {
       diag_beacon_post_len = size;
     }
 
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+      if (shared_spi_mutex) xSemaphoreTake(shared_spi_mutex, portMAX_DELAY);
+    #endif
     LoRa->beginPacket();
     for (uint16_t i = 0; i < size; i++) {
       LoRa->write(tbuf[i]);
     }
-    if (!LoRa->endPacket()) {
-      led_indicate_error(5);
+    bool tx_ok = LoRa->endPacket();
+    #if BOARD_MODEL == BOARD_TWATCH_ULT
+      if (shared_spi_mutex) xSemaphoreGive(shared_spi_mutex);
+    #endif
+    if (!tx_ok) {
+      Serial.println("[beacon] TX failed");
     }
     stat_tx++;
     add_airtime(size);
