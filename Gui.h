@@ -709,8 +709,13 @@ struct msg_entry_t {
     uint8_t  pkt_type;
     uint8_t  sender_hash[16];
     char     display_name[MSG_NAME_LEN];
+    char     content[64];           // LXMF message content (first 63 chars)
+    uint8_t  sender_ed25519_pub[32]; // cached from announce for signature verification
     uint16_t pkt_len;
     bool     is_announce;
+    bool     is_lxmf;              // true if decrypted LXMF message
+    bool     verified;             // signature verified
+    bool     has_pubkey;           // sender_ed25519_pub is valid
 };
 extern msg_entry_t msg_log[];
 extern uint8_t msg_log_head;
@@ -1473,10 +1478,17 @@ static void gui_update_data() {
 
                 lv_obj_clear_flag(gui_msg_row[shown], LV_OBJ_FLAG_HIDDEN);
 
-                // Name — amber for announces, white for data
-                lv_label_set_text(gui_msg_name[shown], m.display_name);
-                lv_obj_set_style_text_color(gui_msg_name[shown],
-                    lv_color_hex(m.is_announce ? GUI_COL_AMBER : GUI_COL_WHITE), 0);
+                // Name — green for verified LXMF, amber for announces, white for data
+                if (m.is_lxmf && m.content[0]) {
+                    // LXMF message: show content as primary text
+                    lv_label_set_text(gui_msg_name[shown], m.content);
+                    lv_obj_set_style_text_color(gui_msg_name[shown],
+                        lv_color_hex(m.verified ? GUI_COL_GREEN : GUI_COL_WHITE), 0);
+                } else {
+                    lv_label_set_text(gui_msg_name[shown], m.display_name);
+                    lv_obj_set_style_text_color(gui_msg_name[shown],
+                        lv_color_hex(m.is_announce ? GUI_COL_AMBER : GUI_COL_WHITE), 0);
+                }
 
                 // RSSI with colour coding
                 lv_label_set_text_fmt(gui_msg_rssi[shown], "%d dBm", m.rssi);
@@ -1484,11 +1496,17 @@ static void gui_update_data() {
                                     (m.rssi > -100) ? GUI_COL_AMBER : GUI_COL_RED;
                 lv_obj_set_style_text_color(gui_msg_rssi[shown], lv_color_hex(rssi_col), 0);
 
-                // Time ago
+                // Time ago + sender name for LXMF messages
                 uint32_t ago = (millis() - m.timestamp) / 1000;
-                if (ago < 60) lv_label_set_text_fmt(gui_msg_time[shown], "%lus ago  %dB", ago, m.pkt_len);
-                else if (ago < 3600) lv_label_set_text_fmt(gui_msg_time[shown], "%lum ago  %dB", ago / 60, m.pkt_len);
-                else lv_label_set_text_fmt(gui_msg_time[shown], "%luh ago  %dB", ago / 3600, m.pkt_len);
+                if (m.is_lxmf) {
+                    if (ago < 60) lv_label_set_text_fmt(gui_msg_time[shown], "%s  %lus ago", m.display_name, ago);
+                    else if (ago < 3600) lv_label_set_text_fmt(gui_msg_time[shown], "%s  %lum ago", m.display_name, ago / 60);
+                    else lv_label_set_text_fmt(gui_msg_time[shown], "%s  %luh ago", m.display_name, ago / 3600);
+                } else {
+                    if (ago < 60) lv_label_set_text_fmt(gui_msg_time[shown], "%lus ago  %dB", ago, m.pkt_len);
+                    else if (ago < 3600) lv_label_set_text_fmt(gui_msg_time[shown], "%lum ago  %dB", ago / 60, m.pkt_len);
+                    else lv_label_set_text_fmt(gui_msg_time[shown], "%luh ago  %dB", ago / 3600, m.pkt_len);
+                }
 
                 shown++;
             }

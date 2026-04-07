@@ -446,6 +446,155 @@ static int lxmf_build_message(uint8_t *out, size_t out_cap,
     return (int)total;
 }
 
+// ---- Minimal Msgpack Reader ----
+// Read-only cursor over msgpack data. No allocation.
+struct MsgpackReader {
+    const uint8_t *buf;
+    size_t pos;
+    size_t len;
+
+    MsgpackReader(const uint8_t *data, size_t sz) : buf(data), pos(0), len(sz) {}
+    bool has(size_t n) const { return pos + n <= len; }
+    uint8_t peek() const { return has(1) ? buf[pos] : 0xFF; }
+    uint8_t read_u8() { return has(1) ? buf[pos++] : 0; }
+
+    // Read fixarray length (0x90-0x9F)
+    int read_array_len() {
+        uint8_t b = read_u8();
+        if ((b & 0xF0) == 0x90) return b & 0x0F;
+        if (b == 0xDC && has(2)) { uint16_t n = (buf[pos]<<8)|buf[pos+1]; pos+=2; return n; }
+        return -1;
+    }
+
+    // Read uint (fixint, uint8, uint16, uint32)
+    uint32_t read_uint() {
+        uint8_t b = read_u8();
+        if (b <= 0x7F) return b;
+        if (b == 0xCC && has(1)) return buf[pos++];
+        if (b == 0xCD && has(2)) { uint16_t v=(buf[pos]<<8)|buf[pos+1]; pos+=2; return v; }
+        if (b == 0xCE && has(4)) { uint32_t v=(buf[pos]<<24)|(buf[pos+1]<<16)|(buf[pos+2]<<8)|buf[pos+3]; pos+=4; return v; }
+        return 0;
+    }
+
+    // Read binary/string, returns pointer and sets length. Doesn't copy.
+    const uint8_t *read_bin(size_t *out_len) {
+        uint8_t b = read_u8();
+        size_t n = 0;
+        if ((b & 0xE0) == 0xA0) n = b & 0x1F;          // fixstr
+        else if (b == 0xC4 && has(1)) n = buf[pos++];    // bin8
+        else if (b == 0xC5 && has(2)) { n=(buf[pos]<<8)|buf[pos+1]; pos+=2; }  // bin16
+        else if (b == 0xD9 && has(1)) n = buf[pos++];    // str8
+        else { *out_len = 0; return NULL; }
+        if (!has(n)) { *out_len = 0; return NULL; }
+        const uint8_t *ptr = buf + pos;
+        pos += n;
+        *out_len = n;
+        return ptr;
+    }
+
+    // Skip one msgpack value
+    void skip() {
+        uint8_t b = peek();
+        if (b <= 0x7F || b >= 0xE0 || b == 0xC0 || b == 0xC2 || b == 0xC3) { pos++; return; }
+        if ((b & 0xF0) == 0x90) { int n = read_array_len(); for (int i=0;i<n;i++) skip(); return; }
+        if ((b & 0xF0) == 0x80) { pos++; int n = b & 0x0F; for (int i=0;i<n*2;i++) skip(); return; }
+        size_t dummy; read_bin(&dummy);  // handles str/bin
+    }
+
+    // Read fixmap length
+    int read_map_len() {
+        uint8_t b = read_u8();
+        if ((b & 0xF0) == 0x80) return b & 0x0F;
+        if (b == 0xDE && has(2)) { uint16_t n=(buf[pos]<<8)|buf[pos+1]; pos+=2; return n; }
+        return -1;
+    }
+};
+
+// ---- LXMF Message RX Parser ----
+// Parse decrypted LXMF plaintext: source_hash(16) + signature(64) + msgpack
+// Returns true if parsed successfully. Fills title_out and content_out.
+struct LxmfParsed {
+    uint8_t  source_hash[16];
+    uint32_t timestamp;
+    char     title[32];
+    char     content[64];
+    bool     verified;  // signature verified against cached announce key
+};
+
+static bool lxmf_parse_received(const uint8_t *plaintext, size_t pt_len,
+                                 LxmfParsed *out) {
+    if (pt_len < 16 + 64 + 4) return false;  // minimum: hash + sig + tiny msgpack
+
+    memcpy(out->source_hash, plaintext, 16);
+    // signature at plaintext+16, 64 bytes (verified later with sender's pubkey)
+    const uint8_t *msgpack_data = plaintext + 16 + 64;
+    size_t msgpack_len = pt_len - 16 - 64;
+
+    MsgpackReader r(msgpack_data, msgpack_len);
+
+    // Expect fixarray(4): [timestamp, title, content, fields]
+    int arr_len = r.read_array_len();
+    if (arr_len < 3) return false;
+
+    // [0] timestamp
+    out->timestamp = r.read_uint();
+
+    // [1] title
+    size_t title_len = 0;
+    const uint8_t *title_ptr = r.read_bin(&title_len);
+    if (title_ptr && title_len > 0) {
+        size_t n = title_len < sizeof(out->title)-1 ? title_len : sizeof(out->title)-1;
+        memcpy(out->title, title_ptr, n);
+        out->title[n] = '\0';
+    } else {
+        out->title[0] = '\0';
+    }
+
+    // [2] content
+    size_t content_len = 0;
+    const uint8_t *content_ptr = r.read_bin(&content_len);
+    if (content_ptr && content_len > 0) {
+        size_t n = content_len < sizeof(out->content)-1 ? content_len : sizeof(out->content)-1;
+        memcpy(out->content, content_ptr, n);
+        out->content[n] = '\0';
+    } else {
+        out->content[0] = '\0';
+    }
+
+    out->verified = false;  // caller must verify with sender's pubkey
+    return true;
+}
+
+// Verify LXMF signature using sender's Ed25519 public key
+static bool lxmf_verify_signature(const uint8_t *plaintext, size_t pt_len,
+                                   const uint8_t *sender_ed25519_pub) {
+    if (pt_len < 16 + 64 + 4) return false;
+    const uint8_t *signature = plaintext + 16;
+    const uint8_t *msgpack_data = plaintext + 16 + 64;
+    size_t msgpack_len = pt_len - 16 - 64;
+
+    // Reconstruct signed_part: dest_hash + source_hash + msgpack + SHA256(same)
+    // dest_hash = our lxmf_source_hash, source_hash = plaintext[0:16]
+    static uint8_t hashed_part[512];
+    size_t hp_len = 16 + 16 + msgpack_len;
+    if (hp_len > sizeof(hashed_part) - 32) return false;
+
+    memcpy(hashed_part, lxmf_source_hash, 16);      // dest = us
+    memcpy(hashed_part + 16, plaintext, 16);          // source
+    memcpy(hashed_part + 32, msgpack_data, msgpack_len);
+
+    uint8_t message_hash[32];
+    sha256_once(hashed_part, hp_len, message_hash);
+
+    static uint8_t signed_part[512 + 32];
+    memcpy(signed_part, hashed_part, hp_len);
+    memcpy(signed_part + hp_len, message_hash, 32);
+    size_t sp_len = hp_len + 32;
+
+    return crypto_sign_ed25519_verify_detached(signature, signed_part, sp_len,
+                                                sender_ed25519_pub) == 0;
+}
+
 // ---- RNS Announce Packet Construction ----
 // Builds a complete RNS announce packet in tbuf for transmission.
 //

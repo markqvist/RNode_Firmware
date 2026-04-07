@@ -115,20 +115,11 @@ static void msg_log_parse_packet(const uint8_t *pkt, uint16_t len,
     const uint8_t *dest_hash = pkt + 2;  // bytes 2-17
 
     if (pkt_type == RNS_TYPE_ANNOUNCE && len > 167) {
-        // ANNOUNCE packet structure (HEADER_1, 19-byte header):
-        // [flags(1) hops(1) dest_hash(16) context(1)]
-        // [pub_keys(64) = x25519(32) + ed25519(32)]
-        // [name_hash(10)]
-        // [random_hash(10)]
-        // [signature(64)]
-        // [app_data(variable) = display name]
-
-        // Compute identity hash from public keys
-        const uint8_t *pub_keys = pkt + 19;  // 64 bytes
+        // ANNOUNCE: extract identity, display name, and cache public keys
+        const uint8_t *pub_keys = pkt + 19;  // x25519(32) + ed25519(32)
         uint8_t identity_hash[32];
         mbedtls_sha256(pub_keys, 64, identity_hash, 0);
 
-        // Extract display name from app_data
         char name[MSG_NAME_LEN] = {0};
         int app_data_offset = 19 + 64 + 10 + 10 + 64;  // = 167
         int app_data_len = len - app_data_offset;
@@ -138,8 +129,76 @@ static void msg_log_parse_packet(const uint8_t *pkt, uint16_t len,
         }
 
         msg_log_add(identity_hash, name, rssi, snr, pkt_type, len, true);
+
+        // Cache sender's ed25519 public key for signature verification
+        int idx = msg_log_find_sender(identity_hash);
+        if (idx >= 0) {
+            memcpy(msg_log[idx].sender_ed25519_pub, pub_keys + 32, 32);
+            msg_log[idx].has_pubkey = true;
+        }
+
+    } else if (pkt_type == RNS_TYPE_DATA && len > 19 + 96) {
+        // DATA packet — check if addressed to us (LXMF delivery)
+        extern uint8_t lxmf_source_hash[16];
+        extern uint8_t lxmf_x25519_sk[32];
+        extern bool lxmf_identity_configured;
+
+        if (lxmf_identity_configured && memcmp(dest_hash, lxmf_source_hash, 16) == 0) {
+            // Addressed to our LXMF delivery destination — try to decrypt
+            const uint8_t *encrypted = pkt + 19;  // after RNS header
+            size_t enc_len = len - 19;
+
+            // We need the sender's identity hash for HKDF salt.
+            // For OPPORTUNISTIC messages, we use our OWN identity hash as salt
+            // (the sender encrypted TO us, using our identity hash as salt)
+            extern uint8_t lxmf_identity_hash[16];
+
+            static uint8_t plaintext[512];
+            int pt_len = beacon_crypto_decrypt(encrypted, enc_len,
+                                                lxmf_x25519_sk,
+                                                lxmf_identity_hash,
+                                                plaintext, sizeof(plaintext));
+
+            if (pt_len > 0) {
+                // Decryption succeeded — parse LXMF message
+                LxmfParsed parsed;
+                if (lxmf_parse_received(plaintext, pt_len, &parsed)) {
+                    // Look up sender's name and pubkey from announce cache
+                    char *sender_name = NULL;
+                    uint8_t *sender_pub = NULL;
+                    int sender_idx = msg_log_find_sender(parsed.source_hash);
+                    if (sender_idx >= 0) {
+                        sender_name = msg_log[sender_idx].display_name;
+                        if (msg_log[sender_idx].has_pubkey)
+                            sender_pub = msg_log[sender_idx].sender_ed25519_pub;
+                    }
+
+                    // Add as LXMF message entry
+                    msg_log_add(parsed.source_hash, sender_name, rssi, snr,
+                                pkt_type, len, false);
+
+                    // Store content in the new entry
+                    int new_idx = msg_log_find_sender(parsed.source_hash);
+                    if (new_idx >= 0) {
+                        strncpy(msg_log[new_idx].content, parsed.content, 63);
+                        msg_log[new_idx].content[63] = '\0';
+                        msg_log[new_idx].is_lxmf = true;
+                        if (sender_pub) {
+                            msg_log[new_idx].verified =
+                                lxmf_verify_signature(plaintext, pt_len, sender_pub);
+                        }
+                    }
+
+                    Serial.printf("[lxmf_rx] from %02x%02x: \"%s\"\n",
+                        parsed.source_hash[0], parsed.source_hash[1], parsed.content);
+                }
+            }
+        } else {
+            // DATA not for us — log generically
+            msg_log_add(dest_hash, NULL, rssi, snr, pkt_type, len, false);
+        }
     } else {
-        // DATA or short packet — log with dest_hash
+        // Other packet — log with dest_hash
         msg_log_add(dest_hash, NULL, rssi, snr, pkt_type, len, false);
     }
 }

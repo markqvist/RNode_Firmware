@@ -155,5 +155,82 @@ static int beacon_crypto_encrypt(const uint8_t *plaintext, size_t pt_len,
     return 32 + 16 + (int)padded_len + 32;
 }
 
+// Decrypt incoming RNS Token-format payload.
+//
+// Input layout: [ephemeral_pub:32][IV:16][ciphertext:var][HMAC:32]
+// Returns plaintext length, or -1 on error (HMAC fail, decrypt fail, etc.)
+//
+// Crypto pipeline (reverse of beacon_crypto_encrypt):
+//   1. Extract ephemeral public key
+//   2. ECDH shared secret with OUR private key
+//   3. HKDF-SHA256 → signing_key(32) + encryption_key(32)
+//   4. Verify HMAC-SHA256(signing_key, IV || ciphertext)
+//   5. AES-256-CBC decrypt
+//   6. PKCS7 unpad
+static int beacon_crypto_decrypt(const uint8_t *input, size_t input_len,
+                                 const uint8_t *our_x25519_sk,
+                                 const uint8_t *peer_identity_hash,
+                                 uint8_t *output, size_t output_cap) {
+    // Minimum: ephemeral(32) + IV(16) + 16-byte block + HMAC(32) = 96
+    if (input_len < 96) return -1;
+
+    const uint8_t *eph_pub = input;
+    const uint8_t *iv_pos  = input + 32;
+    size_t ct_len = input_len - 32 - 16 - 32;  // remove eph + IV + HMAC
+    const uint8_t *ct_pos  = input + 32 + 16;
+    const uint8_t *hmac_in = input + input_len - 32;
+
+    if (ct_len == 0 || ct_len % 16 != 0) return -1;
+    if (ct_len > output_cap) return -1;
+
+    // 1. ECDH shared secret
+    uint8_t ss_bytes[32];
+    if (crypto_scalarmult_curve25519(ss_bytes, our_x25519_sk, eph_pub) != 0) return -1;
+
+    // 2. HKDF-SHA256: derive signing_key(32) + encryption_key(32)
+    uint8_t derived[64];
+    int ret = rns_hkdf(ss_bytes, 32, peer_identity_hash, 16, derived);
+    if (ret != 0) return -1;
+
+    uint8_t *signing_key    = derived;
+    uint8_t *encryption_key = derived + 32;
+
+    // 3. Verify HMAC-SHA256(signing_key, IV || ciphertext)
+    uint8_t computed_hmac[32];
+    const mbedtls_md_info_t *md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    mbedtls_md_context_t md_ctx;
+    mbedtls_md_init(&md_ctx);
+    ret = mbedtls_md_setup(&md_ctx, md_info, 1);
+    if (ret == 0) ret = mbedtls_md_hmac_starts(&md_ctx, signing_key, 32);
+    if (ret == 0) ret = mbedtls_md_hmac_update(&md_ctx, iv_pos, 16);
+    if (ret == 0) ret = mbedtls_md_hmac_update(&md_ctx, ct_pos, ct_len);
+    if (ret == 0) ret = mbedtls_md_hmac_finish(&md_ctx, computed_hmac);
+    mbedtls_md_free(&md_ctx);
+    if (ret != 0) return -1;
+
+    if (memcmp(computed_hmac, hmac_in, 32) != 0) return -2;  // HMAC mismatch
+
+    // 4. AES-256-CBC decrypt
+    uint8_t iv_copy[16];
+    memcpy(iv_copy, iv_pos, 16);
+    mbedtls_aes_context aes;
+    mbedtls_aes_init(&aes);
+    ret = mbedtls_aes_setkey_dec(&aes, encryption_key, 256);
+    if (ret != 0) { mbedtls_aes_free(&aes); return -1; }
+    ret = mbedtls_aes_crypt_cbc(&aes, MBEDTLS_AES_DECRYPT, ct_len,
+                                 iv_copy, ct_pos, output);
+    mbedtls_aes_free(&aes);
+    if (ret != 0) return -1;
+
+    // 5. PKCS7 unpad
+    uint8_t pad_val = output[ct_len - 1];
+    if (pad_val == 0 || pad_val > 16) return -3;  // invalid padding
+    for (size_t i = 0; i < pad_val; i++) {
+        if (output[ct_len - 1 - i] != pad_val) return -3;
+    }
+
+    return (int)(ct_len - pad_val);
+}
+
 #endif
 #endif
