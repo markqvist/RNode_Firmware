@@ -270,9 +270,24 @@ void sx126x::setPacketParams(long preamble_symbols, uint8_t headermode, uint8_t 
   buf[4] = crc;
   buf[5] = 0x00; // standard IQ setting (no inversion)
   buf[6] = 0x00; // unused params
-  buf[7] = 0x00; 
-  buf[8] = 0x00; 
+  buf[7] = 0x00;
+  buf[8] = 0x00;
   executeOpcode(OP_PACKET_PARAMS_6X, buf, 9);
+
+  // SX1262 errata section 15.4: IQ polarity is inverted compared to
+  // SX1276. The SetPacketParams command resets register 0x0736 to an
+  // incorrect default. For standard IQ (no inversion), bit 2 must be
+  // SET after every SetPacketParams call. For inverted IQ, bit 2 must
+  // be CLEARED. Without this fix, LoRa RX demodulation fails silently
+  // while TX continues to work.
+  uint8_t iqreg = readRegister(0x0736);
+  if (buf[5] == 0x00) {
+    // Standard IQ: set bit 2
+    writeRegister(0x0736, iqreg | 0x04);
+  } else {
+    // Inverted IQ: clear bit 2
+    writeRegister(0x0736, iqreg & ~0x04);
+  }
 }
 
 void sx126x::reset(void) {
@@ -729,7 +744,17 @@ void sx126x::handleLowDataRate() {
 }
 
 // TODO: Check if there's anything the sx1262 can do here
-void sx126x::optimizeModemSensitivity(){ }
+// SX1262 errata section 15.1: Modulation quality with 500 kHz LoRa BW.
+// Register 0x0889 bit 2 must be cleared for 500 kHz, set for all other
+// bandwidths. Improves receiver sensitivity at non-500 kHz bandwidths.
+void sx126x::optimizeModemSensitivity(){
+  uint8_t reg = readRegister(0x0889);
+  if (getSignalBandwidth() == 500E3) {
+    writeRegister(0x0889, reg & 0xFB); // clear bit 2
+  } else {
+    writeRegister(0x0889, reg | 0x04); // set bit 2
+  }
+}
 
 void sx126x::setSignalBandwidth(long sbw) {
   if (sbw <= 7.8E3)        { _bw = 0x00; }
