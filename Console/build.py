@@ -4,10 +4,10 @@ import sys
 import shutil
 
 packages = {
-    "rns": "rns-1.0.3-py3-none-any.whl",
-    "nomadnet": "nomadnet-0.9.1-py3-none-any.whl",
-    "lxmf": "lxmf-0.9.3-py3-none-any.whl",
-    "rnsh": "rnsh-0.1.5-py3-none-any.whl",
+    "rns": "rns-1.1.6-py3-none-any.whl",
+    "nomadnet": "nomadnet-0.9.9-py3-none-any.whl",
+    "lxmf": "lxmf-0.9.4-py3-none-any.whl",
+    "rnsh": "rnsh-0.1.9-py3-none-any.whl",
 }
 
 DEFAULT_TITLE = "RNode Bootstrap Console"
@@ -194,8 +194,29 @@ def optimise_manual(path):
         ("_images/meshchat_1.webp", pm),
         ("_images/radio_is5ac.png", pm),
         ("_images/radio_rblhg5.png", pm),
+        ("_images/rbrowser.webp", pm),
+        ("_images/rnphone.webp", pm),
+        ("_images/retibbs.webp", pm),
+        ("_images/meshchatx.webp", pm),
+        ("_images/lxst_phone.webp", pm),
+        ("_images/columba.webp", pm),
         ("_static/rns_logo_512.png", 256),
         ("../images/bg_h_1.webp", pm),
+
+        ("../../images/3_conv.webp", pm/2),
+        ("../../images/an1.webp", pm/2),
+        ("../../images/bg1ds1.webp", pm/2),
+        ("../../images/bg1ds2.webp", pm/2),
+        ("../../images/bg_h_1.webp", pm/2),
+        ("../../images/bg_h_2.webp", pm/2),
+        ("../../images/g1p.webp", pm/2),
+        ("../../images/g2p.webp", pm/2),
+        ("../../images/g3p.webp", pm/2),
+        ("../../images/g4p.webp", pm/2),
+        ("../../images/lora_rnodes.webp", pm/2),
+        ("../../images/nn_an.webp", pm/2),
+        ("../../images/nn_conv.webp", pm/2),
+        ("../../images/nn_init.webp", pm/2),
     ]
 
     import subprocess

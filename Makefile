@@ -30,7 +30,6 @@ prep: prep-avr prep-esp32 prep-samd
 prep-avr:
 	arduino-cli core update-index --config-file arduino-cli.yaml
 	arduino-cli core install arduino:avr --config-file arduino-cli.yaml
-	arduino-cli core install unsignedio:avr --config-file arduino-cli.yaml
 
 prep-esp32:
 	arduino-cli core update-index --config-file arduino-cli.yaml
