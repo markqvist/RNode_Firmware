@@ -1287,11 +1287,33 @@ int getTxPower() {
 }
 
 #if HAS_LORA_PA
-	const int tx_gain[PA_GAIN_POINTS] = {PA_GAIN_VALUES};
+	#if BOARD_MODEL == BOARD_HELTEC32_V4
+		bool pa_values_determined = false;
+		int tx_gain[PA_GAIN_POINTS] = {100};
+	#else
+		bool pa_values_determined = true;
+		const int tx_gain[PA_GAIN_POINTS] = {PA_GAIN_VALUES};
+	#endif
 #endif
+
+extern uint8_t lora_pa_model;
+void determine_pa_values() {
+	#if BOARD_MODEL == BOARD_HELTEC32_V4
+		if (lora_pa_model == LORA_PA_GC1109) {
+			for (int i=0; i < PA_GAIN_POINTS; i++) { tx_gain[i] = PA_GC1109_VALUES[i]; }
+			pa_values_determined = true;
+			for (int i=0; i < PA_GAIN_POINTS; i++) { Serial.print(" "); Serial.printf("%d", tx_gain[i]); }
+		} else if (lora_pa_model == LORA_PA_KCT8103L) {
+			for (int i=0; i < PA_GAIN_POINTS; i++) { tx_gain[i] = PA_KCT8103L_VALUES[i]; }
+			pa_values_determined = true;
+			for (int i=0; i < PA_GAIN_POINTS; i++) { Serial.print(" "); Serial.printf("%d", tx_gain[i]); }
+		}
+	#endif
+}
 
 int map_target_power_to_modem_output(int target_tx_power) {
 	#if HAS_LORA_PA
+		if (!pa_values_determined) { determine_pa_values(); }
 		int modem_output_dbm = -9;
 		for (int i = 0; i < PA_GAIN_POINTS; i++) {
 			int gain = tx_gain[i];
