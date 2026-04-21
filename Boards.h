@@ -403,7 +403,11 @@
       #define HAS_LORA_LNA true
       #define PIN_WAKEUP GPIO_NUM_0
       #define WAKEUP_LEVEL 0
-      #define OCP_TUNED 0x28
+      // SX1262 datasheet specifies OCP resets to 0x38 (140mA) after SetPaConfig
+      // for SX1262 devices (vs 0x18/60mA for SX1261). The Heltec V4 external PA
+      // draws from Vext, not the SX1262 supply rail, so the brownout risk that
+      // prompted lowering OCP on other boards does not apply here.
+      #define OCP_TUNED 0x38
       #define Vext GPIO_NUM_36
       #define LORA_PA_MODEL LORA_PA_UNKNOWN;
 
