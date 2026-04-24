@@ -18,7 +18,7 @@ The RNode system is primarily software, which *transforms* different kinds of av
 
 ## Latest Release
 
-The latest release, installable through `rnodeconf`, is version `1.82`. You must have at least version `2.4.1` of `rnodeconf` installed to update the RNode Firmware to version `1.82`. Get it by updating the `rns` package to at least version `0.9.4`.
+The latest release, installable through `rnodeconf`, is version `1.86`. You must have at least version `2.4.1` of `rnodeconf` installed to update the RNode Firmware to version `1.86`. Get it by updating the `rns` package to at least version `1.1.9`.
 
 ## A Self-Replicating System
 
